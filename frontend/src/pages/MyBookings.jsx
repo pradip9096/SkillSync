@@ -1,0 +1,384 @@
+/**
+ * @file MyBookings.jsx
+ * @description Page for users to view and manage their personal booking history.
+ * 
+ * Purpose: Allows users to search for bookings by email, cancel upcoming sessions, and rate completed sessions.
+ * Inputs: User email (from input or localStorage).
+ * Outputs: JSX element for the booking history page.
+ * Side Effects:
+ * - Fetches bookings from the server.
+ * - Updates booking status on the server.
+ * - Submits expert ratings to the server.
+ * - Reads/Writes user email to localStorage.
+ */
+
+import React, { useState, useEffect } from 'react';
+import { fetchBookingsByEmail, updateBookingStatus, rateExpert, markBookingAsRated } from '../services/api';
+import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
+
+/**
+ * MyBookings Page Component.
+ * 
+ * Purpose: Manages state for user bookings, search functionality, and post-session actions.
+ * Parameters: None.
+ * Return value: {JSX.Element} The rendered booking history page.
+ * Side effects: API interactions and localStorage updates.
+ */
+const MyBookings = () => {
+  // State for user email, initialized from localStorage if available
+  const [email, setEmail] = useState(localStorage.getItem('userEmail') || '');
+  // State for the list of user bookings
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  // States for tracking loading during status updates or rating submissions
+  const [actionLoading, setActionLoading] = useState(null); 
+  const [ratingLoading, setRatingLoading] = useState(null);
+  // Keep track of current time for time-lock checks
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  /**
+   * Effect Hook: Updates current time every 10 seconds.
+   * Purpose: Keeps UI time-lock logic fresh.
+   */
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  /**
+   * Atomic Check Helper: Determines if a session has passed based on IST time.
+   * 
+   * Purpose: Enables the "Mark as Completed" button only after the session starts.
+   * @param {string} date - Booking date (YYYY-MM-DD).
+   * @param {string} time - Booking time (HH:MM).
+   * @returns {boolean} True if the session start time has passed.
+   */
+  const isSessionPast = (date, time) => {
+    // We use Intl.DateTimeFormat to reliably get current components in the Asia/Kolkata timezone.
+    const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false };
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(new Date());
+    
+    const now = {};
+    parts.forEach(p => { if (p.type !== 'literal') now[p.type] = parseInt(p.value); });
+    
+    const [sYear, sMonth, sDay] = date.split('-').map(Number);
+    const [sHour, sMinute] = time.split(':').map(Number);
+    
+    // Step-by-step hierarchical comparison (Year -> Month -> Day -> Hour -> Minute)
+    if (now.year > sYear) return true;
+    if (now.year < sYear) return false;
+    
+    if (now.month > sMonth) return true;
+    if (now.month < sMonth) return false;
+    
+    if (now.day > sDay) return true;
+    if (now.day < sDay) return false;
+    
+    if (now.hour > sHour) return true;
+    if (now.hour < sHour) return false;
+    
+    return now.minute >= sMinute;
+  };
+
+  /**
+   * Helper: Returns tailwind color classes based on booking status.
+   * 
+   * Purpose: Provides visual distinction for different booking states.
+   * @param {string} status - Booking status.
+   * @returns {string} Tailwind CSS classes.
+   */
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Confirmed': return 'bg-green-50 text-green-700 border-green-100';
+      case 'Pending': return 'bg-yellow-50 text-yellow-700 border-yellow-100';
+      case 'Completed': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'Cancelled': return 'bg-red-50 text-red-700 border-red-100';
+      default: return 'bg-gray-50 text-gray-700 border-gray-100';
+    }
+  };
+
+  /**
+   * Handler: Search for bookings associated with the provided email.
+   * 
+   * Purpose: Fetches user-specific data and persists the search email.
+   * @param {React.FormEvent} [e] - Optional form event.
+   */
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!email) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const { data } = await fetchBookingsByEmail(email);
+      setBookings(data.data);
+      // Persist email to localStorage for convenience on next visit
+      localStorage.setItem('userEmail', email);
+      setHasSearched(true);
+    } catch (err) {
+      setError('Failed to load bookings. Please check your email and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Handler: Update the status of a booking.
+   * 
+   * Purpose: Allows users to mark sessions as completed or cancel them.
+   * @param {string} bookingId - ID of the booking.
+   * @param {string} newStatus - The new status to set.
+   */
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    try {
+      setActionLoading(bookingId);
+      await updateBookingStatus(bookingId, newStatus);
+      // Refresh the list to show updated status
+      const { data } = await fetchBookingsByEmail(email);
+      setBookings(data.data);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update booking status.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  /**
+   * Handler: Submit a rating for the expert.
+   * 
+   * Purpose: Updates expert rating and marks the booking as rated.
+   * @param {string} bookingId - ID of the booking.
+   * @param {string} expertId - ID of the expert being rated.
+   * @param {number} rating - Rating value (1-5).
+   */
+  const handleRating = async (bookingId, expertId, rating) => {
+    try {
+      setRatingLoading(bookingId);
+      // Step 1: Update the expert's aggregate rating
+      await rateExpert(expertId, rating);
+      // Step 2: Mark the specific booking as rated to hide the rating UI
+      await markBookingAsRated(bookingId);
+      // Refresh list
+      const { data } = await fetchBookingsByEmail(email);
+      setBookings(data.data);
+    } catch (err) {
+      alert('Failed to submit rating.');
+    } finally {
+      setRatingLoading(null);
+    }
+  };
+
+  // Initial load: If an email is already stored, search immediately.
+  useEffect(() => {
+    if (email) {
+      handleSearch();
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50/50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="text-center mb-12 animate-fade-in">
+          <h1 className="text-5xl font-black text-gray-900 mb-4 tracking-tight flex items-center justify-center gap-4">
+            <History className="w-12 h-12 text-blue-600" /> My History
+          </h1>
+          <p className="text-xl text-gray-600 font-medium max-w-xl mx-auto">Manage your upcoming and past sessions with our industry experts.</p>
+          {/* Visual indicator of current IST time for reference */}
+          <div className="inline-block px-4 py-1.5 bg-gray-100 rounded-full text-[10px] font-black text-gray-400 uppercase tracking-widest border border-gray-200 mt-4">
+            Current IST Time: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+          </div>
+        </div>
+
+        {/* Email Search Bar Section */}
+        <form onSubmit={handleSearch} className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 mb-12 animate-slide-up">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-grow group">
+              <label htmlFor="searchEmail" className="sr-only">Email Address</label>
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                id="searchEmail"
+                name="searchEmail"
+                type="email"
+                placeholder="registered@email.com"
+                className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-2xl transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 md:min-w-[200px] active:scale-95 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+              {loading ? 'SYNCING...' : 'VIEW SESSIONS'}
+            </button>
+          </div>
+        </form>
+
+        {/* Dynamic Content: Results or Empty State */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+            <p className="text-gray-400 font-bold mt-4 uppercase tracking-widest text-xs">Accessing Records...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-100 text-red-700 px-8 py-6 rounded-3xl flex items-center gap-4 animate-fade-in">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+            <p className="font-bold text-lg">{error}</p>
+          </div>
+        ) : hasSearched && bookings.length > 0 ? (
+          <div className="space-y-8">
+            {bookings.map((booking, index) => (
+              <div 
+                key={booking._id} 
+                className="group bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden hover:border-blue-200 transition-all duration-300 animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="p-8">
+                  {/* Expert Summary Header */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-blue-200 group-hover:rotate-6 transition-transform">
+                        <User className="w-10 h-10 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-gray-900 leading-tight">{booking.expert?.name || 'Deleted Expert'}</h3>
+                        <p className="text-sm text-blue-500 font-black uppercase tracking-widest mt-1">{booking.expert?.category}</p>
+                      </div>
+                    </div>
+                    <span className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-tighter border-2 ${getStatusColor(booking.status)}`}>
+                      {booking.status}
+                    </span>
+                  </div>
+
+                  {/* Visual indicator of whether the session is eligible for completion */}
+                  <div className="mb-6 px-4 py-2 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Time-Lock Status</span>
+                    <span className={`text-[10px] font-black uppercase ${isSessionPast(booking.bookingDate, booking.slotTime) ? 'text-green-600' : 'text-orange-500'}`}>
+                      {isSessionPast(booking.bookingDate, booking.slotTime) ? 'Eligible for Completion' : 'Locked until Start Time'}
+                    </span>
+                  </div>
+
+                  {/* Booking Metadata (Date, Time, Session ID) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 p-6 bg-gray-50 rounded-2xl mb-8">
+                    <div className="flex items-center gap-4 text-gray-600">
+                      <div className="bg-white p-2.5 rounded-xl shadow-sm"><Calendar className="w-5 h-5 text-blue-500" /></div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Date</p>
+                        <p className="font-black text-gray-900 uppercase">{booking.bookingDate}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-gray-600">
+                      <div className="bg-white p-2.5 rounded-xl shadow-sm"><Clock className="w-5 h-5 text-blue-500" /></div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Time Slot</p>
+                        <p className="font-black text-gray-900 uppercase">
+                          {booking.slotTime.startsWith('09') || booking.slotTime.startsWith('10') || booking.slotTime.startsWith('11') ? `${booking.slotTime} AM` : 
+                           booking.slotTime.startsWith('12') ? '12:00 PM' :
+                           `${parseInt(booking.slotTime.split(':')[0]) - 12}:${booking.slotTime.split(':')[1]} PM`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-gray-600">
+                      <div className="bg-white p-2.5 rounded-xl shadow-sm"><Sparkles className="w-5 h-5 text-blue-500" /></div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Session ID</p>
+                        <p className="font-mono text-sm font-black text-blue-600">#{booking._id.substring(18).toUpperCase()}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conditional Actions based on Status */}
+                  {booking.status === 'Confirmed' && (
+                    <div className="flex flex-wrap gap-4">
+                      {/* Only allow completion if session time has arrived */}
+                      {isSessionPast(booking.bookingDate, booking.slotTime) ? (
+                        <button
+                          onClick={() => handleStatusUpdate(booking._id, 'Completed')}
+                          disabled={actionLoading === booking._id}
+                          className="flex-grow flex items-center justify-center gap-3 bg-blue-600 text-white hover:bg-blue-700 font-black py-4 px-8 rounded-2xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-95"
+                        >
+                          {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                          MARK AS COMPLETED
+                        </button>
+                      ) : (
+                        <div className="flex-grow flex items-center justify-center gap-3 bg-gray-100 text-gray-400 font-black py-4 px-8 rounded-2xl border-2 border-dashed border-gray-200 cursor-help" title="Session time has not arrived yet">
+                          <Clock className="w-5 h-5" />
+                          UPCOMING SESSION
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handleStatusUpdate(booking._id, 'Cancelled')}
+                        disabled={actionLoading === booking._id}
+                        className="flex-grow flex items-center justify-center gap-3 bg-white text-red-600 hover:bg-red-50 border-2 border-red-100 font-black py-4 px-8 rounded-2xl transition-all disabled:opacity-50 active:scale-95"
+                      >
+                        {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                        CANCEL SESSION
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Post-Session Rating UI */}
+                  {booking.status === 'Completed' && !booking.isRated && (
+                    <div className="p-8 border-2 border-dashed border-blue-100 rounded-3xl animate-fade-in">
+                      <p className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                        <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" /> Rate Your Session
+                      </p>
+                      <div className="flex flex-wrap gap-4">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            disabled={ratingLoading === booking._id}
+                            onClick={() => handleRating(booking._id, booking.expert?._id, star)}
+                            className="group flex flex-col items-center gap-2 flex-1 min-w-[60px]"
+                          >
+                            <div className="w-full aspect-square bg-gray-50 border-2 border-gray-100 rounded-2xl flex items-center justify-center group-hover:border-yellow-400 group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
+                              <Star className="w-8 h-8 text-gray-300 group-hover:text-yellow-500 group-hover:fill-yellow-500" />
+                            </div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{star} Stars</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rating Confirmation State */}
+                  {booking.isRated && (
+                    <div className="p-6 bg-green-50 rounded-2xl flex items-center justify-center gap-3 text-green-700 font-black uppercase tracking-widest text-xs animate-fade-in">
+                      <CheckCircle2 className="w-5 h-5" />
+                      Experience Rated Successfully
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : hasSearched ? (
+          // Search found no results
+          <div className="text-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-gray-100 animate-fade-in">
+            <History className="w-20 h-20 text-gray-200 mx-auto mb-6" />
+            <p className="text-gray-400 text-2xl font-black tracking-tight">No session history found.</p>
+            <p className="text-gray-300 font-bold mt-2 uppercase tracking-widest text-xs">Verify your email and search again</p>
+          </div>
+        ) : (
+          // Initial state before search
+          <div className="text-center py-24 animate-fade-in">
+             <div className="w-32 h-32 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 border border-blue-100 shadow-inner">
+               <History className="w-16 h-16 text-blue-300" />
+             </div>
+             <p className="text-gray-300 font-black uppercase tracking-[0.3em]">Access Your Secure Portal Above</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MyBookings;
