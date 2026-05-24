@@ -123,4 +123,16 @@ export const rateExpert = (expertId, rating) => API.post(`/experts/${expertId}/r
  */
 export const markBookingAsRated = (bookingId) => API.patch(`/bookings/${bookingId}/rate`);
 
+// --- Profile APIs ---
+export const fetchUserProfile = () => API.get('/auth/profile');
+export const updateUserProfile = (profileData) => API.put('/auth/profile', profileData);
+
+// --- Admin Dashboard APIs ---
+export const adminFetchUsers = () => API.get('/admin/users');
+export const adminFetchBookings = () => API.get('/admin/bookings');
+export const adminUpdateBookingStatus = (id, status) => API.patch(`/admin/bookings/${id}/status`, { status });
+export const adminDeleteBooking = (id) => API.delete(`/admin/bookings/${id}`);
+export const adminCreateExpert = (expertData) => API.post('/admin/experts', expertData);
+export const adminDeleteExpert = (id) => API.delete(`/admin/experts/${id}`);
+
 export default API;

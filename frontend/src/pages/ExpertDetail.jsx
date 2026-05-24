@@ -67,6 +67,7 @@ const ExpertDetail = () => {
         return displayVal;
       };
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(prev => ({
         ...prev,
         userName: prev.userName || user.name || '',

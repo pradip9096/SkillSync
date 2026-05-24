@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * @file AuthContext.jsx
  * @description React Context to manage authentication state, user roles, and local token storage.
@@ -70,7 +71,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Registration failed. Please try again.';
       setError(errorMsg);
-      throw new Error(errorMsg);
+      throw new Error(errorMsg, { cause: err });
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Login failed. Please check your credentials.';
       setError(errorMsg);
-      throw new Error(errorMsg);
+      throw new Error(errorMsg, { cause: err });
     } finally {
       setLoading(false);
     }

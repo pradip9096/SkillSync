@@ -143,7 +143,97 @@ const loginUser = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get user profile
+ * @route   GET /auth/profile
+ * @access  Private
+ */
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    res.status(200).json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error retrieving profile'
+    });
+  }
+};
+
+/**
+ * @desc    Update user profile
+ * @route   PUT /auth/profile
+ * @access  Private
+ */
+const updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Update fields
+    if (req.body.name !== undefined) {
+      user.name = req.body.name;
+    }
+
+    if (req.body.phone !== undefined) {
+      const phone = req.body.phone;
+      if (phone && !/^\+91[0-9]{10}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Phone number must start with +91 followed by 10 digits'
+        });
+      }
+      user.phone = phone;
+    }
+
+    if (req.body.password) {
+      if (req.body.password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must be at least 6 characters'
+        });
+      }
+      user.password = req.body.password;
+    }
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: updatedUser._id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        name: updatedUser.name || '',
+        phone: updatedUser.phone || ''
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error updating profile'
+    });
+  }
+};
+
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  getUserProfile,
+  updateUserProfile
 };

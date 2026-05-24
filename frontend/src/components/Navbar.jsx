@@ -72,6 +72,34 @@ const Navbar = () => {
               <span className="sm:hidden text-[10px]">Bookings</span>
             </Link>
 
+            {/* Profile Link */}
+            {user && (
+              <Link 
+                to="/profile" 
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  location.pathname === '/profile' 
+                    ? 'text-blue-600 bg-blue-50 shadow-sm' 
+                    : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+              >
+                Profile
+              </Link>
+            )}
+
+            {/* Admin Panel Link */}
+            {user && user.role === 'Admin' && (
+              <Link 
+                to="/admin" 
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  location.pathname === '/admin' 
+                    ? 'text-red-600 bg-red-50 shadow-sm' 
+                    : 'text-gray-500 hover:text-red-600 hover:bg-gray-50'
+                }`}
+              >
+                Admin Panel
+              </Link>
+            )}
+
             {/* Auth Controls */}
             {user ? (
               <div className="flex items-center gap-3 pl-4 border-l border-gray-100">

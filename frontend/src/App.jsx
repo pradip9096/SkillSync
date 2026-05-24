@@ -16,6 +16,8 @@ import ExpertDetail from './pages/ExpertDetail';
 import MyBookings from './pages/MyBookings';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -55,6 +57,20 @@ function App() {
             <Route path="/my-bookings" element={
               <ProtectedRoute>
                 <MyBookings />
+              </ProtectedRoute>
+            } />
+
+            {/* User's profile page (protected) */}
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin dashboard page (protected, Admin only) */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
           </Routes>

@@ -168,6 +168,7 @@ const MyBookings = () => {
   // Initial load: If authenticated user or stored email is available, fetch bookings immediately.
   useEffect(() => {
     if (user && user.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(user.email);
       const getInitialBookings = async () => {
         try {
