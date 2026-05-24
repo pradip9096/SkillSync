@@ -31,8 +31,8 @@
 Introduce secure credentials-based registration/login, session token management using **JSON Web Tokens (JWT)**, and **Role-Based Access Control (RBAC)** across the SkillSync stack. This shifts the application from an anonymous guest-booking model to a secure multi-role platform accommodating **Clients**, **Experts**, and **Admins**.
 
 ### User Story
-* **As a Visitor**, I want to register a credentials-based account with my name, email, password, and phone number so that I can securely log in later.
-* **As a Client**, I want to see only my own history under My Bookings, and be authorized to create bookings.
+* **As a Visitor**, I want to register a credentials-based account using **only my email and password**, select my starting role (Client or Expert), and log in securely.
+* **As a Client**, I want to see only my own history under My Bookings, be authorized to create bookings, and have my name and phone number auto-saved upon my first booking so future bookings are pre-filled.
 * **As an Expert**, I want to log in to view my upcoming sessions and manage my availability, ensuring only I can edit my slots.
 * **As an Admin**, I want system-wide administrative rights to manage all users and view all platform bookings.
 
@@ -44,9 +44,11 @@ The current MVP has no security layer:
 
 ### Solution Statement
 Implement a vertical security stack:
-* **Storage Engine Level:** Create a `User` model, encrypting passwords with `bcryptjs`. Link `Booking` and `Expert` schemas to the `User` model via Mongoose ObjectId references.
-* **API Level:** Implement `/auth/register` and `/auth/login` endpoints. Protect sensitive routes with `authMiddleware.js` verifying JWTs inside request headers. Restrict endpoints using a `restrictTo(...roles)` authorization middleware.
-* **UI State Level:** Set up an `AuthContext` to manage the authenticated state and Axios header interceptors. Secure frontend paths using a `<ProtectedRoute>` component.
+* **Storage Engine Level:** Create a `User` model containing `email` (unique), `password` (hashed with `bcryptjs`), and `role` (enum). The `name` and `phone` fields will be optional. Link `Booking` and `Expert` schemas to the `User` model.
+* **Auto-Save on Booking:** Capture `userName` and `userPhone` during the first booking flow, and auto-save these fields to the logged-in `User` profile to enable automated pre-filling on future bookings.
+* **API Level:** Implement `/auth/register` and `/auth/login` endpoints. Protect sensitive routes with `authMiddleware.js` verifying JWTs. Create a `restrictTo(...roles)` authorization middleware. The registration route will strictly validate and block any attempt to register an `"Admin"` account via public routes.
+* **UI State Level:** Set up an `AuthContext` to manage the authenticated state and Axios header interceptors. Secure frontend paths using a `<ProtectedRoute>` component. Add a role selection dropdown (Client/Expert only) to the signup page.
+* **Admin Bootstrapping:** Create a `userSeeder.js` script to bootstrap the first system Administrator account directly in MongoDB.
 
 ---
 
@@ -89,14 +91,14 @@ Implement a vertical security stack:
 
 | File | Role |
 |------|------|
-| `backend/src/models/User.js` | Mongoose schema and model for authenticated accounts |
+| `backend/src/models/User.js` | Mongoose schema and model for accounts (`name` and `phone` optional) |
 | `backend/src/middleware/authMiddleware.js` | Express middlewares for route protection and RBAC role checks |
-| `backend/src/controllers/authController.js` | Registration and login request handlers |
+| `backend/src/controllers/authController.js` | Registration and login handlers (with Admin registration validation block) |
 | `backend/src/routes/authRoutes.js` | Registration and login endpoint router mounting |
 | `frontend/src/context/AuthContext.jsx` | Global React authentication context and local token storage manager |
 | `frontend/src/components/ProtectedRoute.jsx` | Routing guard wrapper to restrict access based on auth state and roles |
-| `frontend/src/pages/Login.jsx` | Secure login interface page |
-| `frontend/src/pages/Register.jsx` | Secure signup interface page with phone validation |
+| `frontend/src/pages/Login.jsx` | Secure login interface page (email + password) |
+| `frontend/src/pages/Register.jsx` | Secure signup interface page (email + password + role selector dropdown) |
 
 ---
 
@@ -190,8 +192,8 @@ cd frontend && npm run build
 
 ### Level 3: Integration Tests (Manual API Validation)
 ```bash
-# Register User
-curl -X POST http://localhost:5000/auth/register -H "Content-Type: application/json" -d '{"name":"Test User","email":"test@example.com","password":"password123","phone":"+919876543210"}'
+# Register User (Client)
+curl -X POST http://localhost:5000/auth/register -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"password123","role":"Client"}'
 
 # Login User
 curl -X POST http://localhost:5000/auth/login -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"password123"}'
@@ -228,6 +230,9 @@ curl -X POST http://localhost:5000/auth/login -H "Content-Type: application/json
 |---|---|---|---|
 | 2026-05-24 | Use localStorage for token storage | Architecture Team | Easiest starting point for single-domain client-side Vite applications. Can be upgraded to HttpOnly cookies for XSS mitigation in a later sprint. |
 | 2026-05-24 | Hashing on model pre-save hook | Architecture Team | Encapsulates credential encryption inside schema domain; prevents raw password exposure regardless of save controller path. |
+| 2026-05-24 | Minimal Sign Up (Email/Password Only) | Architecture Team & User | Simplifies registration conversion rate. Name and phone are made optional and gathered only during transactional booking. |
+| 2026-05-24 | Dynamic Profile Auto-Save | Architecture Team & User | Saves name/phone to user profile on first booking, automatically pre-filling future booking requests for improved UX. |
+| 2026-05-24 | Restricted Role Selector (Admin Blocked) | Architecture Team & User | Frontend supports Client/Expert options. Backend strictly blocks "Admin" registration payloads to prevent security escalation. Initial admin created via seeder. |
 
 ---
 
