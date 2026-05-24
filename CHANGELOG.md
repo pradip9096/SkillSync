@@ -8,5 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Created comprehensive `README.md` containing project structure, features, and setup instructions for both frontend and backend.
-- Generated `SkillSync_PRD.md` inside `.agent/commands/docs/` detailing the product requirements, user personas, MoSCoW prioritization, and BDD acceptance criteria.
+- **Feature Documentation:** Generated 8 comprehensive Feature Plan markdown files under the `docs/` directory.
+- **Anatomy Blueprint:** Created `docs/feature-plan-anatomy.txt` defining the visual component hierarchy template for future planning documents.
+- **Home Landing Page:** Implemented `Home.jsx` with a hero section and feature highlights; updated navigation routes so the root path `/` renders the Home page and `/experts` renders the directory listing.
+- **India-Specific Localization:** Added Indian Rupee (`₹`) currency symbol, automatic `+91` phone number formatting, HTML5 number patterns, and timezone-aware IST scheduling constraints.
+- **Smart Image Fallbacks:** Implemented a two-level client-side fallback system on `ExpertCard` and `ExpertDetail` using `ui-avatars.com` with infinite-loop prevention.
+- **CI/CD & Lint Hardening:** Resolved all frontend ESLint warnings and errors, verifying a clean production build with Vite.
+- **SkillSync PRD & Roadmap:** Defined product requirements (`docs/SkillSync_PRD.md`) and strategic milestones (`docs/ROADMAP.md`).
