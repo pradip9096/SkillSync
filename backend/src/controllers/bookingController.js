@@ -18,6 +18,42 @@ const createBooking = async (req, res) => {
   try {
     const { expert, userName, userEmail, userPhone, bookingDate, slotTime, notes } = req.body;
 
+    // Check for authenticated user from req.user or parse JWT from header
+    let userRef = null;
+    let authUser = req.user;
+
+    if (!authUser && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const jwt = require('jsonwebtoken');
+        const User = require('../models/User');
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || 'skillsync_fallback_jwt_secret_key_2026'
+        );
+        authUser = await User.findById(decoded.id).select('-password');
+      } catch (err) {
+        console.error('Manual auth parsing in createBooking failed:', err.message);
+      }
+    }
+
+    if (authUser) {
+      userRef = authUser._id;
+      // Auto-save: update user's profile details if currently empty
+      let profileUpdated = false;
+      if (!authUser.name && userName) {
+        authUser.name = userName;
+        profileUpdated = true;
+      }
+      if (!authUser.phone && userPhone) {
+        authUser.phone = userPhone;
+        profileUpdated = true;
+      }
+      if (profileUpdated) {
+        await authUser.save();
+      }
+    }
+
     /**
      * Check if the selected time slot is already booked.
      * We exclude 'Cancelled' bookings to allow previously cancelled slots to be re-booked.
@@ -40,6 +76,7 @@ const createBooking = async (req, res) => {
     // Create the booking record in the database
     const booking = await Booking.create({
       expert,
+      user: userRef,
       userName,
       userEmail,
       userPhone,

@@ -15,6 +15,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchExpertById, fetchBookedSlots, createBooking } from '../services/api';
 import socket from '../services/socket';
+import { useAuth } from '../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star } from 'lucide-react';
 
 /**
@@ -28,6 +29,8 @@ import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Load
 const ExpertDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const { user, updateUserProfile } = useAuth();
 
   // State Management
   const [expert, setExpert] = useState(null);
@@ -49,6 +52,29 @@ const ExpertDetail = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Pre-fill form from user details
+  useEffect(() => {
+    if (user) {
+      const formatPhoneForInput = (phone) => {
+        if (!phone) return '+91 ';
+        let val = phone.replace(/\s/g, '');
+        if (!val.startsWith('+91')) val = '+91' + val.replace(/^\+?9?1?/, '');
+        let displayVal = val.slice(0, 13);
+        if (displayVal.length > 3) {
+          displayVal = displayVal.slice(0, 3) + ' ' + displayVal.slice(3);
+        }
+        return displayVal;
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        userName: prev.userName || user.name || '',
+        userEmail: prev.userEmail || user.email || '',
+        userPhone: (prev.userPhone && prev.userPhone !== '+91 ') ? prev.userPhone : formatPhoneForInput(user.phone)
+      }));
+    }
+  }, [user]);
 
   /**
    * Helper: Check if a time slot has already passed for the current day.
@@ -168,13 +194,20 @@ const ExpertDetail = () => {
     try {
       setIsSubmitting(true);
       // Construct payload and strip formatting from phone number
+      const phoneClean = formData.userPhone.replace(/\s/g, '');
       await createBooking({
         expert: id,
         bookingDate: selectedDate,
         slotTime: selectedSlot,
         ...formData,
-        userPhone: formData.userPhone.replace(/\s/g, '')
+        userPhone: phoneClean
       });
+
+      // Update global context user details if they were empty/modified
+      if (user) {
+        updateUserProfile(formData.userName, phoneClean);
+      }
+
       setSuccess(true);
       // Redirect to history page after a brief delay
       setTimeout(() => navigate('/my-bookings'), 3000);
@@ -353,120 +386,143 @@ const ExpertDetail = () => {
           </div>
 
           {/* Section: Guest Information Form */}
-          <form onSubmit={handleBooking} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
-            <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-              <User className="w-8 h-8 text-blue-600" /> Guest Information
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label htmlFor="userName" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Full Name</label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    id="userName"
-                    name="userName"
-                    required
-                    type="text" 
-                    placeholder="Enter your name"
-                    value={formData.userName}
-                    onChange={(e) => setFormData({...formData, userName: e.target.value})}
-                    className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
-                  />
-                </div>
+          {!user ? (
+            <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 text-center space-y-6 animate-slide-up">
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto border border-blue-100 shadow-inner">
+                <ShieldCheck className="w-10 h-10 text-blue-600 animate-pulse" />
               </div>
-              <div className="space-y-3">
-                <label htmlFor="userEmail" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Email Address</label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    id="userEmail"
-                    name="userEmail"
-                    required
-                    type="email" 
-                    placeholder="name@example.com"
-                    value={formData.userEmail}
-                    onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
-                    className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
-                  />
-                </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-gray-900">Authentication Required</h3>
+                <p className="text-gray-500 font-medium max-w-sm mx-auto">
+                  Please log in or sign up for a SkillSync account to reserve this slot and manage your sessions.
+                </p>
+              </div>
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate('/login', { state: { from: { pathname: `/expert/${id}` } } })}
+                  className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                >
+                  Sign In to Book
+                </button>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handleBooking} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                <User className="w-8 h-8 text-blue-600" /> Guest Information
+              </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label htmlFor="userPhone" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Phone Number</label>
-                <div className="relative group">
-                  <Phone className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    id="userPhone"
-                    name="userPhone"
-                    required
-                    type="tel" 
-                    placeholder="+91 XXXXXXXXXX"
-                    pattern="\+91\s[0-9]{10}"
-                    title="Please enter a 10-digit number after the +91 prefix"
-                    value={formData.userPhone}
-                    onChange={(e) => {
-                      // Custom formatter for the Indian phone number input
-                      let val = e.target.value.replace(/\s/g, ''); 
-                      if (!val.startsWith('+91')) val = '+91' + val.replace(/^\+?9?1?/, '');
-                      
-                      let displayVal = val.slice(0, 13);
-                      if (displayVal.length > 3) {
-                         displayVal = displayVal.slice(0, 3) + ' ' + displayVal.slice(3);
-                      }
-                      setFormData({...formData, userPhone: displayVal});
-                    }}
-                    className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <label htmlFor="userName" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Full Name</label>
+                  <div className="relative group">
+                    <User className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input 
+                      id="userName"
+                      name="userName"
+                      required
+                      type="text" 
+                      placeholder="Enter your name"
+                      value={formData.userName}
+                      onChange={(e) => setFormData({...formData, userName: e.target.value})}
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label htmlFor="userEmail" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Email Address</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input 
+                      id="userEmail"
+                      name="userEmail"
+                      required
+                      type="email" 
+                      placeholder="name@example.com"
+                      value={formData.userEmail}
+                      onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-3">
-                <label htmlFor="notes" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Meeting Notes</label>
-                <div className="relative group">
-                  <MessageSquare className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    id="notes"
-                    name="notes"
-                    type="text" 
-                    placeholder="Briefly describe your goals..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
-                  />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <label htmlFor="userPhone" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Phone Number</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input 
+                      id="userPhone"
+                      name="userPhone"
+                      required
+                      type="tel" 
+                      placeholder="+91 XXXXXXXXXX"
+                      pattern="\+91\s[0-9]{10}"
+                      title="Please enter a 10-digit number after the +91 prefix"
+                      value={formData.userPhone}
+                      onChange={(e) => {
+                        // Custom formatter for the Indian phone number input
+                        let val = e.target.value.replace(/\s/g, ''); 
+                        if (!val.startsWith('+91')) val = '+91' + val.replace(/^\+?9?1?/, '');
+                        
+                        let displayVal = val.slice(0, 13);
+                        if (displayVal.length > 3) {
+                           displayVal = displayVal.slice(0, 3) + ' ' + displayVal.slice(3);
+                        }
+                        setFormData({...formData, userPhone: displayVal});
+                      }}
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label htmlFor="notes" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Meeting Notes</label>
+                  <div className="relative group">
+                    <MessageSquare className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input 
+                      id="notes"
+                      name="notes"
+                      type="text" 
+                      placeholder="Briefly describe your goals..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="pt-6">
-              {/* Submission Button */}
-              <button 
-                disabled={isSubmitting || !selectedSlot}
-                type="submit"
-                className={`
-                  w-full py-6 rounded-[2rem] font-black text-xl tracking-tight transition-all duration-500
-                  ${isSubmitting || !selectedSlot
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95'
-                  }
-                `}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin" /> Finalizing Booking...
-                  </span>
-                ) : !selectedSlot ? (
-                  'Select a Slot Above'
-                ) : (
-                  'Secure My Appointment'
-                )}
-              </button>
-              <p className="text-center text-gray-400 text-xs mt-6 font-bold tracking-widest uppercase">
-                Encrypted & Secure Booking Environment
-              </p>
-            </div>
-          </form>
+              <div className="pt-6">
+                {/* Submission Button */}
+                <button 
+                  disabled={isSubmitting || !selectedSlot}
+                  type="submit"
+                  className={`
+                    w-full py-6 rounded-[2rem] font-black text-xl tracking-tight transition-all duration-500
+                    ${isSubmitting || !selectedSlot
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95'
+                    }
+                  `}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-6 h-6 animate-spin" /> Finalizing Booking...
+                    </span>
+                  ) : !selectedSlot ? (
+                    'Select a Slot Above'
+                  ) : (
+                    'Secure My Appointment'
+                  )}
+                </button>
+                <p className="text-center text-gray-400 text-xs mt-6 font-bold tracking-widest uppercase">
+                  Encrypted & Secure Booking Environment
+                </p>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

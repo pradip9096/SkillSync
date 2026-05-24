@@ -58,6 +58,11 @@ const expertSchema = new mongoose.Schema({
   hourlyRate: {
     type: Number,
     required: [true, 'Please add an hourly rate']
+  },
+  // Reference to the user credentials account associated with this expert
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   // Automatically manage createdAt and updatedAt fields

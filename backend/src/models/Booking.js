@@ -14,6 +14,11 @@ const bookingSchema = new mongoose.Schema({
     ref: 'Expert',
     required: true
   },
+  // Reference to the registered User who made this booking
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   // User's name with basic validation
   userName: {
     type: String,

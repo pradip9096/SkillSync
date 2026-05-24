@@ -14,6 +14,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchBookingsByEmail, updateBookingStatus, rateExpert, markBookingAsRated } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
 
 /**
@@ -25,8 +26,9 @@ import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2
  * Side effects: API interactions and localStorage updates.
  */
 const MyBookings = () => {
-  // State for user email, initialized from localStorage if available
-  const [email, setEmail] = useState(localStorage.getItem('userEmail') || '');
+  const { user } = useAuth();
+  // State for user email, initialized from localStorage or context if available
+  const [email, setEmail] = useState(user?.email || localStorage.getItem('userEmail') || '');
   // State for the list of user bookings
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -163,16 +165,33 @@ const MyBookings = () => {
     }
   };
 
-  // Initial load: If an email is already stored, search immediately.
+  // Initial load: If authenticated user or stored email is available, fetch bookings immediately.
   useEffect(() => {
-    if (email) {
+    if (user && user.email) {
+      setEmail(user.email);
+      const getInitialBookings = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const { data } = await fetchBookingsByEmail(user.email);
+          setBookings(data.data);
+          localStorage.setItem('userEmail', user.email);
+          setHasSearched(true);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      getInitialBookings();
+    } else if (email) {
       const deferSearch = setTimeout(() => {
         handleSearch();
       }, 0);
       return () => clearTimeout(deferSearch);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-16 px-4 sm:px-6 lg:px-8">

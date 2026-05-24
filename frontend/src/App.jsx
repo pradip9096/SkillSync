@@ -14,6 +14,10 @@ import Home from './pages/Home';
 import ExpertListing from './pages/ExpertListing';
 import ExpertDetail from './pages/ExpertDetail';
 import MyBookings from './pages/MyBookings';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
 /**
  * Main App Component.
@@ -26,26 +30,36 @@ import MyBookings from './pages/MyBookings';
 function App() {
   return (
     <Router>
-      {/* Main container with a light gray background and minimum screen height */}
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Persistent Navigation Bar */}
-        <Navbar />
-        
-        {/* Route Definitions */}
-        <Routes>
-          {/* Landing page */}
-          <Route path="/" element={<Home />} />
+      <AuthProvider>
+        {/* Main container with a light gray background and minimum screen height */}
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          {/* Persistent Navigation Bar */}
+          <Navbar />
+          
+          {/* Route Definitions */}
+          <Routes>
+            {/* Landing page */}
+            <Route path="/" element={<Home />} />
 
-          {/* List of experts */}
-          <Route path="/experts" element={<ExpertListing />} />
-          
-          {/* Detailed view for a specific expert */}
-          <Route path="/expert/:id" element={<ExpertDetail />} />
-          
-          {/* User's booking history page */}
-          <Route path="/my-bookings" element={<MyBookings />} />
-        </Routes>
-      </div>
+            {/* Public authentication routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* List of experts */}
+            <Route path="/experts" element={<ExpertListing />} />
+            
+            {/* Detailed view for a specific expert */}
+            <Route path="/expert/:id" element={<ExpertDetail />} />
+            
+            {/* User's booking history page (protected) */}
+            <Route path="/my-bookings" element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </div>
+      </AuthProvider>
     </Router>
   );
 }

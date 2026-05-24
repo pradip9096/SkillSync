@@ -14,13 +14,14 @@ const {
   getBookedSlots,
   markAsRated
 } = require('../controllers/bookingController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * Route: POST /
  * Purpose: Create a new session booking.
- * Access: Public.
+ * Access: Private (Requires authentication).
  */
-router.post('/', createBooking);
+router.post('/', protect, createBooking);
 
 /**
  * Route: GET /

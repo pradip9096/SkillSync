@@ -92,13 +92,15 @@ app.get('/', (req, res) => {
 });
 
 // Mount Routers
-// Importing route modules for experts and bookings
+// Importing route modules for experts, bookings, and auth
 const expertRoutes = require('./routes/expertRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // Defining the base paths for the respective routes
 app.use('/experts', expertRoutes);
 app.use('/bookings', bookingRoutes);
+app.use('/auth', authRoutes);
 
 /** 
  * @type {number|string} 

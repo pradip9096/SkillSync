@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **JWT Authentication & RBAC (Phase 2):**
+  - Added backend `User` schema with automated password hashing via `bcryptjs` and credential verification.
+  - Implemented JWT token generation and validation middleware (`authMiddleware`).
+  - Added REST endpoints for `/auth/register` and `/auth/login`, including strict validations to block public admin account creation.
+  - Added `userSeeder.js` utility to bootstrap initial system admin users.
+  - Created client-side `AuthContext` to persist user login state and handle JWT auth headers in Axios requests.
+  - Implemented frontend `Login` and `Register` pages with a role dropdown selector (Client or Expert).
+  - Protected sensitive frontend routes (like `My Bookings`) using the `<ProtectedRoute>` guard.
 - **Feature Documentation:** Generated 8 comprehensive Feature Plan markdown files under the `docs/` directory.
 - **Anatomy Blueprint:** Created `docs/feature-plan-anatomy.txt` defining the visual component hierarchy template for future planning documents.
 - **Home Landing Page:** Implemented `Home.jsx` with a hero section and feature highlights; updated navigation routes so the root path `/` renders the Home page and `/experts` renders the directory listing.
