@@ -24,7 +24,8 @@ const experts = [
     experience: 12,
     rating: 4.9,
     description: 'Specialist in holistic wellness and preventive medicine.',
-    hourlyRate: 150
+    hourlyRate: 150,
+    profileImage: '/experts/sarah.png'
   },
   {
     name: 'James Wilson',
@@ -32,7 +33,8 @@ const experts = [
     experience: 8,
     rating: 4.7,
     description: 'Expert Full-stack Developer and System Architect.',
-    hourlyRate: 120
+    hourlyRate: 120,
+    profileImage: '/experts/james.png'
   },
   {
     name: 'Elena Rodriguez',
@@ -40,7 +42,8 @@ const experts = [
     experience: 6,
     rating: 4.8,
     description: 'Award-winning UI/UX Designer specializing in mobile apps.',
-    hourlyRate: 90
+    hourlyRate: 90,
+    profileImage: '/experts/elena.png'
   },
   {
     name: 'Michael Chen',
@@ -48,7 +51,8 @@ const experts = [
     experience: 15,
     rating: 4.9,
     description: 'Certified Financial Planner and Investment Consultant.',
-    hourlyRate: 200
+    hourlyRate: 200,
+    profileImage: '/experts/michael.png'
   },
   {
     name: 'Amanda Brooks',
@@ -56,7 +60,8 @@ const experts = [
     experience: 5,
     rating: 4.5,
     description: 'Digital Marketing Strategist and Social Media Expert.',
-    hourlyRate: 80
+    hourlyRate: 80,
+    profileImage: '/experts/amanda.png'
   },
   {
     name: 'David Foster',
@@ -64,7 +69,8 @@ const experts = [
     experience: 10,
     rating: 4.6,
     description: 'Startup Mentor and Business Strategy Consultant.',
-    hourlyRate: 180
+    hourlyRate: 180,
+    profileImage: '/experts/david.png'
   }
 ];
 
