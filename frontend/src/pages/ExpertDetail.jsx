@@ -11,7 +11,7 @@
  * - Creates a booking record on the server via POST request.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchExpertById, fetchBookedSlots, createBooking } from '../services/api';
 import socket from '../services/socket';

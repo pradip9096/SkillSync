@@ -8,7 +8,7 @@
  * Side Effects: Fetches expert data from the backend API on mount and filter changes.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchExperts } from '../services/api';
 import ExpertCard from '../components/ExpertCard';
 import { Search, Filter, Loader2, AlertCircle } from 'lucide-react';
@@ -52,6 +52,7 @@ const ExpertListing = () => {
         setExperts(data.data);
         setError(null);
       } catch (err) {
+        console.error(err);
         setError('Failed to fetch experts. Please try again later.');
       } finally {
         setLoading(false);

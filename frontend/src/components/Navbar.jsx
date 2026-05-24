@@ -8,9 +8,8 @@
  * Side Effects: Reads from React Router's location state to highlight the active link.
  */
 
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, User, LayoutGrid } from 'lucide-react';
+import { Calendar, LayoutGrid } from 'lucide-react';
 
 /**
  * Navbar Component.

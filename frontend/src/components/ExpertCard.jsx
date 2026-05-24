@@ -8,7 +8,6 @@
  * Side Effects: None.
  */
 
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Briefcase, Award } from 'lucide-react';
 

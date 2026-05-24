@@ -12,7 +12,7 @@
  * - Reads/Writes user email to localStorage.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchBookingsByEmail, updateBookingStatus, rateExpert, markBookingAsRated } from '../services/api';
 import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
 
@@ -35,17 +35,7 @@ const MyBookings = () => {
   // States for tracking loading during status updates or rating submissions
   const [actionLoading, setActionLoading] = useState(null); 
   const [ratingLoading, setRatingLoading] = useState(null);
-  // Keep track of current time for time-lock checks
-  const [currentTime, setCurrentTime] = useState(new Date());
 
-  /**
-   * Effect Hook: Updates current time every 10 seconds.
-   * Purpose: Keeps UI time-lock logic fresh.
-   */
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 10000);
-    return () => clearInterval(timer);
-  }, []);
 
   /**
    * Atomic Check Helper: Determines if a session has passed based on IST time.
@@ -119,6 +109,7 @@ const MyBookings = () => {
       localStorage.setItem('userEmail', email);
       setHasSearched(true);
     } catch (err) {
+      console.error(err);
       setError('Failed to load bookings. Please check your email and try again.');
     } finally {
       setLoading(false);
@@ -165,6 +156,7 @@ const MyBookings = () => {
       const { data } = await fetchBookingsByEmail(email);
       setBookings(data.data);
     } catch (err) {
+      console.error(err);
       alert('Failed to submit rating.');
     } finally {
       setRatingLoading(null);
@@ -174,8 +166,12 @@ const MyBookings = () => {
   // Initial load: If an email is already stored, search immediately.
   useEffect(() => {
     if (email) {
-      handleSearch();
+      const deferSearch = setTimeout(() => {
+        handleSearch();
+      }, 0);
+      return () => clearTimeout(deferSearch);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
