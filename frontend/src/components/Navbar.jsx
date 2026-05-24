@@ -43,11 +43,11 @@ const Navbar = () => {
           
           {/* Navigation Links */}
           <div className="flex items-center gap-2 sm:gap-6">
-            {/* Explore / Home Link */}
+            {/* Explore Link */}
             <Link 
-              to="/" 
+              to="/experts" 
               className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                location.pathname === '/' 
+                location.pathname === '/experts' 
                   ? 'text-blue-600 bg-blue-50 shadow-sm' 
                   : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
               }`}

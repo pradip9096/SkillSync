@@ -236,7 +236,15 @@ const ExpertDetail = () => {
         <div className="lg:col-span-4 sticky top-32">
           <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden animate-slide-up">
             <div className="relative">
-              <img src={expert.profileImage} alt={expert.name} className="w-full h-80 object-cover" />
+              <img 
+                src={expert.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(expert.name)}&background=e0e7ff&color=4f46e5&size=512`} 
+                alt={expert.name} 
+                className="w-full h-80 object-cover" 
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(expert.name)}&background=e0e7ff&color=4f46e5&size=512`;
+                }}
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
               <div className="absolute bottom-6 left-6 right-6">
                 <span className="inline-block px-3 py-1 text-xs font-black tracking-widest text-white uppercase bg-blue-600 rounded-lg mb-2">
@@ -256,7 +264,7 @@ const ExpertDetail = () => {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl">
                   <span className="text-sm font-bold text-blue-400 uppercase tracking-wider">Hourly Rate</span>
-                  <span className="font-black text-blue-700">${expert.hourlyRate}/hr</span>
+                  <span className="font-black text-blue-700">₹{expert.hourlyRate}/hr</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-2xl">
                   <span className="text-sm font-bold text-yellow-600 uppercase tracking-wider">Global Rating</span>

@@ -11,6 +11,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Home from './pages/Home';
 import ExpertListing from './pages/ExpertListing';
 import ExpertDetail from './pages/ExpertDetail';
 import MyBookings from './pages/MyBookings';
@@ -27,14 +28,17 @@ function App() {
   return (
     <Router>
       {/* Main container with a light gray background and minimum screen height */}
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Persistent Navigation Bar */}
         <Navbar />
         
         {/* Route Definitions */}
         <Routes>
-          {/* Home page: List of experts */}
-          <Route path="/" element={<ExpertListing />} />
+          {/* Landing page */}
+          <Route path="/" element={<Home />} />
+
+          {/* List of experts */}
+          <Route path="/experts" element={<ExpertListing />} />
           
           {/* Detailed view for a specific expert */}
           <Route path="/expert/:id" element={<ExpertDetail />} />
