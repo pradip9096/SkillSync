@@ -1,136 +1,170 @@
 Feature_Plan
 │
-├── 1. Feature Definition
+├── 1. Document Header & Identification
 │   │
-│   ├── Purpose: Defines the basic identity, scope, value, and context of the feature.
+│   ├── Purpose: Establishes document title and key metadata (Project, Author, Created, Status, Version).
 │   │
-│   ├── 1.1 Feature Name & Description
-│   │   ├── Purpose: High-level name and detailed description of what the feature is and its value.
+│   └── 1.1 Table of Contents
+│       ├── Purpose: Navigational indexes linking directly to sections.
+│       └── Status: MANDATORY | EXPLICIT
+│
+├── 2. Feature Overview
+│   │
+│   ├── Purpose: Sets the high-level business case, user story, problem statement, and solution.
+│   │
+│   ├── 2.1 Description
+│   │   ├── Purpose: Explains what the feature is and its value.
 │   │   └── Status: MANDATORY | EXPLICIT
 │   │
-│   ├── 1.2 User Story
-│   │   ├── Purpose: Describes the feature from the user's perspective (As a... I want to... So that...).
+│   ├── 2.2 User Story
+│   │   ├── Purpose: User story from the client or system perspective.
 │   │   └── Status: MANDATORY | EXPLICIT
 │   │
-│   ├── 1.3 Problem Statement
-│   │   ├── Purpose: Clarifies the core issue, limitation, or opportunity that motivated this feature.
+│   ├── 2.3 Problem Statement
+│   │   ├── Purpose: Detail the challenges, edge cases, and limitations resolved by the feature.
 │   │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
 │   │
-│   ├── 1.4 Solution Statement
-│   │   ├── Purpose: Describes the high-level technical or design approach taken to resolve the problem.
-│   │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
-│   │
-│   └── 1.5 Feature Metadata
-│       ├── Purpose: Captures key project metrics like Feature Type, Complexity, Affected Systems, and Dependencies.
+│   └── 2.4 Solution Statement
+│       ├── Purpose: Outlines the design pattern, modules, or layers used to build the solution.
 │       └── Status: MANDATORY | EXPLICIT + IMPLICIT
 │
-├── 2. Context & References
+├── 3. Feature Metadata
 │   │
-│   ├── Purpose: Connects the feature plan to the existing codebase, documentation, and architectural patterns.
+│   ├── Purpose: Captures technical statistics like feature type, complexity, priority, affected systems, and database impact.
 │   │
-│   ├── 2.1 Relevant Codebase Files
-│   │   ├── Purpose: Identifies existing source files that the developer must read/understand before implementing.
+│   └── 3.1 Dependencies
+│       ├── Purpose: Lists required runtime dependencies (e.g., packages, external APIs) and version requirements.
+│       └── Status: MANDATORY | EXPLICIT
+│
+├── 4. Context References
+│   │
+│   ├── Purpose: Defines files that must be read, modified, or created for implementing the feature.
+│   │
+│   ├── 4.1 Relevant Existing Files
+│   │   ├── Purpose: Catalog of files the developer must read/understand before implementing.
 │   │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
 │   │
-│   ├── 2.2 New Files to Create
-│   │   ├── Purpose: Lists files that will be added to the project (source, components, services, tests).
-│   │   └── Status: RECOMMENDED | IMPLICIT
+│   ├── 4.2 New Files Created
+│   │   ├── Purpose: List of new files added during implementation.
+│   │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
 │   │
-│   ├── 2.3 Relevant Documentation
-│   │   ├── Purpose: Provides links to official docs, specifications, or reference material required for implementation.
-│   │   └── Status: RECOMMENDED | EXPLICIT
+│   ├── 4.3 Files Modified to Integrate
+│   │   ├── Purpose: List of existing files modified to connect the new code.
+│   │   └── Status: CONDITIONALLY REQUIRED | IMPLICIT
 │   │
-│   └── 2.4 Patterns to Follow
-│       ├── Purpose: Highlights naming conventions, error handling, logging, and styling standards to mirror.
-│       └── Status: MANDATORY | IMPLICIT
+│   └── 4.4 Documentation References
+│       ├── Purpose: Links to external manuals, official guidelines, PRD sections, or wikis.
+│       └── Status: RECOMMENDED | EXPLICIT
 │
-├── 3. High-Level Implementation Strategy
+├── 5. Patterns Followed / Patterns to Follow
 │   │
-│   ├── Purpose: Breaks down the implementation journey into logical, step-by-step phases.
+│   ├── Purpose: Outlines design rules, file structures, and code standards to keep the implementation consistent.
 │   │
-│   ├── 3.1 Phase 1: Foundation
-│   │   ├── Purpose: Configures dependencies, base structures, schemas, configurations, and basic setup.
-│   │   └── Status: RECOMMENDED | IMPLICIT
-│   │
-│   ├── 3.2 Phase 2: Core Implementation
-│   │   ├── Purpose: Implements core business logic, components, service layer, and models.
-│   │   └── Status: RECOMMENDED | IMPLICIT
-│   │
-│   ├── 3.3 Phase 3: Integration
-│   │   ├── Purpose: Connects the newly implemented components with the existing routers, API layers, or handlers.
-│   │   └── Status: RECOMMENDED | IMPLICIT
-│   │
-│   └── 3.4 Phase 4: Testing & Validation
-│       ├── Purpose: Sets up early unit and integration tests to validate structural correctness before final delivery.
-│       └── Status: RECOMMENDED | IMPLICIT
-│
-├── 4. Step-by-Step Task Execution List
-│   │
-│   ├── Purpose: Provides atomic, sequential, and testable tasks for the developer or agent to execute top-to-bottom.
-│   │
-│   ├── 4.1 Task Action Guideline
-│   │   ├── Purpose: Outlines standard keywords (CREATE, UPDATE, ADD, REMOVE, REFACTOR, MIRROR) for clarity.
+│   ├── 5.1 Module System
+│   │   ├── Purpose: Explains how imports/exports are scoped (e.g., CommonJS for backend, ESM for frontend).
 │   │   └── Status: MANDATORY | IMPLICIT
 │   │
-│   └── 4.2 Atomic Tasks
-│       ├── Purpose: List of specific, step-by-step instructions. For each task, defines imports, patterns, gotchas, and specific validation commands.
-│       └── Status: MANDATORY | EXPLICIT + IMPLICIT
-│
-├── 5. Testing Strategy
+│   ├── 5.2 Naming Conventions
+│   │   ├── Purpose: Establishes conventions (e.g., camelCase for routes, PascalCase for components).
+│   │   └── Status: MANDATORY | IMPLICIT
 │   │
-│   ├── Purpose: Outlines the testing paradigms needed to ensure feature correctness and prevent regressions.
-│   │
-│   ├── 5.1 Unit Tests
-│   │   ├── Purpose: Details the scope, expectations, and mock strategies for testing individual modules or components.
-│   │   └── Status: RECOMMENDED | IMPLICIT
-│   │
-│   ├── 5.2 Integration Tests
-│   │   ├── Purpose: Details how the end-to-end data flow and cross-module interactions will be verified.
-│   │   └── Status: RECOMMENDED | IMPLICIT
-│   │
-│   └── 5.3 Edge Cases
-│       ├── Purpose: Focuses on race conditions, input validations, error limits, boundary conditions, or system failures.
+│   └── 5.3 Component/Coding Patterns
+│       ├── Purpose: Highlights recurring code blocks to copy (e.g., search debouncing, Mongoose pre-save, React useEffect, Socket room isolation).
 │       └── Status: RECOMMENDED | IMPLICIT
 │
-├── 6. Verification & Validation Commands
+├── 6. Architecture & Data Flow
 │   │
-│   ├── Purpose: Provides copy-pasteable, non-interactive shell commands to verify system health at different levels.
+│   ├── Purpose: Visualizes cross-component dependencies, sequence flows, or room lifecycles for complex modules.
 │   │
-│   ├── 6.1 Level 1: Syntax & Style
-│   │   ├── Purpose: Linters, formatters, and compilers (e.g., eslint, prettier, tsc) to ensure code meets code guidelines.
+│   └── Status: CONDITIONALLY REQUIRED | EXPLICIT + IMPLICIT
+│
+├── 7. Implementation Plan
+│   │
+│   ├── Purpose: Outlines the implementation sequence divided into clear development phases.
+│   │
+│   ├── 7.1 Phase 1 — Foundation
+│   │   ├── Purpose: Setting up database schemas, configurations, and core setup.
 │   │   └── Status: RECOMMENDED | IMPLICIT
 │   │
-│   ├── 6.2 Level 2: Unit Tests
-│   │   ├── Purpose: Specific commands to execute the unit test suites.
+│   ├── 7.2 Phase 2 — Core
+│   │   ├── Purpose: Implementation of core logic, routers, handlers, and visual components.
 │   │   └── Status: RECOMMENDED | IMPLICIT
 │   │
-│   ├── 6.3 Level 3: Integration Tests
-│   │   ├── Purpose: Specific commands to execute the integration or end-to-end test suites.
+│   ├── 7.3 Phase 3 — Integration
+│   │   ├── Purpose: Wiring endpoints to components, mounting routers, and nav link updates.
 │   │   └── Status: RECOMMENDED | IMPLICIT
 │   │
-│   ├── 6.4 Level 4: Manual Validation
-│   │   ├── Purpose: Step-by-step instructions for API client (e.g., curl/postman) checks, UI walks, or browser logs.
+│   ├── 7.4 Phase 4 — Testing & Hardening
+│   │   ├── Purpose: Unit testing, sanity checks, and edge case coverage.
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   └── 7.5 Step-by-Step Tasks
+│       ├── Purpose: Specific tasks labeled CREATE, UPDATE, ADD, REMOVE, REFACTOR, MIRROR.
+│       └── Status: CONDITIONALLY REQUIRED | EXPLICIT + IMPLICIT
+│
+├── 8. Testing Strategy
+│   │
+│   ├── Purpose: Defines the testing scopes required to prove feature correctness and zero regression.
+│   │
+│   ├── 8.1 Unit Tests
+│   │   ├── Purpose: Focuses on individual class, function, or controller tests.
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   ├── 8.2 Integration Tests
+│   │   ├── Purpose: Focuses on testing the full API flow or component interaction.
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   └── 8.3 Edge Cases
+│       ├── Purpose: Focuses on race conditions, incorrect input formats, or validation failures.
+│       └── Status: RECOMMENDED | IMPLICIT
+│
+├── 9. Validation Commands
+│   │
+│   ├── Purpose: Provides copy-pasteable, non-interactive validation checks for verification.
+│   │
+│   ├── 9.1 Level 1: Syntax & Style
+│   │   ├── Purpose: Runs linters and compilers (eslint, tsc).
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   ├── 9.2 Level 2: Unit Tests / Build Verification
+│   │   ├── Purpose: Runs unit test command or production bundle commands.
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   ├── 9.3 Level 3: Integration Tests
+│   │   ├── Purpose: Runs integration suite or checks manual test suite hooks.
+│   │   └── Status: RECOMMENDED | IMPLICIT
+│   │
+│   ├── 9.4 Level 4: Manual UI Validation
+│   │   ├── Purpose: Specific manual instructions (e.g., click sequence, network payloads).
 │   │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
 │   │
-│   └── 6.5 Level 5: Additional Validation
-│       ├── Purpose: MCP validation tools, security vulnerability scanners, or third-party audits.
+│   └── 9.5 Level 5: Production Preview / Additional Validation
+│       ├── Purpose: Runs local previews or audits (npm run preview, security checks).
 │       └── Status: OPTIONAL | IMPLICIT
 │
-└── 7. Quality Assurance & Handover
+└── 10. Quality Assurance & Decisions
     │
-    ├── Purpose: Ensures that all success metrics are verified, quality gates are met, and notes are captured before closing.
+    ├── Purpose: Gathers criteria, checklists, logs, and notes to verify feature completion.
     │
-    ├── 7.1 Acceptance Criteria
-    │   ├── Purpose: Measurable check list mapping directly to the initial feature requirements and user story.
+    ├── 10.1 Acceptance Criteria
+    │   ├── Purpose: Checkable list of criteria mapping back to user requirements.
     │   └── Status: MANDATORY | EXPLICIT
     │
-    ├── 7.2 Completion Checklist
-    │   ├── Purpose: Verifies that formatting, linting, tests, and reviews have been completed successfully.
+    ├── 10.2 Completion Checklist
+    │   ├── Purpose: Formal checklist verifying that the code meets delivery guidelines.
     │   └── Status: MANDATORY | EXPLICIT
     │
-    └── 7.3 Decision Log / Notes
-        ├── Purpose: Capture architectural decisions, discarded alternatives, trade-offs, and future improvements.
-        └── Status: CONDITIONALLY REQUIRED | EXPLICIT + IMPLICIT
+    ├── 10.3 Notes, Design Decisions & Trade-offs
+    │   ├── Purpose: Technical discussion of alternatives considered and trade-offs.
+    │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
+    │
+    ├── 10.4 Decision Log
+    │   ├── Purpose: Table tracking dates, choices, authors, and rationales for decisions.
+    │   └── Status: MANDATORY | EXPLICIT + IMPLICIT
+    │
+    └── 10.5 Known Limitations & Future Improvements
+        ├── Purpose: Documents future work, gaps, performance constraints, or follow-up milestones.
+        └── Status: MANDATORY | EXPLICIT + IMPLICIT
 
 Legend
 REQUIREMENT LEVELS
