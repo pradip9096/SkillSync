@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Expert Profile Image Fallback (Phase 2):**
+  - Updated `ExpertCard` and `ExpertDetail` components to treat default Mongoose/generic placeholder image URLs (like `placehold.co`) as missing, successfully triggering the premium initials-based personalized avatar fallback (`ui-avatars.com`) instead of loading generic gray "150 x 150" boxes.
+
 ### Added
 - **Registration Form Validation & Field Extensions (Phase 2):**
   - Refined Client registration flow to only require Email, Password, and Confirm Password (optional fields are hidden for client signup).
