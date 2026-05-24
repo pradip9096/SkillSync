@@ -18,6 +18,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import ExpertDashboard from './pages/ExpertDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -71,6 +72,13 @@ function App() {
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Expert dashboard page (protected, Expert only) */}
+            <Route path="/expert-dashboard" element={
+              <ProtectedRoute allowedRoles={['Expert']}>
+                <ExpertDashboard />
               </ProtectedRoute>
             } />
           </Routes>

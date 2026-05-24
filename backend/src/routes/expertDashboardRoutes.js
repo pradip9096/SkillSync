@@ -1,0 +1,37 @@
+/**
+ * @file expertDashboardRoutes.js
+ * @description Defines the endpoints for the Expert Portal. All routes are protected and restricted to the Expert role.
+ * 
+ * Purpose: Routing map for expert panel dashboards.
+ * Inputs: Express router.
+ * Outputs: Mounted routes.
+ * Side Effects: Connects API endpoints to expertDashboardController.
+ */
+
+const express = require('express');
+const router = express.Router();
+const {
+  getExpertBookings,
+  getExpertProfile,
+  updateExpertProfile,
+  blockSlot,
+  unblockSlot
+} = require('../controllers/expertDashboardController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
+
+// Secure all endpoints in this router to Expert role only
+router.use(protect);
+router.use(restrictTo('Expert'));
+
+// Sessions / bookings list
+router.get('/bookings', getExpertBookings);
+
+// Professional profile configurations
+router.get('/profile', getExpertProfile);
+router.put('/profile', updateExpertProfile);
+
+// Availability blocks
+router.post('/block-slot', blockSlot);
+router.post('/unblock-slot', unblockSlot);
+
+module.exports = router;

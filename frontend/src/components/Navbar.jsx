@@ -100,6 +100,20 @@ const Navbar = () => {
               </Link>
             )}
 
+            {/* Expert Portal Link */}
+            {user && user.role === 'Expert' && (
+              <Link 
+                to="/expert-dashboard" 
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  location.pathname === '/expert-dashboard' 
+                    ? 'text-purple-600 bg-purple-50 shadow-sm' 
+                    : 'text-gray-500 hover:text-purple-600 hover:bg-gray-50'
+                }`}
+              >
+                Expert Portal
+              </Link>
+            )}
+
             {/* Auth Controls */}
             {user ? (
               <div className="flex items-center gap-3 pl-4 border-l border-gray-100">

@@ -135,4 +135,11 @@ export const adminDeleteBooking = (id) => API.delete(`/admin/bookings/${id}`);
 export const adminCreateExpert = (expertData) => API.post('/admin/experts', expertData);
 export const adminDeleteExpert = (id) => API.delete(`/admin/experts/${id}`);
 
+// --- Expert Dashboard APIs ---
+export const fetchExpertDashboardBookings = () => API.get('/expert-dashboard/bookings');
+export const fetchExpertDashboardProfile = () => API.get('/expert-dashboard/profile');
+export const updateExpertDashboardProfile = (profileData) => API.put('/expert-dashboard/profile', profileData);
+export const expertBlockSlot = (bookingDate, slotTime) => API.post('/expert-dashboard/block-slot', { bookingDate, slotTime });
+export const expertUnblockSlot = (bookingDate, slotTime) => API.post('/expert-dashboard/unblock-slot', { bookingDate, slotTime });
+
 export default API;
