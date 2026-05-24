@@ -31,19 +31,11 @@ const registerUser = async (req, res) => {
   try {
     const { email, password, role, name, phone, category, experience, hourlyRate, description } = req.body;
 
-    // Validate email, password, name and phone are provided
-    if (!email || !password || !name || !phone) {
+    // Validate email and password are provided
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Please fill in all mandatory fields: email, password, full name, and mobile number'
-      });
-    }
-
-    // Phone format validation
-    if (!/^\+91[0-9]{10}$/.test(phone)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Phone number must start with +91 followed by 10 digits'
+        error: 'Please fill in all mandatory fields: email and password'
       });
     }
 
@@ -58,12 +50,20 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // For Experts, validate expert-specific fields
+    // For Experts, validate name, phone, and expert-specific fields
     if (normalizedRole === 'Expert') {
-      if (!category || !experience || !hourlyRate || !description) {
+      if (!name || !phone || !category || !experience || !hourlyRate || !description) {
         return res.status(400).json({
           success: false,
-          error: 'Please provide all expert profile fields: category, experience, hourly rate, and description'
+          error: 'Please provide all expert profile fields: name, phone, category, experience, hourly rate, and description'
+        });
+      }
+
+      // Phone format validation
+      if (!/^\+91[0-9]{10}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Phone number must start with +91 followed by 10 digits'
         });
       }
 
@@ -98,14 +98,17 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Create user in DB
-    const user = await User.create({
+    // Create user object safely
+    const userData = {
       email,
       password,
-      role: normalizedRole,
-      name,
-      phone
-    });
+      role: normalizedRole
+    };
+    if (name) userData.name = name;
+    if (phone) userData.phone = phone;
+
+    // Create user in DB
+    const user = await User.create(userData);
 
     if (user) {
       let expertProfile = null;

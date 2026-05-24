@@ -39,13 +39,8 @@ const Register = () => {
     setErrorMsg('');
 
     // Field validations
-    if (!email || !password || !confirmPassword || !name || !phone) {
-      setErrorMsg('Please fill in all mandatory fields: Name, Phone, Email, and Password.');
-      return;
-    }
-
-    if (!/^\+91[0-9]{10}$/.test(phone)) {
-      setErrorMsg('Phone number must start with +91 followed by 10 digits (e.g. +919876543210).');
+    if (!email || !password || !confirmPassword) {
+      setErrorMsg('Please fill in all mandatory fields: Email and Password.');
       return;
     }
 
@@ -60,8 +55,12 @@ const Register = () => {
     }
 
     if (role === 'Expert') {
-      if (!category || !experience || !hourlyRate || !description) {
-        setErrorMsg('Please fill in all expert profile fields.');
+      if (!name || !phone || !category || !experience || !hourlyRate || !description) {
+        setErrorMsg('Please fill in all expert professional fields (Name, Phone, Category, Experience, Hourly Rate, Bio).');
+        return;
+      }
+      if (!/^\+91[0-9]{10}$/.test(phone)) {
+        setErrorMsg('Phone number must start with +91 followed by 10 digits (e.g. +919876543210).');
         return;
       }
       if (isNaN(experience) || Number(experience) < 0) {
@@ -77,9 +76,9 @@ const Register = () => {
     try {
       setIsSubmitting(true);
       const extraFields = {
-        name,
-        phone,
         ...(role === 'Expert' && {
+          name,
+          phone,
           category,
           experience: Number(experience),
           hourlyRate: Number(hourlyRate),
@@ -126,48 +125,53 @@ const Register = () => {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Full Name Field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-1">
-                Full Name
-              </label>
-              <div className="relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+            {/* Full Name & Mobile Number Fields (Only shown for Expert signup) */}
+            {role === 'Expert' && (
+              <>
+                {/* Full Name Field */}
+                <div>
+                  <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-1">
+                    Full Name
+                  </label>
+                  <div className="relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="name"
+                      type="text"
+                      required
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
+                    />
+                  </div>
                 </div>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
-                />
-              </div>
-            </div>
 
-            {/* Mobile Number Field */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-1">
-                Mobile Number
-              </label>
-              <div className="relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
+                {/* Mobile Number Field */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-1">
+                    Mobile Number
+                  </label>
+                  <div className="relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="phone"
+                      type="tel"
+                      required
+                      placeholder="+919876543210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-500 font-medium">Must start with +91 followed by 10 digits</p>
                 </div>
-                <input
-                  id="phone"
-                  type="tel"
-                  required
-                  placeholder="+919876543210"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
-                />
-              </div>
-              <p className="mt-1 text-[11px] text-gray-500 font-medium">Must start with +91 followed by 10 digits</p>
-            </div>
+              </>
+            )}
 
             {/* Email Field */}
             <div>
