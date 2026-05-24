@@ -30,6 +30,14 @@ import { Star, Briefcase, Award } from 'lucide-react';
  * Side effects: None.
  */
 const ExpertCard = ({ expert, index }) => {
+  const isPlaceholder = !expert.profileImage || 
+    expert.profileImage.includes('placehold.co') || 
+    expert.profileImage.includes('placehold.it') || 
+    expert.profileImage.includes('placeholder');
+  
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(expert.name)}&background=e0e7ff&color=4f46e5&size=256`;
+  const imageSrc = isPlaceholder ? avatarUrl : expert.profileImage;
+
   return (
     <div 
       className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-500 border border-gray-100 hover:-translate-y-2 animate-slide-up"
@@ -40,12 +48,12 @@ const ExpertCard = ({ expert, index }) => {
         {/* Profile Image & Rating Badge */}
         <div className="relative h-56 bg-gray-200 overflow-hidden">
           <img 
-            src={expert.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(expert.name)}&background=e0e7ff&color=4f46e5&size=256`} 
+            src={imageSrc} 
             alt={expert.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(expert.name)}&background=e0e7ff&color=4f46e5&size=256`;
+              e.target.src = avatarUrl;
             }}
           />
           {/* Rating overlay badge */}
