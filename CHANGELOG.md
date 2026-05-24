@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Registration Form Validation & Field Extensions (Phase 2):**
+  - Expanded registration endpoint (`POST /auth/register`) and frontend `Register` page to collect and validate Full Name and Indian (+91) Mobile Number for all users.
+  - Dynamically prompt for expert professional profile details (category, experience, hourly rate, and description bio) during expert registration, and programmatically initialize their `Expert` schema profile document in the database.
+  - Configured frontend Socket.io client to utilize both HTTP long-polling and WebSockets as an upgrade path to avoid raw WebSocket connection handshake failures in strict proxy/CORS environments.
 - **Expert Portal Dashboard (Phase 2):**
   - Added JWT-protected backend endpoints under `/expert-dashboard` restricted to `Expert` role to get sessions, fetch/update profile biography, and block/unblock slots.
   - Implemented the frontend `ExpertDashboard` page with tabbed panels: Sessions Directory, Slot Availability, and Edit Profile Bio.
