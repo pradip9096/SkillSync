@@ -37,7 +37,8 @@ const ExpertDetail = () => {
     // Initialize with current date in IST format
     const now = new Date();
     const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    return istNow.toISOString().split('T')[0];
+    //  The toISOString() method converts a Date object into a standardized string format (ISO 8601).
+    return istNow.toISOString().split('T')[0]; 
   });
   const [selectedSlot, setSelectedSlot] = useState('');
   const [formData, setFormData] = useState({
@@ -65,6 +66,8 @@ const ExpertDetail = () => {
     if (selectedDate !== todayStr) return false;
     
     const [sHour, sMinute] = slotTime.split(':').map(Number);
+    // Crucial Note: Because we manually added the 5.5-hour offset to istNow,
+    // calling .getUTCHours() actually gives us the hour in India.
     const nowHour = istNow.getUTCHours();
     const nowMinute = istNow.getUTCMinutes();
     
