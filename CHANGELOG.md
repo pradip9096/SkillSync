@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Secure User Profile Management (Phase 2):**
+  - Added backend endpoints `GET /auth/profile` and `PUT /auth/profile` to retrieve and update user data (display name, phone format, and optional password).
+  - Created a frontend `Profile` page matching the modern glassmorphism design system.
+  - Configured navbar layout to display the Profile link for authenticated users.
+- **Admin Panel Dashboard (Phase 2):**
+  - Added administrative backend controller `adminController.js` and router `adminRoutes.js` at `/admin`.
+  - Created endpoints to view all users, view all bookings, force update booking status (override time-locks), delete bookings with real-time slot release, and add/delete expert accounts.
+  - Implemented a frontend `AdminDashboard` page with tab layouts for Users list, Bookings manager, and Experts configuration.
+  - Configured navbar navigation to display the Admin Panel link only to verified system administrators.
 - **JWT Authentication & RBAC (Phase 2):**
   - Added backend `User` schema with automated password hashing via `bcryptjs` and credential verification.
   - Implemented JWT token generation and validation middleware (`authMiddleware`).
