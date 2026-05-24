@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `ExpertCard` and `ExpertDetail` components to treat default Mongoose/generic placeholder image URLs (like `placehold.co`) as missing, successfully triggering the premium initials-based personalized avatar fallback (`ui-avatars.com`) instead of loading generic gray "150 x 150" boxes.
 
 ### Added
+- **Professional Expert Portrait Assets (Phase 2):**
+  - Generated and included 6 high-resolution professional portrait photos for the seeded experts inside the frontend public asset folder (`frontend/public/experts/`).
+  - Updated `expertSeeder.js` to seed the database with paths pointing to these premium portrait image assets, replacing all default placeholder gray boxes on the directory grid and expert profile pages.
 - **Registration Form Validation & Field Extensions (Phase 2):**
   - Refined Client registration flow to only require Email, Password, and Confirm Password (optional fields are hidden for client signup).
   - Expanded registration endpoint (`POST /auth/register`) and frontend `Register` page to dynamically collect and validate Full Name and Indian (+91) Mobile Number conditionally for the Expert role.
