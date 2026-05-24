@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Registration Form Validation & Field Extensions (Phase 2):**
-  - Expanded registration endpoint (`POST /auth/register`) and frontend `Register` page to collect and validate Full Name and Indian (+91) Mobile Number for all users.
+  - Refined Client registration flow to only require Email, Password, and Confirm Password (optional fields are hidden for client signup).
+  - Expanded registration endpoint (`POST /auth/register`) and frontend `Register` page to dynamically collect and validate Full Name and Indian (+91) Mobile Number conditionally for the Expert role.
   - Dynamically prompt for expert professional profile details (category, experience, hourly rate, and description bio) during expert registration, and programmatically initialize their `Expert` schema profile document in the database.
   - Configured frontend Socket.io client to utilize both HTTP long-polling and WebSockets as an upgrade path to avoid raw WebSocket connection handshake failures in strict proxy/CORS environments.
 - **Expert Portal Dashboard (Phase 2):**
