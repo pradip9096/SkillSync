@@ -21,8 +21,8 @@ import { io } from 'socket.io-client';
  * @type {import('socket.io-client').Socket}
  */
 const socket = io('http://localhost:5000', {
-  transports: ['websocket'],
-  upgrade: false
+  transports: ['polling', 'websocket'],
+  upgrade: true
 });
 
 export default socket;

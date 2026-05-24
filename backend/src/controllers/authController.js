@@ -6,6 +6,7 @@
  */
 
 const User = require('../models/User');
+const Expert = require('../models/Expert');
 const jwt = require('jsonwebtoken');
 
 /**
@@ -28,13 +29,21 @@ const generateToken = (id) => {
  */
 const registerUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, name, phone, category, experience, hourlyRate, description } = req.body;
 
-    // Validate email and password are provided
-    if (!email || !password) {
+    // Validate email, password, name and phone are provided
+    if (!email || !password || !name || !phone) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide an email and password'
+        error: 'Please fill in all mandatory fields: email, password, full name, and mobile number'
+      });
+    }
+
+    // Phone format validation
+    if (!/^\+91[0-9]{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number must start with +91 followed by 10 digits'
       });
     }
 
@@ -47,6 +56,37 @@ const registerUser = async (req, res) => {
         success: false,
         error: 'Registration of Administrator accounts is forbidden.'
       });
+    }
+
+    // For Experts, validate expert-specific fields
+    if (normalizedRole === 'Expert') {
+      if (!category || !experience || !hourlyRate || !description) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please provide all expert profile fields: category, experience, hourly rate, and description'
+        });
+      }
+
+      if (!['Technology', 'Finance', 'Health', 'Marketing', 'Design', 'Business'].includes(category)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please select a valid category'
+        });
+      }
+
+      if (isNaN(experience) || Number(experience) < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Experience must be a valid positive number'
+        });
+      }
+
+      if (isNaN(hourlyRate) || Number(hourlyRate) < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Hourly rate must be a valid positive number'
+        });
+      }
     }
 
     // Check if user already exists in DB
@@ -62,18 +102,36 @@ const registerUser = async (req, res) => {
     const user = await User.create({
       email,
       password,
-      role: normalizedRole
+      role: normalizedRole,
+      name,
+      phone
     });
 
     if (user) {
+      let expertProfile = null;
+      if (normalizedRole === 'Expert') {
+        // Create corresponding Expert profile
+        expertProfile = await Expert.create({
+          name,
+          category,
+          experience: Number(experience),
+          description: description || '',
+          hourlyRate: Number(hourlyRate),
+          user: user._id
+        });
+      }
+
       res.status(201).json({
         success: true,
         token: generateToken(user._id),
         user: {
           _id: user._id,
           email: user.email,
-          role: user.role
-        }
+          role: user.role,
+          name: user.name,
+          phone: user.phone
+        },
+        expert: expertProfile
       });
     } else {
       res.status(400).json({
