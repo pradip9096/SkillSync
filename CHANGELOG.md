@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Expert Portal Dashboard (Phase 2):**
+  - Added JWT-protected backend endpoints under `/expert-dashboard` restricted to `Expert` role to get sessions, fetch/update profile biography, and block/unblock slots.
+  - Implemented the frontend `ExpertDashboard` page with tabbed panels: Sessions Directory, Slot Availability, and Edit Profile Bio.
+  - Configured navbar layout to display the Expert Portal navigation link only for authenticated experts.
+- **Availability Slot Blocking (Phase 2):**
+  - Leveraged the existing Atomic Booking Engine by treating blocked slots as a transactional booking where the client email matches the expert's email and notes indicate `"Blocked by Expert"`.
+  - Implemented real-time Socket.io broadcasting (`slot_booked` / `slot_released`) on block/unblock events, ensuring client browsers reflect changes instantly.
 - **Secure User Profile Management (Phase 2):**
   - Added backend endpoints `GET /auth/profile` and `PUT /auth/profile` to retrieve and update user data (display name, phone format, and optional password).
   - Created a frontend `Profile` page matching the modern glassmorphism design system.

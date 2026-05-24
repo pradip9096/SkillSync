@@ -12,6 +12,9 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **JWT Authentication & Role-Based Access Control (RBAC):** Secure sign-up/login flows, state persistence via `AuthContext`, and authorization checks with route guards for `Client`, `Expert`, and `Admin` roles.
 - **Secure User Profile Management:** Private dashboard allowing clients and experts to update their display names, Indian formatted (+91) phone numbers, and credentials.
 - **Admin Dashboard Console:** Centralized console for administrators to view register lists, override booking statuses, cancel/delete bookings with real-time slot release, and add/delete expert accounts.
+- **Expert Portal Dashboard:** Specialized dashboard for registered experts to view client appointments, update profile info (experience, hourly rate, and biography), and block/unblock time slots.
+- **Availability Slot Blocking:** Dynamic grid allowing experts to block/unblock slots in real-time, instantly broadcasting availability status to all connected client browsers.
+
 
 ## 🛠️ Tech Stack
 - **Frontend:** React + Vite
@@ -25,10 +28,12 @@ This is a two-package JavaScript application:
 - `backend/`: Node.js, Express, MongoDB, and Socket.io API.
   - `src/controllers/authController.js` - Registration and login handlers.
   - `src/controllers/adminController.js` - System-wide dashboard action handlers.
+  - `src/controllers/expertDashboardController.js` - Expert portal and slot blocking handlers.
   - `src/middleware/authMiddleware.js` - JWT authentication verification and role checks.
   - `src/models/User.js` - Mongoose User schema with password hashing.
   - `src/routes/authRoutes.js` - Auth and profile routes mounting.
   - `src/routes/adminRoutes.js` - Admin dashboard routing endpoints.
+  - `src/routes/expertDashboardRoutes.js` - Expert dashboard routing endpoints.
   - `src/seeds/userSeeder.js` - Admin bootstrapping utility.
 - `frontend/`: React + Vite client.
   - `src/context/AuthContext.jsx` - Global authentication context state.
@@ -36,6 +41,7 @@ This is a two-package JavaScript application:
   - `src/pages/Login.jsx` & `Register.jsx` - Credentials-based screens.
   - `src/pages/Profile.jsx` - User account settings update screen.
   - `src/pages/AdminDashboard.jsx` - System administration monitoring tab console.
+  - `src/pages/ExpertDashboard.jsx` - Expert session management, profile editor, and interactive slot blocking grid.
 
 ## 📖 Documentation
 Strategic planning, specifications, and architecture references are available in the `docs/` folder:
