@@ -17,16 +17,17 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] Basic Project Skeleton (Backend/Frontend)
 - [x] Real-Time Socket.io Infrastructure
 - [x] Atomic Database Locking (MongoDB)
-- [ ] Home Page & Core UI Foundations
-- [ ] India-Specific Localization (IST, INR, +91 formats)
-- [ ] Image Placeholders
+- [x] Home Page & Core UI Foundations
+- [x] India-Specific Localization (IST, INR, +91 formats)
+- [x] Image Placeholders
 
 ### Phase 2: Security & Platform Management
 *Goal: Secure the platform, segregate user access, and prepare for multi-tenant usage.*
-- [ ] JWT Based Authentication
-- [ ] Role-Based Access Control (RBAC: Client, Expert, Admin)
-- [ ] Admin Dashboard (System-wide monitoring & management)
-- [ ] Secure User Profile Management
+- [x] JWT Based Authentication
+- [x] Role-Based Access Control (RBAC: Client, Expert, Admin)
+- [x] Admin Dashboard (System-wide monitoring & management)
+- [x] Secure User Profile Management
+- [x] Expert Portal Dashboard & Availability Slot Blocking
 
 ### Phase 3: Engagement & Trust
 *Goal: Build trust in the ecosystem and improve the user experience.*
