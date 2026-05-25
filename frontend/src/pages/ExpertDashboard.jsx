@@ -35,6 +35,20 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
+const formatTime12H = (time24) => {
+  if (!time24) return '';
+  const parts = time24.split(':');
+  if (parts.length < 2) return time24;
+  const hour24 = parseInt(parts[0], 10);
+  const minute = parts[1];
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  let hour12 = hour24 % 12;
+  if (hour12 === 0) hour12 = 12;
+  const hourStr = hour12.toString().padStart(2, '0');
+  return `${hourStr}:${minute} ${ampm}`;
+};
+
 const ExpertDashboard = () => {
   // Navigation tabs: 'sessions', 'availability', 'profile'
   const [activeTab, setActiveTab] = useState('sessions');
@@ -194,7 +208,7 @@ const ExpertDashboard = () => {
         if (matchedSlot.notes === 'Blocked by Expert') {
           // It is currently blocked, click to unblock it
           await expertUnblockSlot(selectedDate, slotTime);
-          setSuccessMsg(`Slot ${slotTime} is now open for bookings.`);
+          setSuccessMsg(`Slot ${formatTime12H(slotTime)} is now open for bookings.`);
         } else {
           // Already booked by a client, cannot toggle
           setErrorMsg('Cannot toggle slot booked by a client.');
@@ -202,7 +216,7 @@ const ExpertDashboard = () => {
       } else {
         // Slot is open, click to block it
         await expertBlockSlot(selectedDate, slotTime);
-        setSuccessMsg(`Slot ${slotTime} is now blocked.`);
+        setSuccessMsg(`Slot ${formatTime12H(slotTime)} is now blocked.`);
       }
       // Reload slots list
       await loadBookedSlots();
@@ -402,7 +416,7 @@ const ExpertDashboard = () => {
                         <div className="text-gray-600 font-bold">{getISTFormattedDate(b.bookingDate)}</div>
                         <div className="text-xs text-gray-500 font-black flex items-center gap-1 mt-1">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          {b.slotTime}
+                          {formatTime12H(b.slotTime)}
                         </div>
                       </td>
                       <td className="px-6 py-4 max-w-xs truncate text-gray-500 text-xs">
@@ -524,7 +538,7 @@ const ExpertDashboard = () => {
                           !isBookedByClient ? 'cursor-pointer active:scale-95' : ''
                         } ${btnStyle}`}
                       >
-                        <span className="text-base font-black tracking-tight mb-1">{slot}</span>
+                        <span className="text-base font-black tracking-tight mb-1">{formatTime12H(slot)}</span>
                         <span className="text-[10px] font-bold tracking-tight uppercase">{label}</span>
                       </button>
                     );

@@ -79,7 +79,8 @@ const AdminDashboard = () => {
       
       if (activeTab === 'users') {
         const { data } = await adminFetchUsers();
-        setUsers(data.data);
+        const filteredUsers = (data.data || []).filter(u => u.role !== 'Admin');
+        setUsers(filteredUsers);
       } else if (activeTab === 'bookings') {
         const { data } = await adminFetchBookings();
         setBookings(data.data);
@@ -191,8 +192,9 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (!/^\+91[0-9]{10}$/.test(newExpertPhone.replace(/\s+/g, ''))) {
-      setModalError('Phone number must start with +91 followed by 10 digits.');
+    const cleanedPhone = newExpertPhone.replace(/\D/g, '');
+    if (!/^[0-9]{10}$/.test(cleanedPhone)) {
+      setModalError('Phone number must be a valid 10-digit mobile number.');
       setModalSubmitting(false);
       return;
     }
@@ -202,7 +204,7 @@ const AdminDashboard = () => {
         email: newExpertEmail,
         password: newExpertPassword,
         name: newExpertName,
-        phone: newExpertPhone.replace(/\s+/g, ''),
+        phone: '+91' + cleanedPhone,
         category: newExpertCategory,
         experience: Number(newExpertExperience),
         hourlyRate: Number(newExpertHourlyRate),
@@ -633,9 +635,12 @@ const AdminDashboard = () => {
                     <input
                       type="text"
                       required
-                      placeholder="+919876543210"
+                      placeholder="9876543210"
                       value={newExpertPhone}
-                      onChange={(e) => setNewExpertPhone(e.target.value)}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        setNewExpertPhone(val.slice(0, 10));
+                      }}
                       className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
                     />
                   </div>

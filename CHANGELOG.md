@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+### Added
+- **Simplified Phone Input UX:**
+  - Refactored frontend phone inputs (`ExpertDetail.jsx`, `Register.jsx`, `Profile.jsx`, `AdminDashboard.jsx`) to accept a standard 10-digit mobile number, removing the need for users to type or see the `+91` country code.
+  - Prepend `+91` country code transparently on API submit to satisfy Mongoose schema validations.
+  - Automatically strip `+91` prefix from loaded user profiles to display clean 10-digit numbers in forms.
+- **12-Hour Format Conversion on Expert Dashboard:**
+  - Added a centralized `formatTime12H` helper in `ExpertDashboard.jsx` to display time slots in 12-hour AM/PM format (e.g. `09:00 AM`, `02:00 PM`).
+  - Formatted dates/slots inside the client sessions table list and the calendar block/unblock grid on the Expert Dashboard page.
+  - Updated toggle success status alerts to show standard 12-hour values.
 - **Expert Profile Image Fallback (Phase 2):**
   - Updated `ExpertCard` and `ExpertDetail` components to treat default Mongoose/generic placeholder image URLs (like `placehold.co`) as missing, successfully triggering the premium initials-based personalized avatar fallback (`ui-avatars.com`) instead of loading generic gray "150 x 150" boxes.
 

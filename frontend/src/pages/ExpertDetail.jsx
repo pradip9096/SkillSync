@@ -47,7 +47,7 @@ const ExpertDetail = () => {
   const [formData, setFormData] = useState({
     userName: '',
     userEmail: '',
-    userPhone: '+91 ',
+    userPhone: '',
     notes: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,14 +57,12 @@ const ExpertDetail = () => {
   useEffect(() => {
     if (user) {
       const formatPhoneForInput = (phone) => {
-        if (!phone) return '+91 ';
-        let val = phone.replace(/\s/g, '');
-        if (!val.startsWith('+91')) val = '+91' + val.replace(/^\+?9?1?/, '');
-        let displayVal = val.slice(0, 13);
-        if (displayVal.length > 3) {
-          displayVal = displayVal.slice(0, 3) + ' ' + displayVal.slice(3);
+        if (!phone) return '';
+        let val = phone.replace(/\s|-/g, '');
+        if (val.startsWith('+91')) {
+          val = val.slice(3);
         }
-        return displayVal;
+        return val.slice(0, 10);
       };
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -72,7 +70,7 @@ const ExpertDetail = () => {
         ...prev,
         userName: prev.userName || user.name || '',
         userEmail: prev.userEmail || user.email || '',
-        userPhone: (prev.userPhone && prev.userPhone !== '+91 ') ? prev.userPhone : formatPhoneForInput(user.phone)
+        userPhone: prev.userPhone || formatPhoneForInput(user.phone)
       }));
     }
   }, [user]);
@@ -194,8 +192,11 @@ const ExpertDetail = () => {
 
     try {
       setIsSubmitting(true);
-      // Construct payload and strip formatting from phone number
-      const phoneClean = formData.userPhone.replace(/\s/g, '');
+      // Construct payload, strip any non-digits, and prepend +91 prefix
+      let phoneClean = formData.userPhone.replace(/\D/g, '');
+      if (phoneClean && !phoneClean.startsWith('+91')) {
+        phoneClean = '+91' + phoneClean;
+      }
       await createBooking({
         expert: id,
         bookingDate: selectedDate,
@@ -470,20 +471,13 @@ const ExpertDetail = () => {
                       name="userPhone"
                       required
                       type="tel" 
-                      placeholder="+91 XXXXXXXXXX"
-                      pattern="\+91\s[0-9]{10}"
-                      title="Please enter a 10-digit number after the +91 prefix"
+                      placeholder="9876543210"
+                      pattern="[0-9]{10}"
+                      title="Please enter a 10-digit mobile number"
                       value={formData.userPhone}
                       onChange={(e) => {
-                        // Custom formatter for the Indian phone number input
-                        let val = e.target.value.replace(/\s/g, ''); 
-                        if (!val.startsWith('+91')) val = '+91' + val.replace(/^\+?9?1?/, '');
-                        
-                        let displayVal = val.slice(0, 13);
-                        if (displayVal.length > 3) {
-                           displayVal = displayVal.slice(0, 3) + ' ' + displayVal.slice(3);
-                        }
-                        setFormData({...formData, userPhone: displayVal});
+                        let val = e.target.value.replace(/\D/g, ''); 
+                        setFormData({...formData, userPhone: val.slice(0, 10)});
                       }}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
                     />

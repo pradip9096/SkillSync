@@ -40,7 +40,11 @@ const Profile = () => {
           setEmail(data.user.email || '');
           setRole(data.user.role || '');
           setName(data.user.name || '');
-          setPhone(data.user.phone || '');
+          let displayPhone = data.user.phone || '';
+          if (displayPhone.startsWith('+91')) {
+            displayPhone = displayPhone.slice(3);
+          }
+          setPhone(displayPhone);
         }
       } catch (err) {
         console.error(err);
@@ -52,17 +56,10 @@ const Profile = () => {
     loadProfile();
   }, []);
 
-  // Format phone number to strictly match +91 XXXXXXXXXX format
+  // Handle 10-digit phone number inputs
   const handlePhoneChange = (e) => {
-    let val = e.target.value;
-    
-    // Automatically pre-fill +91 if user starts typing a number and it's missing
-    if (val && !val.startsWith('+91') && /^\d/.test(val)) {
-      val = '+91' + val;
-    }
-    
-    // Clean up input by removing multiple non-digit spaces or keeping strict characters
-    setPhone(val);
+    let val = e.target.value.replace(/\D/g, ''); // keep only digits
+    setPhone(val.slice(0, 10));
   };
 
   const handleUpdate = async (e) => {
@@ -71,13 +68,14 @@ const Profile = () => {
     setSuccessMsg('');
 
     // Validations
+    let finalPhone = '';
     if (phone) {
-      // Remove spaces if any for verification
-      const cleanedPhone = phone.replace(/\s+/g, '');
-      if (!/^\+91[0-9]{10}$/.test(cleanedPhone)) {
-        setErrorMsg('Phone number must match the Indian standard format: +91 followed by 10 digits.');
+      const cleanedPhone = phone.replace(/\D/g, '');
+      if (!/^[0-9]{10}$/.test(cleanedPhone)) {
+        setErrorMsg('Phone number must be a valid 10-digit mobile number.');
         return;
       }
+      finalPhone = '+91' + cleanedPhone;
     }
 
     if (password) {
@@ -93,7 +91,7 @@ const Profile = () => {
 
     try {
       setIsSaving(true);
-      const updateData = { name, phone: phone.replace(/\s+/g, '') };
+      const updateData = { name, phone: finalPhone };
       if (password) {
         updateData.password = password;
       }
@@ -268,13 +266,13 @@ const Profile = () => {
                     <input
                       id="phone"
                       type="text"
-                      placeholder="+91 XXXXXXXXXX"
+                      placeholder="9876543210"
                       value={phone}
                       onChange={handlePhoneChange}
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-gray-400 font-medium">Must follow +91 prefix format.</p>
+                  <p className="mt-1 text-[11px] text-gray-400 font-medium">Must be a 10-digit mobile number.</p>
                 </div>
               </div>
             </div>

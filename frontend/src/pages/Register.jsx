@@ -59,8 +59,9 @@ const Register = () => {
         setErrorMsg('Please fill in all expert professional fields (Name, Phone, Category, Experience, Hourly Rate, Bio).');
         return;
       }
-      if (!/^\+91[0-9]{10}$/.test(phone)) {
-        setErrorMsg('Phone number must start with +91 followed by 10 digits (e.g. +919876543210).');
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (!/^[0-9]{10}$/.test(cleanPhone)) {
+        setErrorMsg('Phone number must be a valid 10-digit mobile number.');
         return;
       }
       if (isNaN(experience) || Number(experience) < 0) {
@@ -78,7 +79,7 @@ const Register = () => {
       const extraFields = {
         ...(role === 'Expert' && {
           name,
-          phone,
+          phone: '+91' + phone.replace(/\D/g, ''),
           category,
           experience: Number(experience),
           hourlyRate: Number(hourlyRate),
@@ -162,13 +163,16 @@ const Register = () => {
                       id="phone"
                       type="tel"
                       required
-                      placeholder="+919876543210"
+                      placeholder="9876543210"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        setPhone(val.slice(0, 10));
+                      }}
                       className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-gray-500 font-medium">Must start with +91 followed by 10 digits</p>
+                  <p className="mt-1 text-[11px] text-gray-500 font-medium">Must be a 10-digit mobile number</p>
                 </div>
               </>
             )}
