@@ -16,7 +16,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchExpertById, fetchBookedSlots, createBooking } from '../services/api';
 import socket from '../services/socket';
 import { useAuth } from '../context/AuthContext';
-import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle } from 'lucide-react';
 
 /**
  * ExpertDetail Page Component.
@@ -53,6 +53,8 @@ const ExpertDetail = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
 
   // Pre-fill form from user details
   useEffect(() => {
@@ -329,6 +331,28 @@ const ExpertDetail = () => {
         {/* Right Column: Slot Selection & Booking Form */}
         <div className="lg:col-span-8 space-y-8 animate-slide-up delay-100">
           
+          {isOwnProfile && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-2xl shadow-sm animate-fade-in">
+              <div className="flex gap-3">
+                <AlertCircle className="w-6 h-6 text-yellow-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-black text-yellow-800">You are viewing your own expert profile.</h3>
+                  <p className="text-yellow-700 font-semibold mt-1">
+                    You cannot book sessions with yourself. To manage your availability, please visit your{' '}
+                    <button 
+                      type="button"
+                      onClick={() => navigate('/expert-dashboard')} 
+                      className="underline font-black hover:text-yellow-900 transition-colors"
+                    >
+                      Expert Dashboard
+                    </button>
+                    .
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section: Date & Slot Selection */}
           <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10">
             <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
@@ -354,8 +378,9 @@ const ExpertDetail = () => {
                       return istNow.toISOString().split('T')[0];
                     })()}
                     value={selectedDate}
+                    disabled={isOwnProfile}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -367,7 +392,7 @@ const ExpertDetail = () => {
                 {timeSlots.map((slot) => {
                   const isBooked = bookedSlots.includes(slot.value);
                   const isPassed = isSlotInPast(slot.value);
-                  const isDisabled = isBooked || isPassed;
+                  const isDisabled = isBooked || isPassed || isOwnProfile;
 
                   return (
                     <button
@@ -440,8 +465,9 @@ const ExpertDetail = () => {
                       type="text" 
                       placeholder="Enter your name"
                       value={formData.userName}
+                      disabled={isOwnProfile}
                       onChange={(e) => setFormData({...formData, userName: e.target.value})}
-                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -456,8 +482,9 @@ const ExpertDetail = () => {
                       type="email" 
                       placeholder="name@example.com"
                       value={formData.userEmail}
+                      disabled={isOwnProfile}
                       onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
-                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -477,11 +504,12 @@ const ExpertDetail = () => {
                       pattern="[0-9]{10}"
                       title="Please enter a 10-digit mobile number"
                       value={formData.userPhone}
+                      disabled={isOwnProfile}
                       onChange={(e) => {
                         let val = e.target.value.replace(/\D/g, ''); 
                         setFormData({...formData, userPhone: val.slice(0, 10)});
                       }}
-                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -495,8 +523,9 @@ const ExpertDetail = () => {
                       type="text" 
                       placeholder="Briefly describe your goals..."
                       value={formData.notes}
+                      disabled={isOwnProfile}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all"
+                      className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -505,11 +534,11 @@ const ExpertDetail = () => {
               <div className="pt-6">
                 {/* Submission Button */}
                 <button 
-                  disabled={isSubmitting || !selectedSlot}
+                  disabled={isSubmitting || !selectedSlot || isOwnProfile}
                   type="submit"
                   className={`
                     w-full py-6 rounded-[2rem] font-black text-xl tracking-tight transition-all duration-500
-                    ${isSubmitting || !selectedSlot
+                    ${isSubmitting || !selectedSlot || isOwnProfile
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95'
                     }
@@ -519,6 +548,8 @@ const ExpertDetail = () => {
                     <span className="flex items-center justify-center gap-3">
                       <Loader2 className="w-6 h-6 animate-spin" /> Finalizing Booking...
                     </span>
+                  ) : isOwnProfile ? (
+                    'Self-Booking Disabled'
                   ) : !selectedSlot ? (
                     'Select a Slot Above'
                   ) : (

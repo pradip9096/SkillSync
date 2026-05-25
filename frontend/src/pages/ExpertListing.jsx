@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import { fetchExperts } from '../services/api';
 import ExpertCard from '../components/ExpertCard';
+import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Loader2, AlertCircle } from 'lucide-react';
 
 /**
@@ -22,6 +23,7 @@ import { Search, Filter, Loader2, AlertCircle } from 'lucide-react';
  * Side effects: Triggers API calls to fetch experts.
  */
 const ExpertListing = () => {
+  const { user } = useAuth();
   // State for storing the list of experts
   const [experts, setExperts] = useState([]);
   // State for managing loading and error states
@@ -71,6 +73,11 @@ const ExpertListing = () => {
     // Cleanup function to clear the timeout if the effect is re-triggered
     return () => clearTimeout(delayDebounceFn);
   }, [search, category]);
+
+  // Filter out the expert's own profile card if logged in
+  const displayedExperts = experts.filter(
+    (exp) => !user || (exp.user !== user._id && exp.user?._id !== user._id)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8">
@@ -132,10 +139,10 @@ const ExpertListing = () => {
             <AlertCircle className="w-8 h-8 text-red-500" />
             <p className="font-semibold text-lg">{error}</p>
           </div>
-        ) : experts.length > 0 ? (
+        ) : displayedExperts.length > 0 ? (
           // Grid of Expert Cards
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {experts.map((expert, index) => (
+            {displayedExperts.map((expert, index) => (
               <ExpertCard key={expert._id} expert={expert} index={index} />
             ))}
           </div>

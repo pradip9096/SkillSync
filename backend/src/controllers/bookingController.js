@@ -6,6 +6,7 @@
  */
 
 const Booking = require('../models/Booking');
+const Expert = require('../models/Expert');
 
 /**
  * Purpose: Create a new booking after checking for existing conflicts.
@@ -22,7 +23,7 @@ const createBooking = async (req, res) => {
     let userRef = null;
     let authUser = req.user;
 
-    if (!authUser && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    if (!authUser && req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       try {
         const token = req.headers.authorization.split(' ')[1];
         const jwt = require('jsonwebtoken');
@@ -51,6 +52,30 @@ const createBooking = async (req, res) => {
       }
       if (profileUpdated) {
         await authUser.save();
+      }
+    }
+
+    // Block expert from booking their own slot
+    const expertProfile = await Expert.findById(expert).populate('user');
+    if (!expertProfile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Expert profile not found.'
+      });
+    }
+
+    if (expertProfile.user) {
+      const expertUserId = expertProfile.user._id.toString();
+      const expertEmail = expertProfile.user.email;
+
+      if (
+        (authUser && expertUserId === authUser._id.toString()) ||
+        (userEmail && userEmail.toLowerCase().trim() === expertEmail.toLowerCase().trim())
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: 'You cannot book a session with yourself.'
+        });
       }
     }
 
