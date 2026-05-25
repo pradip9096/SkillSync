@@ -49,6 +49,33 @@ const formatTime12H = (time24) => {
   return `${hourStr}:${minute} ${ampm}`;
 };
 
+// Helper: check if booking date/time has passed in IST timezone (UTC+5:30)
+const isSessionPast = (date, time) => {
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false };
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const parts = formatter.formatToParts(new Date());
+  
+  const now = {};
+  parts.forEach(p => { if (p.type !== 'literal') now[p.type] = parseInt(p.value); });
+  
+  const [sYear, sMonth, sDay] = date.split('-').map(Number);
+  const [sHour, sMinute] = time.split(':').map(Number);
+  
+  if (now.year > sYear) return true;
+  if (now.year < sYear) return false;
+  
+  if (now.month > sMonth) return true;
+  if (now.month < sMonth) return false;
+  
+  if (now.day > sDay) return true;
+  if (now.day < sDay) return false;
+  
+  if (now.hour > sHour) return true;
+  if (now.hour < sHour) return false;
+  
+  return now.minute >= sMinute;
+};
+
 const ExpertDashboard = () => {
   // Navigation tabs: 'sessions', 'availability', 'profile'
   const [activeTab, setActiveTab] = useState('sessions');
@@ -453,19 +480,30 @@ const ExpertDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         {b.status === 'Confirmed' && (
                           <div className="flex justify-end gap-2">
-                            <button
-                              disabled={actionLoading === b._id}
-                              onClick={() => handleStatusChange(b._id, 'Completed')}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                              title="Mark Completed"
-                            >
-                              {actionLoading === b._id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <CheckCircle className="w-3.5 h-3.5" />
-                              )}
-                              Complete
-                            </button>
+                            {isSessionPast(b.bookingDate, b.slotTime) ? (
+                              <button
+                                disabled={actionLoading === b._id}
+                                onClick={() => handleStatusChange(b._id, 'Completed')}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                                title="Mark Completed"
+                              >
+                                {actionLoading === b._id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                )}
+                                Complete
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-bold rounded-lg cursor-not-allowed opacity-50"
+                                title="Locked until session start time"
+                              >
+                                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                Locked
+                              </button>
+                            )}
                             <button
                               disabled={actionLoading === b._id}
                               onClick={() => handleStatusChange(b._id, 'Cancelled')}
