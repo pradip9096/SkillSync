@@ -86,6 +86,24 @@ const ExpertDashboard = () => {
     '18:00', '19:00', '20:00', '21:00', '22:00'
   ];
 
+  // Helper: check if slot is in the past
+  const isSlotInPast = useCallback((slotTime) => {
+    const now = new Date();
+    const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const todayStr = istNow.toISOString().split('T')[0];
+    
+    if (selectedDate < todayStr) return true;
+    if (selectedDate > todayStr) return false;
+    
+    const [sHour, sMinute] = slotTime.split(':').map(Number);
+    const nowHour = istNow.getUTCHours();
+    const nowMinute = istNow.getUTCMinutes();
+    
+    if (nowHour > sHour) return true;
+    if (nowHour === sHour && nowMinute >= sMinute) return true;
+    return false;
+  }, [selectedDate]);
+
   // Fetch expert profile info
   const loadProfile = useCallback(async () => {
     try {
@@ -198,6 +216,11 @@ const ExpertDashboard = () => {
     if (!expertId) return;
     setErrorMsg('');
     setSuccessMsg('');
+
+    if (isSlotInPast(slotTime)) {
+      setErrorMsg('Cannot toggle slots in the past.');
+      return;
+    }
 
     // Check if slot is already occupied
     const matchedSlot = bookedSlotsList.find(s => s.slotTime === slotTime);
@@ -516,6 +539,7 @@ const ExpertDashboard = () => {
                     const match = bookedSlotsList.find(s => s.slotTime === slot);
                     const isBookedByClient = match && match.notes !== 'Blocked by Expert';
                     const isBlockedByExpert = match && match.notes === 'Blocked by Expert';
+                    const isPassed = isSlotInPast(slot);
 
                     let btnStyle = 'bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border-gray-200';
                     let label = 'Open (Click to Block)';
@@ -524,18 +548,28 @@ const ExpertDashboard = () => {
                       btnStyle = 'bg-indigo-50 text-indigo-700 border-indigo-100 opacity-60 cursor-not-allowed';
                       label = `Booked (${match.userName || 'Client'})`;
                     } else if (isBlockedByExpert) {
-                      btnStyle = 'bg-red-50 text-red-700 border-red-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200';
-                      label = 'Blocked (Click to Unblock)';
+                      if (isPassed) {
+                        btnStyle = 'bg-red-50 text-red-700/60 border-red-100 opacity-60 cursor-not-allowed';
+                        label = 'Blocked (Passed)';
+                      } else {
+                        btnStyle = 'bg-red-50 text-red-700 border-red-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200';
+                        label = 'Blocked (Click to Unblock)';
+                      }
+                    } else if (isPassed) {
+                      btnStyle = 'bg-gray-100 text-gray-300 border-gray-200 opacity-60 cursor-not-allowed';
+                      label = 'Passed';
                     }
+
+                    const isDisabled = isBookedByClient || slotsLoading || isPassed;
 
                     return (
                       <button
                         key={slot}
                         type="button"
-                        disabled={isBookedByClient || slotsLoading}
+                        disabled={isDisabled}
                         onClick={() => handleSlotToggle(slot)}
                         className={`flex flex-col items-center justify-center p-4 rounded-2xl border text-center transition-all duration-200 ${
-                          !isBookedByClient ? 'cursor-pointer active:scale-95' : ''
+                          !isDisabled ? 'cursor-pointer active:scale-95' : ''
                         } ${btnStyle}`}
                       >
                         <span className="text-base font-black tracking-tight mb-1">{formatTime12H(slot)}</span>

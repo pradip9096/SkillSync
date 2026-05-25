@@ -121,11 +121,23 @@ const updateExpertProfile = async (req, res) => {
 const blockSlot = async (req, res) => {
   try {
     const { bookingDate, slotTime } = req.body;
-    
+
     if (!bookingDate || !slotTime) {
       return res.status(400).json({
         success: false,
         error: 'Please provide bookingDate and slotTime'
+      });
+    }
+
+    // Validate that the slot is not in the past (using IST offset +05:30)
+    const nowMs = Date.now();
+    const slotDateTime = new Date(`${bookingDate}T${slotTime}:00+05:30`);
+    const slotMs = slotDateTime.getTime();
+
+    if (Number.isNaN(slotMs) || nowMs >= slotMs) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot block slots in the past.'
       });
     }
 
