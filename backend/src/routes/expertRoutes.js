@@ -8,6 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const { getExperts, getExpertById, rateExpert } = require('../controllers/expertController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * Route: GET /
@@ -28,6 +29,6 @@ router.get('/:id', getExpertById);
  * Purpose: Submit a rating for an expert and update their overall rating.
  * Access: Public.
  */
-router.post('/:id/rate', rateExpert);
+router.post('/:id/rate', protect, rateExpert);
 
 module.exports = router;

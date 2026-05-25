@@ -108,10 +108,12 @@ export const updateBookingStatus = (id, status) => API.patch(`/bookings/${id}/st
  * Purpose: Updates the aggregate rating of an expert based on a new user rating.
  * @param {string} expertId - The expert's ID.
  * @param {number} rating - The rating value (1-5).
+ * @param {string} [comment] - Optional text comment/review.
+ * @param {string} bookingId - The booking ID associated with the review.
  * @returns {Promise<import('axios').AxiosResponse>} A promise resolving to the API response.
  * Side effects: Performs a POST network request.
  */
-export const rateExpert = (expertId, rating) => API.post(`/experts/${expertId}/rate`, { rating });
+export const rateExpert = (expertId, rating, comment, bookingId) => API.post(`/experts/${expertId}/rate`, { rating, comment, bookingId });
 
 /**
  * Mark a booking as having been rated.

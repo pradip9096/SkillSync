@@ -36,6 +36,7 @@ const ExpertDetail = () => {
   const [expert, setExpert] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookedSlots, setBookedSlots] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
     // Initialize with current date in IST format
     const now = new Date();
@@ -130,6 +131,7 @@ const ExpertDetail = () => {
       try {
         const { data } = await fetchExpertById(id);
         setExpert(data.data);
+        setReviews(data.reviews || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -528,6 +530,70 @@ const ExpertDetail = () => {
                 </p>
               </div>
             </form>
+          )}
+        </div>
+
+        {/* Client Reviews Section */}
+        <div className="mt-12 bg-white rounded-3xl border border-gray-100 p-8 shadow-xl animate-slide-up delay-200">
+          <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center gap-3">
+            <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
+            Client Reviews & Testimonials
+            <span className="text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border">
+              {reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'}
+            </span>
+          </h2>
+
+          {reviews.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-3xl">
+              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">No reviews yet</p>
+              <p className="text-xs text-gray-400 mt-2 font-medium">Be the first to share your experience after a completed session!</p>
+            </div>
+          ) : (
+            <div className="space-y-6 divide-y divide-gray-100">
+              {reviews.map((r, index) => (
+                <div key={r._id} className={`pt-6 ${index === 0 ? 'pt-0' : ''} space-y-4`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(r.userName)}&background=random&color=fff&size=80`}
+                        alt={r.userName}
+                        className="w-10 h-10 rounded-full border border-gray-200 object-cover shadow-sm"
+                      />
+                      <div>
+                        <div className="font-black text-gray-900 text-sm">{r.userName}</div>
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                          {new Date(r.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${star <= r.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-200'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {r.comment ? (
+                    <blockquote className="text-gray-600 font-medium italic text-sm border-l-4 border-blue-100 pl-4 py-1 bg-gray-50/50 rounded-r-xl">
+                      "{r.comment}"
+                    </blockquote>
+                  ) : (
+                    <p className="text-gray-400 text-xs italic pl-4 font-semibold uppercase tracking-widest">
+                      Rated {r.rating} stars (no written comment provided)
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

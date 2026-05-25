@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { fetchBookingsByEmail, updateBookingStatus, rateExpert, markBookingAsRated } from '../services/api';
+import { fetchBookingsByEmail, updateBookingStatus, rateExpert } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
 
@@ -37,6 +37,11 @@ const MyBookings = () => {
   // States for tracking loading during status updates or rating submissions
   const [actionLoading, setActionLoading] = useState(null); 
   const [ratingLoading, setRatingLoading] = useState(null);
+  
+  // Interactive Rating & Review Editor States
+  const [activeRatingId, setActiveRatingId] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [commentValue, setCommentValue] = useState('');
 
 
   /**
@@ -147,19 +152,21 @@ const MyBookings = () => {
    * @param {string} expertId - ID of the expert being rated.
    * @param {number} rating - Rating value (1-5).
    */
-  const handleRating = async (bookingId, expertId, rating) => {
+  const handleRating = async (bookingId, expertId, rating, comment) => {
     try {
       setRatingLoading(bookingId);
-      // Step 1: Update the expert's aggregate rating
-      await rateExpert(expertId, rating);
-      // Step 2: Mark the specific booking as rated to hide the rating UI
-      await markBookingAsRated(bookingId);
+      // Update the expert's aggregate rating & create review
+      await rateExpert(expertId, rating, comment, bookingId);
       // Refresh list
       const { data } = await fetchBookingsByEmail(email);
       setBookings(data.data);
+      // Reset form states
+      setActiveRatingId(null);
+      setRatingValue(5);
+      setCommentValue('');
     } catch (err) {
       console.error(err);
-      alert('Failed to submit rating.');
+      alert(err.response?.data?.error || 'Failed to submit rating.');
     } finally {
       setRatingLoading(null);
     }
@@ -342,25 +349,70 @@ const MyBookings = () => {
                   )}
 
                   {/* Post-Session Rating UI */}
-                  {booking.status === 'Completed' && !booking.isRated && (
-                    <div className="p-8 border-2 border-dashed border-blue-100 rounded-3xl animate-fade-in">
-                      <p className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
-                        <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" /> Rate Your Session
+                  {booking.status === 'Completed' && !booking.isRated && activeRatingId !== booking._id && (
+                    <div className="mt-4 flex justify-start">
+                      <button
+                        onClick={() => {
+                          setActiveRatingId(booking._id);
+                          setRatingValue(5);
+                          setCommentValue('');
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 text-yellow-800 text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+                      >
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> Rate & Review Session
+                      </button>
+                    </div>
+                  )}
+
+                  {booking.status === 'Completed' && !booking.isRated && activeRatingId === booking._id && (
+                    <div className="p-8 border border-yellow-200 bg-yellow-50/20 rounded-3xl animate-fade-in space-y-6">
+                      <p className="text-lg font-black text-gray-900 flex items-center gap-2">
+                        <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" /> Rate & Review Your Session
                       </p>
-                      <div className="flex flex-wrap gap-4">
+                      
+                      {/* Star Selector */}
+                      <div className="flex gap-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
-                            disabled={ratingLoading === booking._id}
-                            onClick={() => handleRating(booking._id, booking.expert?._id, star)}
-                            className="group flex flex-col items-center gap-2 flex-1 min-w-[60px]"
+                            type="button"
+                            onClick={() => setRatingValue(star)}
+                            className="focus:outline-none transition-transform hover:scale-110 cursor-pointer"
                           >
-                            <div className="w-full aspect-square bg-gray-50 border-2 border-gray-100 rounded-2xl flex items-center justify-center group-hover:border-yellow-400 group-hover:bg-yellow-50 group-hover:scale-105 transition-all">
-                              <Star className="w-8 h-8 text-gray-300 group-hover:text-yellow-500 group-hover:fill-yellow-500" />
-                            </div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{star} Stars</span>
+                            <Star className={`w-8 h-8 ${star <= ratingValue ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
                           </button>
                         ))}
+                      </div>
+
+                      {/* Comment Textarea */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest px-1">Write your review (optional)</label>
+                        <textarea
+                          rows="3"
+                          placeholder="How was your session? What did you discuss? Share your experience with others..."
+                          value={commentValue}
+                          onChange={(e) => setCommentValue(e.target.value)}
+                          className="w-full p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all text-sm"
+                        />
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex gap-4">
+                        <button
+                          disabled={ratingLoading === booking._id}
+                          onClick={() => handleRating(booking._id, booking.expert?._id, ratingValue, commentValue)}
+                          className="flex items-center justify-center gap-1.5 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {ratingLoading === booking._id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Review'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={ratingLoading === booking._id}
+                          onClick={() => setActiveRatingId(null)}
+                          className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
                   )}

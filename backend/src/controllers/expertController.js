@@ -6,6 +6,8 @@
  */
 
 const Expert = require('../models/Expert');
+const Review = require('../models/Review');
+const Booking = require('../models/Booking');
 
 /**
  * Purpose: Get all experts with optional filtering by name/category and pagination.
@@ -88,9 +90,13 @@ const getExpertById = async (req, res) => {
       });
     }
 
+    // Fetch all reviews for this expert (sorted by newest first)
+    const reviews = await Review.find({ expert: req.params.id }).sort({ createdAt: -1 });
+
     res.status(200).json({
       success: true,
-      data: expert
+      data: expert,
+      reviews
     });
   } catch (error) {
     console.error('API Error:', error);
@@ -110,17 +116,57 @@ const getExpertById = async (req, res) => {
  */
 const rateExpert = async (req, res) => {
   try {
-    const { rating } = req.body;
-    const expert = await Expert.findById(req.params.id);
+    const { rating, comment, bookingId } = req.body;
+    const expertId = req.params.id;
 
+    // Validate inputs
+    if (!rating || !bookingId) {
+      return res.status(400).json({ success: false, error: 'Rating and Booking ID are required.' });
+    }
+
+    const expert = await Expert.findById(expertId);
     if (!expert) {
       return res.status(404).json({ success: false, error: 'Expert not found' });
     }
 
+    // Verify the booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+
+    // Ensure the booking matches the expert
+    if (booking.expert.toString() !== expertId) {
+      return res.status(400).json({ success: false, error: 'Booking expert does not match requested expert.' });
+    }
+
+    // Ensure the booking is completed
+    if (booking.status !== 'Completed') {
+      return res.status(400).json({ success: false, error: 'You can only rate completed sessions.' });
+    }
+
+    // Ensure the user owns this booking
+    if (booking.user && booking.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ success: false, error: 'Not authorized to rate this session.' });
+    }
+
+    // Ensure the booking has not been rated yet
+    if (booking.isRated) {
+      return res.status(400).json({ success: false, error: 'This session has already been rated.' });
+    }
+
+    // Create the Review document
+    const newReview = await Review.create({
+      expert: expertId,
+      user: req.user._id,
+      userName: req.user.name || 'Anonymous Client',
+      rating,
+      comment: comment || undefined,
+      booking: bookingId
+    });
+
     /**
      * Calculate new average rating:
-     * We avoid storing every individual rating to save space. Instead, we keep 
-     * a running average and the count of reviews.
      * Formula: New Average = ((Current Average * Current Count) + New Rating) / (Current Count + 1)
      */
     const currentTotal = expert.rating * expert.numReviews;
@@ -130,12 +176,17 @@ const rateExpert = async (req, res) => {
     // Save the updated expert document
     await expert.save();
 
+    // Mark the booking as rated
+    booking.isRated = true;
+    await booking.save();
+
     res.status(200).json({
       success: true,
-      data: expert
+      data: expert,
+      review: newReview
     });
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('API Error in rateExpert:', error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
