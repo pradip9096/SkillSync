@@ -19,6 +19,8 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] Atomic Database Locking (MongoDB)
 - [x] Home Page & Core UI Foundations
 - [x] India-Specific Localization (IST, INR, +91 formats)
+  - [x] Refined phone input UX: allow 10-digit entry, automatically prepend `+91` prefix for database consistency.
+  - [x] Render slots in 12-hour AM/PM format (completed on Expert Dashboard and Client views).
 - [x] Image Placeholders
 
 ### Phase 2: Security & Platform Management
