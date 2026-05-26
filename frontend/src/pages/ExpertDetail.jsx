@@ -307,7 +307,7 @@ const ExpertDetail = () => {
             <div className="p-8">
               <p className="text-gray-600 leading-relaxed mb-8 font-medium italic">"{expert.description}"</p>
               
-              <div className="space-y-4">
+              <div className="space-y-4 mb-8">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                   <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">Experience</span>
                   <span className="font-black text-gray-900">{expert.experience} Years</span>
@@ -324,6 +324,20 @@ const ExpertDetail = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Expert Media Gallery */}
+              {expert.gallery && expert.gallery.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Professional Gallery</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {expert.gallery.map((imgSrc, idx) => (
+                      <div key={idx} className="rounded-xl overflow-hidden shadow-sm border border-gray-100 aspect-square">
+                        <img src={imgSrc} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

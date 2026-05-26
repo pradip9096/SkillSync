@@ -5,6 +5,7 @@
  * Side Effects: Reads/writes User schema, generates JWT tokens.
  */
 
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Expert = require('../models/Expert');
 const jwt = require('jsonwebtoken');
@@ -107,41 +108,54 @@ const registerUser = async (req, res) => {
     if (name) userData.name = name;
     if (phone) userData.phone = phone;
 
-    // Create user in DB
-    const user = await User.create(userData);
+    // Start MongoDB Session for Transaction
+    const session = await mongoose.startSession();
+    let createdUser;
+    let expertProfile = null;
 
-    if (user) {
-      let expertProfile = null;
-      if (normalizedRole === 'Expert') {
-        // Create corresponding Expert profile
-        expertProfile = await Expert.create({
-          name,
-          category,
-          experience: Number(experience),
-          description: description || '',
-          hourlyRate: Number(hourlyRate),
-          user: user._id
-        });
-      }
+    try {
+      await session.withTransaction(async () => {
+        // Create user in DB
+        const [user] = await User.create([userData], { session });
+        createdUser = user;
 
-      res.status(201).json({
-        success: true,
-        token: generateToken(user._id),
-        user: {
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-          name: user.name,
-          phone: user.phone
-        },
-        expert: expertProfile
+        if (normalizedRole === 'Expert') {
+          // Create corresponding Expert profile
+          const [expert] = await Expert.create([{
+            name,
+            category,
+            experience: Number(experience),
+            description: description || '',
+            hourlyRate: Number(hourlyRate),
+            user: user._id
+          }], { session });
+          expertProfile = expert;
+        }
       });
-    } else {
-      res.status(400).json({
+      // Transaction committed successfully
+    } catch (transactionError) {
+      // Transaction aborted automatically
+      return res.status(400).json({
         success: false,
-        error: 'Invalid user data'
+        error: transactionError.message || 'Failed to create account profile. Registration aborted.'
       });
+    } finally {
+      await session.endSession();
     }
+
+    res.status(201).json({
+      success: true,
+      token: generateToken(createdUser._id),
+      user: {
+        _id: createdUser._id,
+        email: createdUser.email,
+        role: createdUser.role,
+        name: createdUser.name,
+        phone: createdUser.phone
+      },
+      expert: expertProfile
+    });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -292,9 +306,49 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload profile picture
+ * @route   PUT /auth/profile/image
+ * @access  Private
+ */
+const uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Please upload an image file' });
+    }
+
+    const imagePath = `/uploads/${req.file.filename}`;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.profileImage = imagePath;
+    await user.save();
+
+    // If user is an Expert, keep the Expert profile in sync
+    if (user.role === 'Expert') {
+      const Expert = require('../models/Expert');
+      await Expert.findOneAndUpdate({ user: user._id }, { profileImage: imagePath });
+    }
+
+    res.status(200).json({
+      success: true,
+      profileImage: imagePath
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error uploading image'
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
-  updateUserProfile
+  updateUserProfile,
+  uploadProfileImage
 };

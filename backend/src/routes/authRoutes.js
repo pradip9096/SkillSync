@@ -18,4 +18,8 @@ router.post('/login', loginUser);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 
+// Profile image upload endpoint
+const upload = require('../middleware/uploadMiddleware');
+router.put('/profile/image', protect, upload.single('profileImage'), require('../controllers/authController').uploadProfileImage);
+
 module.exports = router;

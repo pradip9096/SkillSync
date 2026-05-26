@@ -259,10 +259,100 @@ const unblockSlot = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload an image to expert's media gallery
+ * @route   POST /expert-dashboard/gallery
+ * @access  Private (Expert Only)
+ */
+const uploadGalleryImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Please upload an image file' });
+    }
+
+    const expert = await Expert.findOne({ user: req.user._id });
+    if (!expert) {
+      return res.status(404).json({ success: false, error: 'Expert profile not found' });
+    }
+
+    // Enforce max 5 images
+    if (expert.gallery.length >= 5) {
+      // Clean up the uploaded file since we are rejecting it
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, '../../../../frontend/public', `/uploads/${req.file.filename}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(400).json({ success: false, error: 'Gallery limit reached (max 5 images).' });
+    }
+
+    const imagePath = `/uploads/${req.file.filename}`;
+    expert.gallery.push(imagePath);
+    await expert.save();
+
+    res.status(200).json({
+      success: true,
+      gallery: expert.gallery
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error uploading gallery image'
+    });
+  }
+};
+
+/**
+ * @desc    Delete an image from expert's media gallery
+ * @route   DELETE /expert-dashboard/gallery/:filename
+ * @access  Private (Expert Only)
+ */
+const deleteGalleryImage = async (req, res) => {
+  try {
+    const expert = await Expert.findOne({ user: req.user._id });
+    if (!expert) {
+      return res.status(404).json({ success: false, error: 'Expert profile not found' });
+    }
+
+    const filename = req.params.filename;
+    const imagePath = `/uploads/${filename}`;
+
+    // Ensure the image exists in their gallery
+    if (!expert.gallery.includes(imagePath)) {
+      return res.status(404).json({ success: false, error: 'Image not found in gallery' });
+    }
+
+    // Remove from array
+    expert.gallery = expert.gallery.filter(img => img !== imagePath);
+    await expert.save();
+
+    // Optionally delete from disk
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '../../../../frontend/public', imagePath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    res.status(200).json({
+      success: true,
+      gallery: expert.gallery
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error deleting gallery image'
+    });
+  }
+};
+
 module.exports = {
   getExpertBookings,
   getExpertProfile,
   updateExpertProfile,
   blockSlot,
-  unblockSlot
+  unblockSlot,
+  uploadGalleryImage,
+  deleteGalleryImage
 };

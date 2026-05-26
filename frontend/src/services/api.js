@@ -128,6 +128,9 @@ export const markBookingAsRated = (bookingId) => API.patch(`/bookings/${bookingI
 // --- Profile APIs ---
 export const fetchUserProfile = () => API.get('/auth/profile');
 export const updateUserProfile = (profileData) => API.put('/auth/profile', profileData);
+export const uploadProfileImage = (formData) => API.put('/auth/profile/image', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 
 // --- Admin Dashboard APIs ---
 export const adminFetchUsers = () => API.get('/admin/users');
@@ -143,5 +146,9 @@ export const fetchExpertDashboardProfile = () => API.get('/expert-dashboard/prof
 export const updateExpertDashboardProfile = (profileData) => API.put('/expert-dashboard/profile', profileData);
 export const expertBlockSlot = (bookingDate, slotTime) => API.post('/expert-dashboard/block-slot', { bookingDate, slotTime });
 export const expertUnblockSlot = (bookingDate, slotTime) => API.post('/expert-dashboard/unblock-slot', { bookingDate, slotTime });
+export const uploadGalleryImage = (formData) => API.post('/expert-dashboard/gallery', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+export const deleteGalleryImage = (filename) => API.delete(`/expert-dashboard/gallery/${filename}`);
 
 export default API;

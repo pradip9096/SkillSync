@@ -49,6 +49,10 @@ const expertSchema = new mongoose.Schema({
     type: String,
     default: 'https://placehold.co/150'
   },
+  // Expert's media gallery (max 5 images enforced by controller)
+  gallery: [{
+    type: String
+  }],
   // Detailed bio or description of the expert's services
   description: {
     type: String,

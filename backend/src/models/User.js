@@ -38,6 +38,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Profile picture URL
+  profileImage: {
+    type: String,
+    default: ''
+  },
   // User's phone number (optional, gathered during booking, +91 validated)
   phone: {
     type: String,

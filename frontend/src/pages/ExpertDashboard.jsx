@@ -16,7 +16,9 @@ import {
   expertBlockSlot, 
   expertUnblockSlot,
   fetchBookedSlots,
-  updateBookingStatus
+  updateBookingStatus,
+  uploadGalleryImage,
+  deleteGalleryImage
 } from '../services/api';
 import socket from '../services/socket';
 import { 
@@ -32,7 +34,9 @@ import {
   Briefcase, 
   DollarSign, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  Image,
+  Trash2
 } from 'lucide-react';
 
 // Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
@@ -77,7 +81,7 @@ const isSessionPast = (date, time) => {
 };
 
 const ExpertDashboard = () => {
-  // Navigation tabs: 'sessions', 'availability', 'profile'
+  // Navigation tabs: 'sessions', 'availability', 'profile', 'gallery'
   const [activeTab, setActiveTab] = useState('sessions');
 
   // Expert profile & bookings states
@@ -97,6 +101,7 @@ const ExpertDashboard = () => {
   const [experience, setExperience] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [description, setDescription] = useState('');
+  const [gallery, setGallery] = useState([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -141,6 +146,7 @@ const ExpertDashboard = () => {
         setExperience(data.data.experience || '');
         setHourlyRate(data.data.hourlyRate || '');
         setDescription(data.data.description || '');
+        setGallery(data.data.gallery || []);
       }
     } catch (err) {
       console.error(err);
@@ -275,6 +281,40 @@ const ExpertDashboard = () => {
       setErrorMsg(err.response?.data?.error || 'Failed to change slot status.');
     } finally {
       setSlotsLoading(false);
+    }
+  };
+
+  const handleGalleryUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setErrorMsg('');
+      setSuccessMsg('');
+      const formData = new FormData();
+      formData.append('galleryImage', file);
+
+      const { data } = await uploadGalleryImage(formData);
+      setGallery(data.gallery);
+      setSuccessMsg('Image uploaded to gallery successfully!');
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to upload gallery image.');
+    }
+  };
+
+  const handleGalleryDelete = async (filename) => {
+    // filename might be '/uploads/filename.jpg', so we extract just the name
+    const name = filename.split('/').pop();
+    try {
+      setErrorMsg('');
+      setSuccessMsg('');
+      const { data } = await deleteGalleryImage(name);
+      setGallery(data.gallery);
+      setSuccessMsg('Image removed from gallery.');
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to delete gallery image.');
     }
   };
 
@@ -429,6 +469,18 @@ const ExpertDashboard = () => {
           >
             <Edit3 className="w-4 h-4" />
             Edit Profile Bio
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`flex items-center gap-2 pb-4 px-2 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'gallery' 
+                ? 'border-purple-600 text-purple-600 font-extrabold' 
+                : 'border-transparent text-gray-500 hover:text-purple-600'
+            }`}
+          >
+            <Image className="w-4 h-4" />
+            Media Gallery
           </button>
         </div>
 
@@ -727,6 +779,57 @@ const ExpertDashboard = () => {
               </div>
 
             </form>
+          )}
+
+          {/* TAB 4: MEDIA GALLERY */}
+          {activeTab === 'gallery' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Professional Gallery</h2>
+                  <p className="text-sm text-gray-500">Showcase your portfolio. Upload up to 5 images.</p>
+                </div>
+                <div>
+                  <label className="relative flex items-center justify-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-black text-white bg-purple-600 hover:bg-purple-700 cursor-pointer transition-colors">
+                    <Image className="w-4 h-4 mr-2" />
+                    Upload Photo
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/png, image/jpeg, image/webp" 
+                      onChange={handleGalleryUpload} 
+                      disabled={gallery.length >= 5} 
+                    />
+                  </label>
+                  {gallery.length >= 5 && (
+                    <p className="text-xs text-red-500 mt-2 font-bold">Gallery limit reached (5/5)</p>
+                  )}
+                </div>
+              </div>
+
+              {gallery.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
+                  <Image className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">Your gallery is empty.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {gallery.map((imgSrc, idx) => (
+                    <div key={idx} className="relative group rounded-xl overflow-hidden shadow-sm border border-gray-200 bg-white aspect-square">
+                      <img src={imgSrc} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button 
+                          onClick={() => handleGalleryDelete(imgSrc)}
+                          className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
         </div>

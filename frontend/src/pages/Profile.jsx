@@ -10,8 +10,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchUserProfile, updateUserProfile } from '../services/api';
-import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail } from 'lucide-react';
+import { fetchUserProfile, updateUserProfile, uploadProfileImage } from '../services/api';
+import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail, Camera } from 'lucide-react';
 
 const Profile = () => {
   const { user } = useAuth(); // Use auth helper to get user details
@@ -23,6 +23,7 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileImage, setProfileImage] = useState('');
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ const Profile = () => {
             displayPhone = displayPhone.slice(3);
           }
           setPhone(displayPhone);
+          setProfileImage(data.user.profileImage || '');
         }
       } catch (err) {
         console.error(err);
@@ -60,6 +62,33 @@ const Profile = () => {
   const handlePhoneChange = (e) => {
     let val = e.target.value.replace(/\D/g, ''); // keep only digits
     setPhone(val.slice(0, 10));
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsSaving(true);
+      setErrorMsg('');
+      const formData = new FormData();
+      formData.append('profileImage', file);
+
+      const { data } = await uploadProfileImage(formData);
+      setProfileImage(data.profileImage);
+      setSuccessMsg('Profile picture updated successfully!');
+      
+      const localUser = JSON.parse(localStorage.getItem('user'));
+      if (localUser) {
+        localUser.profileImage = data.profileImage;
+        localStorage.setItem('user', JSON.stringify(localUser));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to upload image.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -191,7 +220,28 @@ const Profile = () => {
 
           <form onSubmit={handleUpdate} className="space-y-8">
             
-            {/* Read-Only Account Details */}
+            {/* Avatar Upload */}
+            <div className="flex items-center gap-6 pb-8 border-b border-gray-100">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-blue-50 text-blue-500 font-bold text-3xl">
+                      {name ? name.charAt(0).toUpperCase() : <User className="w-8 h-8" />}
+                    </div>
+                  )}
+                </div>
+                <label className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg cursor-pointer transition-colors z-10">
+                  <Camera className="w-4 h-4" />
+                  <input type="file" className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleImageUpload} disabled={isSaving} />
+                </label>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Profile Picture</h3>
+                <p className="text-sm text-gray-500 mt-1">Upload a professional headshot to help people recognize you. <br/> Max size: 5MB (JPEG, PNG, WebP).</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8 border-b border-gray-100">
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider text-gray-400 mb-2">

@@ -34,4 +34,10 @@ router.put('/profile', updateExpertProfile);
 router.post('/block-slot', blockSlot);
 router.post('/unblock-slot', unblockSlot);
 
+// Media Gallery
+const upload = require('../middleware/uploadMiddleware');
+const { uploadGalleryImage, deleteGalleryImage } = require('../controllers/expertDashboardController');
+router.post('/gallery', upload.single('galleryImage'), uploadGalleryImage);
+router.delete('/gallery/:filename', deleteGalleryImage);
+
 module.exports = router;

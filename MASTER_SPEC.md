@@ -165,6 +165,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Real-Time Booking & Scheduling Engine](#feature-real-time-booking--scheduling-engine) | `Generic Blueprint` | — | 2026-05-26 |
 | [Dynamic Availability Management (Slot Toggling)](#feature-dynamic-availability-management-slot-toggling) | `Generic Blueprint` | — | 2026-05-26 |
 | [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Generic Blueprint` | — | 2026-05-26 |
+| [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `In Progress` | SkillSync | 2026-05-26 |
 
 ---
 
@@ -1643,6 +1644,115 @@ None identified.
 
 ### Status
 `Generic Blueprint`
+
+### Last Updated
+2026-05-26
+
+---
+
+## Feature: Media & Gallery Upload System
+
+### Overview
+Allows all users to upload custom profile pictures, and allows Experts to upload multiple photos into a professional gallery to provide clients with more visual context.
+
+### Functional Requirements
+
+- [MUST HAVE] The system must accept image file uploads (JPEG, PNG, WebP) up to 5MB.
+  Rationale: Standardizes file formats and prevents server storage exhaustion.
+
+- [MUST HAVE] Clients and Experts must be able to upload and update their profile picture.
+  Rationale: Personalizes the user experience and builds trust.
+
+- [MUST HAVE] Experts must be able to upload up to 5 images to a Media Gallery.
+  Rationale: Allows experts (like designers or fitness coaches) to visually showcase their work to prospective clients.
+
+- [SHOULD HAVE] Experts must be able to delete images from their gallery.
+  Rationale: Essential for managing portfolio relevance over time.
+
+- [COULD HAVE] The system could integrate with Cloudinary or AWS S3 for scalable storage.
+  Rationale: Built initially with local `multer` storage for velocity, but architected to swap engines if scaling demands it.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] File uploads must be securely handled using `multipart/form-data` parsing, with strict mime-type validation.
+  Rationale: Prevents malicious script or executable uploads.
+
+### User Interaction Flow
+
+```mermaid
+graph TD
+    A[User] -->|Selects Image| B(Profile/Dashboard UI)
+    B -->|Submit| C{Upload Endpoint}
+    C -->|Invalid Type/Size| D[Error: Show feedback banner]
+    C -->|Valid| E[Save to /uploads]
+    E --> F[Update DB Document]
+    F --> G[Return new URL to UI]
+    G --> H[UI Updates Immediately]
+```
+
+### API Specifications
+
+* `PUT /auth/profile/image`
+  Input: `multipart/form-data` with field `profileImage`
+  Validation: File size < 5MB, Type: img/jpeg, img/png, img/webp
+  Output: `{ success: true, profileImage: '/uploads/...' }`
+  Auth: User Role
+
+* `POST /expert-dashboard/gallery`
+  Input: `multipart/form-data` with field `galleryImage`
+  Validation: File size < 5MB, Expert gallery count < 5
+  Output: `{ success: true, gallery: ['/uploads/...'] }`
+  Auth: Expert Role
+
+* `DELETE /expert-dashboard/gallery/:filename`
+  Input: Filename parameter
+  Validation: Expert owns the image
+  Output: `{ success: true, gallery: [...] }`
+  Auth: Expert Role
+
+### Edge Cases
+
+- When an Expert attempts to upload a 6th gallery image, the feature must reject the upload with a 400 Bad Request indicating the gallery limit is reached.
+- When a User uploads a new profile picture, the old file should be overwritten or cleaned up to prevent orphaned files.
+
+### Best Practices
+
+* Use `multer` for backend parsing. Keep the disk storage engine encapsulated in a middleware so it can be cleanly swapped for `multer-s3` or `multer-storage-cloudinary` in the future.
+
+### Acceptance Criteria
+
+* **AC 7.1:** A Client can upload a PNG image < 5MB and see it instantly reflect on their dashboard.
+* **AC 7.2:** An Expert can upload 5 images to their gallery, and the UI successfully renders them on their public `ExpertDetail` page.
+* **AC 7.3:** Attempting to upload a 6th image to the gallery returns an error and does not save the file.
+* **AC 7.4:** Attempting to upload a PDF or an image > 5MB returns a validation error.
+
+### Non-Goals
+
+- This feature does NOT provide in-browser image cropping, rotating, or filtering capabilities.
+
+### Dependencies
+
+- Feature: User Authentication & RBAC — Must be able to associate uploads securely with the authenticated JWT session.
+- Service: Multer — For `multipart/form-data` payload parsing and disk storage.
+
+### Testing Strategy
+
+- Unit: Test the multer fileFilter logic to ensure it strictly rejects PDFs and TXT files.
+- Integration: Submit a valid image payload to the `/auth/profile/image` endpoint and assert DB update.
+- Manual: Upload a gallery image as an expert, verify it renders correctly in the client's public view.
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-26 | Agent | Initial spec created for Media Uploads (Profile & Gallery). |
+
+### Status
+`In Progress`
 
 ### Last Updated
 2026-05-26

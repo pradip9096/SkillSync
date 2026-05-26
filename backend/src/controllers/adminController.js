@@ -8,6 +8,7 @@
  * Side Effects: Reads/writes database collections (User, Expert, Booking).
  */
 
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Expert = require('../models/Expert');
 const Booking = require('../models/Booking');
@@ -187,28 +188,45 @@ const createExpertByAdmin = async (req, res) => {
       });
     }
 
-    // Create User credentials
-    const user = await User.create({
-      email,
-      password,
-      role: 'Expert',
-      name,
-      phone
-    });
+    // Start Transaction Session
+    const session = await mongoose.startSession();
+    let createdExpert = null;
 
-    // Create Expert details
-    const expert = await Expert.create({
-      name,
-      category,
-      experience: Number(experience),
-      description: description || '',
-      hourlyRate: Number(hourlyRate),
-      user: user._id
-    });
+    try {
+      await session.withTransaction(async () => {
+        // Create User credentials
+        const [user] = await User.create([{
+          email,
+          password,
+          role: 'Expert',
+          name,
+          phone
+        }], { session });
+
+        // Create Expert details
+        const [expert] = await Expert.create([{
+          name,
+          category,
+          experience: Number(experience),
+          description: description || '',
+          hourlyRate: Number(hourlyRate),
+          user: user._id
+        }], { session });
+        
+        createdExpert = expert;
+      });
+    } catch (transactionError) {
+      return res.status(500).json({
+        success: false,
+        error: transactionError.message || 'Server error creating expert transaction'
+      });
+    } finally {
+      await session.endSession();
+    }
 
     res.status(201).json({
       success: true,
-      data: expert
+      data: createdExpert
     });
   } catch (error) {
     res.status(500).json({
@@ -233,16 +251,29 @@ const deleteExpertByAdmin = async (req, res) => {
       });
     }
 
-    // Delete user account credentials
-    if (expert.user) {
-      await User.findByIdAndDelete(expert.user);
+    const session = await mongoose.startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // Delete user account credentials
+        if (expert.user) {
+          await User.findByIdAndDelete(expert.user, { session });
+        }
+
+        // Delete associated bookings
+        await Booking.deleteMany({ expert: expert._id }, { session });
+
+        // Delete profile
+        await Expert.findByIdAndDelete(req.params.id, { session });
+      });
+    } catch (transactionError) {
+      return res.status(500).json({
+        success: false,
+        error: transactionError.message || 'Server error executing deletion transaction'
+      });
+    } finally {
+      await session.endSession();
     }
-
-    // Delete associated bookings
-    await Booking.deleteMany({ expert: expert._id });
-
-    // Delete profile
-    await Expert.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
