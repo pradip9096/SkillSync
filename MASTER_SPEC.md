@@ -1113,6 +1113,9 @@ control for multi-tenant systems. Ensures only authorized roles can access prote
 - [SHOULD HAVE] Automatic client-side redirect to login on `401 Unauthorized` API response.
   Rationale: Prevents users from seeing broken authenticated pages after session expiry.
 
+- [MUST HAVE] Client-side app must verify and sync the logged-in user profile from the server on startup to update roles and detect account changes.
+  Rationale: Prevents local storage role values from becoming stale if the user's role is updated or deleted on the database.
+
 - [COULD HAVE] Token refresh mechanism to extend sessions without requiring re-login.
 
 - [CAN HAVE] Multi-factor authentication (MFA) via SMS or TOTP app.
@@ -1195,6 +1198,7 @@ Client redirects to Login page])
 * **AC A.3:** `GET /auth/me` with a Client-role token accessing an Admin-only route must
   return `403 Forbidden`.
 * **AC A.4:** Passwords stored in MongoDB must match bcrypt format (never plain text).
+* **AC A.5:** Client-side app must query the profile endpoint (`GET /auth/profile`) on initialization if a token is present, and update local storage and user context state with the fresh response.
 
 ### Non-Goals
 
@@ -1225,6 +1229,7 @@ None identified.
 | Date | Author | Summary |
 |---|---|---|
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
+| 2026-05-26 | Agent | Added startup profile sync requirement to prevent stale client-side role and user state. |
 
 ### Status
 `Generic Blueprint`

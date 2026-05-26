@@ -58,11 +58,34 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
+        const parsedUser = JSON.parse(storedUser);
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(parsedUser);
 
         // Attach token to axios default headers
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+
+        try {
+          // Fetch the latest user profile from the server to sync any changes (e.g. role updates)
+          const response = await axios.get(`${API_URL}/profile`, {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          if (response.data && response.data.user) {
+            const freshUser = response.data.user;
+            localStorage.setItem('user', JSON.stringify(freshUser));
+            setUser(freshUser);
+          }
+        } catch (err) {
+          console.error('Failed to sync profile on load:', err);
+          // If the token is invalid on the server (e.g., user deleted), clear state
+          if (err.response?.status === 401 || err.response?.status === 404) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setToken(null);
+            setUser(null);
+            delete axios.defaults.headers.common['Authorization'];
+          }
+        }
       }
       setLoading(false);
     };
