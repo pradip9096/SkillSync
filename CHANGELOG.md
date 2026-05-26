@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Admin Layout Hardening & Role Isolation:**
+  - Disabled interactive date selectors, slots grids, and client information inputs in `ExpertDetail.jsx` when viewed by an Admin account, updating the action button text to a static `'Booking Disabled for Admins'`.
+  - Hidden the personal booking history link (`My History`) in `Navbar.jsx` for Admin users, directing them to the global booking manager in the Admin Panel instead.
+  - Documented future development plans in `SkillSync_PRD.md` and `ROADMAP.md` under a new Phase 5 (Marketplace Governance & Schema Health) to address structural availability schema separation, two-sided rating imbalances, and cancellation policy windows.
 - **Unauthorized Booking Access & Information Disclosure Vulnerabilities:**
   - Secured `GET /api/v1/bookings`, `PATCH /api/v1/bookings/:id/status`, and `PATCH /api/v1/bookings/:id/rate` endpoints with JWT-based `protect` authentication middleware.
   - Restricted email query lookups to own bookings or administrators, preventing anonymous users from harvesting booking records, names, or phone numbers.

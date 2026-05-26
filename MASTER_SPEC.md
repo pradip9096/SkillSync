@@ -210,6 +210,12 @@ business logic integrity and prevent scheduling loop vulnerabilities.
   demonstration or testing purposes.
   Rationale: Operational edge case for platform administrators.
 
+- [MUST HAVE] Backend API must reject booking POST submissions initiated by users with the `'Admin'` role.
+  Rationale: Prevents system administration accounts from contaminating booking lists and charts.
+
+- [MUST HAVE] Frontend must disable all booking interactive elements and date pickers for logged-in Admin accounts, and update the submit button text to "Booking Disabled for Admins".
+  Rationale: Clear visual feedback that scheduling is restricted for system administrators.
+
 ### Non-Functional Requirements
 
 - [MUST HAVE] Email comparisons must be case-insensitive and whitespace-trimmed.
@@ -283,12 +289,14 @@ case-insensitive + trimmed}
 * **AC 1.3:** The ExpertListing page rendered for a logged-in Expert must not display that
   Expert's own card in the grid.
 * **AC 1.4:** `GET /api/v1/bookings` querying by the expert's email must not return any booking objects where `notes === 'Blocked by Expert'` (blocked slots).
+* **AC 1.5:** An authenticated Admin accessing any ExpertDetail profile page must see all booking inputs in a disabled state, and the submit button displaying "Booking Disabled for Admins".
+* **AC 1.6:** `POST /api/v1/bookings` from a logged-in user with the `'Admin'` role must return `400 Bad Request` with an appropriate error message.
 
 ### Non-Goals
 
 - Does not restrict an Expert from viewing their own profile page — only from booking.
 - Does not prevent Experts from booking sessions with OTHER experts.
-- Does not apply to Admin-level overrides (Admin role is out of scope for this feature version).
+- Does not restrict Admin users from viewing or managing bookings globally — only from creating client bookings.
 
 ### Dependencies
 
@@ -317,6 +325,7 @@ case-insensitive + trimmed}
 | 2026-05-25 | Agent | Initial implementation. Backend email + ID check added. Frontend card hidden and profile disabled. |
 | 2026-05-26 | Agent | Spec enriched to 15-block structure: flow, API spec, ACs, non-goals, dependencies, testing strategy, spec change log added. |
 | 2026-05-26 | Agent | Updated spec to exclude 'Blocked by Expert' slots from the client-facing booking history listing. |
+| 2026-05-26 | Agent | Integrated Admin role isolation: disabled booking inputs on frontend and blocked Admin bookings on backend. |
 
 ### Status
 `Complete`
