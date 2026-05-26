@@ -1317,14 +1317,26 @@ Disabled — within 500ms])
   Auth: Public
 
 * `POST /api/v1/bookings`
-  Input: `{ expertId, date, slot, userName, userEmail, userPhone }`
-  Validation: Slot not in booked-slots list; unique index enforcement
-  Output: `{ booking }`
-  Auth: Optional
+  Input: `{ expert, userName, userEmail, userPhone, bookingDate, slotTime, notes }`
+  Validation: Slot not in booked-slots list; unique index enforcement; creator must NOT be Admin.
+  Output: `{ success: true, data: booking }`
+  Auth: Private (Client or Expert role required)
+
+* `GET /api/v1/bookings`
+  Input: query parameter `email`
+  Validation: Authenticated user matches queried email, or user has `'Admin'` role.
+  Output: `{ success: true, count, data: [bookings] }`
+  Auth: Private (Client, Expert, or Admin role required)
 
 * `PATCH /api/v1/bookings/:id/status`
   Input: `{ status }` (Confirmed | Completed | Cancelled)
-  Auth: Client or Expert role required
+  Validation: Caller must be the Client owner, host Expert, or Admin.
+  Auth: Private (Client, Expert, or Admin role required)
+
+* `PATCH /api/v1/bookings/:id/rate`
+  Input: none
+  Validation: Caller must be the Client owner or Admin.
+  Auth: Private (Client or Admin role required)
 
 ### Edge Cases
 
@@ -1376,6 +1388,7 @@ None identified.
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-26 | Agent | Secured bookings retrieval, status patch, and rating endpoints with JWT ownership validations. Blocked Admin from booking creators. |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 
 ### Status
