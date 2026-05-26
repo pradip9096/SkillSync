@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Admin Add Expert Modal Layout Clipping & Design Refinement:**
+  - Prevented modal height truncation on smaller viewports by applying viewport constraints (`max-h-[90vh]`), layout structuring (`flex flex-col`), and internal scroll areas (`overflow-y-auto`) to the form body.
+  - Styled header and footer blocks with static gray backgrounds (`bg-gray-50`) to ensure "Add Expert" and "Cancel" buttons remain pinned and accessible.
+  - Replaced the plain input selector with a custom styled category dropdown featuring a standard Lucide chevron-down arrow, and integrated micro-scale animations and smooth focus/hover transitions across all input fields.
 - **Expert Profile Self-Booking History Leak:**
   - Modified the backend `getBookingsByEmail` query in `bookingController.js` to exclude bookings where `notes === 'Blocked by Expert'`, preventing expert-blocked calendar slots from showing up in their client-facing booking history list.
 - **Stale Token Role Desynchronization (403 Forbidden on Dashboard):**
