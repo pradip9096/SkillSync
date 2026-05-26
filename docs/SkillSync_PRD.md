@@ -24,7 +24,7 @@
 > **Note:** This PRD governs high-level business goals and scope. For strict, 15-block technical specifications of these features, `MASTER_SPEC.md` is the canonical single source of truth.
 
 * **In-Scope Features (Phase 1 MVP):** Home Page; India Specific Localization; Placeholder Images; Expert directory with pagination/search/filter; Expert profile views; Real-time slot availability broadcasting via Socket.io; Atomic booking engine (DB-level locking); Booking history tracking by email.
-* **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock.
+* **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock; Endpoint Hardening & Ownership Verification.
 * **In-Scope Features (Phase 3):** Post-session Rating & Review System.
 * **Out-of-Scope Elements:** Payment processing and gateways; Integrated video/audio conferencing (booking handles scheduling only).
 
@@ -75,6 +75,8 @@
   - All incoming HTTP POST payloads must be strictly validated against a schema (Joi/Zod).
   - Environment variables (`MONGO_URI`, `PORT`, `JWT_SECRET`) must remain strictly local and isolated from source control.
   - Phase 2 routes must be protected via JWT middleware verifying Role-Based Access controls.
+  - Core booking actions (retrieval by email, status updates, rating toggles) must enforce strict server-side ownership validations to ensure users only fetch or modify booking records they own or host.
+  - Administrative accounts are restricted from booking creation, enforcing platform role isolation.
 * **Performance & Scalability:** 
   - The database must utilize indexes for Expert queries (Name, Category) and Booking queries (ExpertID + SlotTime).
   - Socket.io connections must utilize Rooms. Clients should only join the specific `expert_<id>` room they are viewing.
