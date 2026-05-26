@@ -120,7 +120,7 @@ const Profile = () => {
 
     try {
       setIsSaving(true);
-      const updateData = { name, phone: finalPhone };
+      const updateData = role === 'Admin' ? {} : { name, phone: finalPhone };
       if (password) {
         updateData.password = password;
       }
@@ -232,14 +232,20 @@ const Profile = () => {
                     </div>
                   )}
                 </div>
-                <label className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg cursor-pointer transition-colors z-10">
-                  <Camera className="w-4 h-4" />
-                  <input type="file" className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleImageUpload} disabled={isSaving} />
-                </label>
+                {role !== 'Admin' && (
+                  <label className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg cursor-pointer transition-colors z-10">
+                    <Camera className="w-4 h-4" />
+                    <input type="file" className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleImageUpload} disabled={isSaving} />
+                  </label>
+                )}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Profile Picture</h3>
-                <p className="text-sm text-gray-500 mt-1">Upload a professional headshot to help people recognize you. <br/> Max size: 5MB (JPEG, PNG, WebP).</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {role === 'Admin' 
+                    ? 'System administration accounts do not require a profile picture.' 
+                    : <>Upload a professional headshot to help people recognize you. <br/> Max size: 5MB (JPEG, PNG, WebP).</>}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8 border-b border-gray-100">
@@ -279,53 +285,55 @@ const Profile = () => {
             </div>
 
             {/* Editable Profile Information */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                Personal Details
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <div className="relative rounded-xl shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-gray-400" />
+            {role !== 'Admin' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                  Personal Details
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
+                      Full Name
+                    </label>
+                    <div className="relative rounded-xl shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="name"
+                        type="text"
+                        placeholder="Enter your name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                      />
                     </div>
-                    <input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
-                    />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <div className="relative rounded-xl shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <div className="relative rounded-xl shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="phone"
+                        type="text"
+                        placeholder="9876543210"
+                        value={phone}
+                        onChange={handlePhoneChange}
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                      />
                     </div>
-                    <input
-                      id="phone"
-                      type="text"
-                      placeholder="9876543210"
-                      value={phone}
-                      onChange={handlePhoneChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
-                    />
+                    <p className="mt-1 text-[11px] text-gray-400 font-medium">Must be a 10-digit mobile number.</p>
                   </div>
-                  <p className="mt-1 text-[11px] text-gray-400 font-medium">Must be a 10-digit mobile number.</p>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Change Password (Optional) */}
             <div className="pt-6 border-t border-gray-100">
