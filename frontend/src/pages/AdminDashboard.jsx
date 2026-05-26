@@ -38,6 +38,20 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+// Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
+const formatTime12H = (time24) => {
+  if (!time24) return '';
+  const parts = time24.split(':');
+  if (parts.length < 2) return time24;
+  const hour24 = parseInt(parts[0], 10);
+  const minute = parts[1];
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  let hour12 = hour24 % 12;
+  if (hour12 === 0) hour12 = 12;
+  const hourStr = hour12.toString().padStart(2, '0');
+  return `${hourStr}:${minute} ${ampm}`;
+};
+
 const AdminDashboard = () => {
   // Navigation tabs: 'users', 'bookings', 'experts'
   const [activeTab, setActiveTab] = useState('users');
@@ -428,7 +442,7 @@ const AdminDashboard = () => {
                               <div className="font-semibold text-xs">
                                 {new Date(b.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}
                               </div>
-                              <div className="text-xs font-black text-gray-900 mt-0.5">{b.slotTime}</div>
+                              <div className="text-xs font-black text-gray-900 mt-0.5">{formatTime12H(b.slotTime)}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <select
