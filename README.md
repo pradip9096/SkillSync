@@ -49,7 +49,7 @@ Strategic planning, specifications, and architecture references are available in
 - **Product Requirement Document (PRD):** [docs/SkillSync_PRD.md](docs/SkillSync_PRD.md) - Details product features, BDD scenarios, and risk vectors.
 - **Strategic Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) - Outlines release phases (Phase 1-4) and prioritization frameworks.
 - **Feature Plan Blueprint:** [docs/feature-plan-anatomy.txt](docs/feature-plan-anatomy.txt) - The standard visual component hierarchy template for planning files.
-- **Knowledge Base:** Internal engineering resources and database architecture references (e.g. [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md)).
+- **Knowledge Base:** Internal engineering resources and database architecture references (e.g. [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md), [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md)).
 - **Feature Plans:** Detailed technical design references for each implemented feature:
   - [Expert Directory](docs/feature-plan-expert-directory.md)
   - [Atomic Booking Engine](docs/feature-plan-atomic-booking-engine.md)
@@ -74,7 +74,7 @@ You can boot both the frontend and backend simultaneously using the provided aut
 ```bash
 ./start.sh
 ```
-*(This script includes protective checks to ensure duplicate instances are not spawned if you open a second terminal tab).*
+*(This script includes proactive port clearing to terminate legacy ghost processes on ports 5000 and 5173, ensuring a clean startup).*
 
 ### Backend Setup
 1. Navigate to the backend directory:

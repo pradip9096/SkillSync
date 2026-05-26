@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Expert Profile Self-Booking History Leak:**
+  - Modified the backend `getBookingsByEmail` query in `bookingController.js` to exclude bookings where `notes === 'Blocked by Expert'`, preventing expert-blocked calendar slots from showing up in their client-facing booking history list.
+- **Stale Token Role Desynchronization (403 Forbidden on Dashboard):**
+  - Configured frontend `AuthContext.jsx` initialization to proactively query `/auth/profile` and sync the latest user role and profile details from the database on startup. This prevents role mismatches (e.g. database-demoted Experts with stale client-side tokens accessing Expert dashboard routes and triggering `403 Forbidden`). Automatically wipes invalid sessions/stale tokens on database deletions.
+- **Local Dev Port Hijacking & Hanging Processes:**
+  - Added port-clearing logic to `start.sh` that detects and forcefully kills (`kill -9`) any legacy ghost processes listening on ports `5000` (backend) and `5173` (frontend), ensuring fresh servers always bind to the expected ports successfully.
+
+### Added
+- **Admin Roles & Session Guide:**
+  - Created `docs/knowledge-base/admin-and-session-guide.md` covering Admin Panel credentials, roles, criticality impact analysis, and session sandbox isolation tips for developers testing client/expert interactions concurrently.
+
+### Fixed
 - **Timezone Mismatches & Clock-Skew Safety:**
   - Standardized date-time past checks on `ExpertDashboard.jsx` (slot availability grid and sessions list), `ExpertDetail.jsx` (available slots selector), and `MyBookings.jsx` (eligible completion check) to use UTC-offset absolute millisecond comparisons (`+05:30`) against `new Date().getTime()`. This aligns the client validation 100% with the backend's epoch validation logic, preventing phantom past-slot errors.
   - Satisfied strict React hooks purity lint rules by replacing `Date.now()` with `new Date().getTime()`.
