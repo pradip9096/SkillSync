@@ -11,22 +11,28 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Starting SkillSync Project...${NC}"
 
-# Check if ports are already in use to prevent ghost processes
-if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null ; then
-    echo "Backend (Port 5000) is already running."
-else
-    echo -e "${BLUE}Starting Backend...${NC}"
-    (cd backend && npm start) &
-    BACKEND_PID=$!
-fi
+# Proactively terminate ghost processes on the required ports to ensure clean startup
+clear_port() {
+    local port=$1
+    local name=$2
+    local pid=$(lsof -t -i:$port -sTCP:LISTEN)
+    if [ ! -z "$pid" ]; then
+        echo -e "Port $port ($name) is currently in use by PID $pid. Terminating ghost process to ensure fresh startup..."
+        kill -9 $pid 2>/dev/null
+        sleep 1
+    fi
+}
 
-if lsof -Pi :5173 -sTCP:LISTEN -t >/dev/null ; then
-    echo "Frontend (Port 5173) is already running."
-else
-    echo -e "${BLUE}Starting Frontend...${NC}"
-    (cd frontend && npm run dev) &
-    FRONTEND_PID=$!
-fi
+clear_port 5000 "Backend"
+clear_port 5173 "Frontend"
+
+echo -e "${BLUE}Starting Backend...${NC}"
+(cd backend && npm start) &
+BACKEND_PID=$!
+
+echo -e "${BLUE}Starting Frontend...${NC}"
+(cd frontend && npm run dev) &
+FRONTEND_PID=$!
 
 # If neither were started by this script, exit gracefully
 if [ -z "$BACKEND_PID" ] && [ -z "$FRONTEND_PID" ]; then
