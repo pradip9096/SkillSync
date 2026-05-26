@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Feature Specification Standards & Tooling:**
+  - Standardized all 10 User Interaction Flow plain-text blocks in `MASTER_SPEC.md` into highly readable, unambiguous Mermaid flowcharts with distinct actor swimlanes and explicit success/failure branching.
+  - Formally codified requirement terminology (Feature, Functionality, Feature Cluster, User Story) within the `MASTER_SPEC.md` Glossary to prevent scope ambiguity across projects.
+  - Documented extensive industry standard comparisons (IREB, SAFe, FDD) for defining features in `docs/feature_definitions.md`.
+  - Created a robust `/start.sh` wrapper script in the root directory that concurrently boots both frontend and backend development servers while applying protective port checks to prevent ghost processes and terminal hijacking crashes.
+
 - **Simplified Phone Input UX:**
   - Refactored frontend phone inputs (`ExpertDetail.jsx`, `Register.jsx`, `Profile.jsx`, `AdminDashboard.jsx`) to accept a standard 10-digit mobile number, removing the need for users to type or see the `+91` country code.
   - Prepend `+91` country code transparently on API submit to satisfy Mongoose schema validations.

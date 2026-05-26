@@ -58,12 +58,21 @@ Strategic planning, specifications, and architecture references are available in
   - [India-Specific Localization](docs/feature-plan-india-localization.md)
   - [Smart Image Placeholders](docs/feature-plan-image-placeholders.md)
   - [JWT Authentication & RBAC](docs/feature-plan-jwt-authentication-rbac.md)
+- **Standards:**
+  - [Feature Requirements Taxonomy](docs/feature_definitions.md) - Formal industry standards (IREB, SAFe, FDD) applied to this project.
 
 ## ⚙️ Getting Started
 
 ### Prerequisites
 - Node.js (v18+ recommended)
 - MongoDB running locally or a MongoDB Atlas URI
+
+### Quick Start (Recommended)
+You can boot both the frontend and backend simultaneously using the provided auto-start script from the project root:
+```bash
+./start.sh
+```
+*(This script includes protective checks to ensure duplicate instances are not spawned if you open a second terminal tab).*
 
 ### Backend Setup
 1. Navigate to the backend directory:
