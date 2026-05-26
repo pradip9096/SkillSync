@@ -46,6 +46,12 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [ ] Integrated WebRTC Video/Audio Conferencing
 - [ ] Dynamic/Surge Pricing Models for Experts
 
+### Phase 5: Marketplace Governance & Schema Health (Future Development)
+*Goal: Resolve schema overloading anomalies, balance platform rating dynamics, and protect provider calendars.*
+- [ ] **Availability & Slot Block Decoupling:** Migrate expert availability and calendar blocks from the overloaded `Booking` collection into a dedicated `BlockedSlot` or `Availability` collection.
+- [ ] **Two-Sided P2P Feedback System:** Introduce client reviews where experts can rate and comment on clients post-session to mitigate spam, no-shows, and abusive behaviors.
+- [ ] **Cancellation Window Policy Lock:** Add time-locks protecting expert schedules (e.g. blocking client cancellations within 2 hours of slot time and recording `"Late Cancellation"` statuses).
+
 ---
 
 ## 🏗️ Technical Adaptability Strategy
