@@ -30,10 +30,12 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] Admin Dashboard (System-wide monitoring & management)
 - [x] Secure User Profile Management
 - [x] Expert Portal Dashboard & Availability Slot Blocking
+- [x] Prevent Expert Self-Booking (Security constraint)
+- [x] Enforce Session Completion Time-Lock (State transition security)
 
 ### Phase 3: Engagement & Trust
 *Goal: Build trust in the ecosystem and improve the user experience.*
-- [ ] Post-Session Rating & Review System
+- [x] Post-Session Rating & Review System
 - [ ] Automated Email/SMS Reminders
 - [ ] Expert Analytics Dashboard (Earnings, Booking metrics)
 

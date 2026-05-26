@@ -20,8 +20,12 @@
   8. Client tracks their status via the "My Bookings" interface.
 
 ## 3. Scope Boundaries
+
+> **Note:** This PRD governs high-level business goals and scope. For strict, 15-block technical specifications of these features, `MASTER_SPEC.md` is the canonical single source of truth.
+
 * **In-Scope Features (Phase 1 MVP):** Home Page; India Specific Localization; Placeholder Images; Expert directory with pagination/search/filter; Expert profile views; Real-time slot availability broadcasting via Socket.io; Atomic booking engine (DB-level locking); Booking history tracking by email.
-* **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Post-session Review Feature.
+* **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock.
+* **In-Scope Features (Phase 3):** Post-session Rating & Review System.
 * **Out-of-Scope Elements:** Payment processing and gateways; Integrated video/audio conferencing (booking handles scheduling only).
 
 ## 4. Functional Specifications & Prioritization
