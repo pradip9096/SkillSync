@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, Loader2, AlertCircle, Sparkles, UserCheck, User, Phone } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle, Sparkles, UserCheck, User, Phone, ChevronDown } from 'lucide-react';
 
 const Register = () => {
   const { register } = useAuth();
@@ -216,8 +216,8 @@ const Register = () => {
                   <option value="Client">Client (Seeking Advice)</option>
                   <option value="Expert">Expert (Offering Advice)</option>
                 </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
-                  ▼
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
                 </div>
               </div>
             </div>
@@ -235,19 +235,24 @@ const Register = () => {
                     <label htmlFor="category" className="block text-xs font-bold text-gray-700 mb-1">
                       Category
                     </label>
-                    <select
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs cursor-pointer"
-                    >
-                      <option value="Technology">Technology</option>
-                      <option value="Finance">Finance</option>
-                      <option value="Health">Health</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Design">Design</option>
-                      <option value="Business">Business</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        id="category"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-xl bg-white text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs cursor-pointer appearance-none transition-all duration-200 hover:border-indigo-200"
+                      >
+                        <option value="Technology">Technology</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Health">Health</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Design">Design</option>
+                        <option value="Business">Business</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
                   </div>
 
                   <div>

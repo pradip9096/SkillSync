@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 import { fetchExperts } from '../services/api';
 import ExpertCard from '../components/ExpertCard';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Filter, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 
 /**
  * ExpertListing Page Component.
@@ -111,7 +111,7 @@ const ExpertListing = () => {
           <div className="relative min-w-[240px]">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
-              className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm appearance-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none cursor-pointer font-medium"
+              className="w-full pl-12 pr-10 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm appearance-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none cursor-pointer font-medium transition-all duration-200 hover:border-blue-200"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -120,6 +120,7 @@ const ExpertListing = () => {
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
           </div>
         </div>
 
