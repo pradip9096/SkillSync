@@ -34,7 +34,8 @@ import {
   Phone,
   Briefcase,
   DollarSign,
-  Lock
+  Lock,
+  ChevronDown
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -544,7 +545,7 @@ const AdminDashboard = () => {
       {/* CREATE EXPERT DIALOG OVERLAY MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-gray-100 overflow-hidden animate-scale-up">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-scale-up">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center bg-gray-50 px-6 py-4 border-b border-gray-100">
@@ -561,179 +562,186 @@ const AdminDashboard = () => {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleCreateExpertSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleCreateExpertSubmit} className="flex flex-col flex-1 overflow-hidden">
               
-              {modalError && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-start gap-3 animate-fade-in">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-700 font-semibold">{modalError}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* Email */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Email (User Login)</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      placeholder="expert@skillsync.com"
-                      value={newExpertEmail}
-                      onChange={(e) => setNewExpertEmail(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                {modalError && (
+                  <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-start gap-3 animate-fade-in">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-700 font-semibold">{modalError}</p>
                   </div>
-                </div>
+                )}
 
-                {/* Password */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Password</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-4 w-4 text-gray-400" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* Email */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Email (User Login)</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        placeholder="expert@skillsync.com"
+                        value={newExpertEmail}
+                        onChange={(e) => setNewExpertEmail(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
                     </div>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={newExpertPassword}
-                      onChange={(e) => setNewExpertPassword(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
                   </div>
-                </div>
 
-                {/* Name */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Display Name</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Users className="h-4 w-4 text-gray-400" />
+                  {/* Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={newExpertPassword}
+                        onChange={(e) => setNewExpertPassword(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Dr. John Doe"
-                      value={newExpertName}
-                      onChange={(e) => setNewExpertName(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
                   </div>
-                </div>
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-4 w-4 text-gray-400" />
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Display Name</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Users className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Dr. John Doe"
+                        value={newExpertName}
+                        onChange={(e) => setNewExpertName(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="9876543210"
-                      value={newExpertPhone}
-                      onChange={(e) => {
-                        let val = e.target.value.replace(/\D/g, '');
-                        setNewExpertPhone(val.slice(0, 10));
-                      }}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
                   </div>
-                </div>
 
-                {/* Category */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
-                  <select
-                    value={newExpertCategory}
-                    onChange={(e) => setNewExpertCategory(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold appearance-none cursor-pointer"
-                  >
-                    <option value="Technology">Technology</option>
-                    <option value="Health">Health</option>
-                    <option value="Design">Design</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Business">Business</option>
-                  </select>
-                </div>
-
-                {/* Experience */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Experience (Years)</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Briefcase className="h-4 w-4 text-gray-400" />
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="9876543210"
+                        value={newExpertPhone}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          setNewExpertPhone(val.slice(0, 10));
+                        }}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
                     </div>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      placeholder="e.g. 5"
-                      value={newExpertExperience}
-                      onChange={(e) => setNewExpertExperience(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
                   </div>
-                </div>
 
-                {/* Hourly Rate */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Hourly Rate (₹ INR)</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="h-4 w-4 text-gray-400" />
+                  {/* Category */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                    <div className="relative">
+                      <select
+                        value={newExpertCategory}
+                        onChange={(e) => setNewExpertCategory(e.target.value)}
+                        className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold appearance-none cursor-pointer transition-all duration-200 hover:border-indigo-200"
+                      >
+                        <option value="Technology">Technology</option>
+                        <option value="Health">Health</option>
+                        <option value="Design">Design</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Business">Business</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </div>
                     </div>
-                    <input
-                      type="number"
-                      required
-                      min="100"
-                      placeholder="e.g. 1500"
-                      value={newExpertHourlyRate}
-                      onChange={(e) => setNewExpertHourlyRate(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold"
-                    />
                   </div>
-                </div>
 
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Professional Biography</label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 pt-2.5 pointer-events-none">
-                      <FileText className="h-4 w-4 text-gray-400" />
+                  {/* Experience */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Experience (Years)</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Briefcase className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 5"
+                        value={newExpertExperience}
+                        onChange={(e) => setNewExpertExperience(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
                     </div>
-                    <textarea
-                      rows="3"
-                      placeholder="Tell us about the expert's qualifications..."
-                      value={newExpertDescription}
-                      onChange={(e) => setNewExpertDescription(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold resize-none"
-                    />
                   </div>
-                </div>
 
+                  {/* Hourly Rate */}
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Hourly Rate (₹ INR)</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <DollarSign className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="number"
+                        required
+                        min="100"
+                        placeholder="e.g. 1500"
+                        value={newExpertHourlyRate}
+                        onChange={(e) => setNewExpertHourlyRate(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Professional Biography</label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 pt-2.5 pointer-events-none">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <textarea
+                        rows="3"
+                        placeholder="Tell us about the expert's qualifications..."
+                        value={newExpertDescription}
+                        onChange={(e) => setNewExpertDescription(e.target.value)}
+                        className="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold resize-none transition-all duration-200 hover:border-indigo-200"
+                      />
+                    </div>
+                  </div>
+
+                </div>
               </div>
 
               {/* Modal footer controls */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-5 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all active:scale-95 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={modalSubmitting}
-                  className="flex items-center gap-1 px-6 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md shadow-indigo-100 disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1 px-6 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md shadow-indigo-100 hover:shadow-lg hover:shadow-indigo-200/50 hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50 cursor-pointer"
                 >
                   {modalSubmitting ? (
                     <>
