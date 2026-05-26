@@ -33,7 +33,7 @@ import {
   Mail,
   Phone,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Lock,
   ChevronDown
 } from 'lucide-react';
@@ -709,7 +709,7 @@ const AdminDashboard = () => {
                     <label className="block text-xs font-bold text-gray-700 mb-1">Hourly Rate (₹ INR)</label>
                     <div className="relative rounded-lg shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
+                        <IndianRupee className="h-4 w-4 text-gray-400" />
                       </div>
                       <input
                         type="number"
