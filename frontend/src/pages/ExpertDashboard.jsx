@@ -604,7 +604,7 @@ const ExpertDashboard = () => {
                     const isBlockedByExpert = match && match.notes === 'Blocked by Expert';
                     const isPassed = isSlotInPast(slot);
 
-                    let btnStyle = 'bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border-gray-200';
+                    let btnStyle = 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border-emerald-200';
                     let label = 'Open (Click to Block)';
                     
                     if (isBookedByClient) {
@@ -646,7 +646,7 @@ const ExpertDashboard = () => {
               {/* Legend Indicator */}
               <div className="flex gap-4 pt-4 border-t border-gray-100 text-xs font-bold text-gray-500">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 bg-gray-100 rounded-full border border-gray-200" />
+                  <span className="w-3 h-3 bg-emerald-50 rounded-full border border-emerald-200" />
                   Open / Available
                 </span>
                 <span className="flex items-center gap-1.5">

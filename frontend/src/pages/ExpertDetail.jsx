@@ -419,8 +419,8 @@ const ExpertDetail = () => {
                         ${isDisabled 
                           ? 'bg-gray-100 text-gray-300 cursor-not-allowed grayscale' 
                           : selectedSlot === slot.value
-                            ? 'bg-blue-600 text-white shadow-2xl shadow-blue-400 scale-105'
-                            : 'bg-white border-2 border-gray-100 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-lg hover:shadow-blue-900/5'
+                            ? 'bg-emerald-600 text-white shadow-2xl shadow-emerald-400/50 scale-105'
+                            : 'bg-emerald-50/40 border-2 border-emerald-100 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-900/5'
                         }
                       `}
                     >
