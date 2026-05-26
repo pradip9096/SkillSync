@@ -55,6 +55,14 @@ const createBooking = async (req, res) => {
       }
     }
 
+    // Block admin from booking expert sessions
+    if (authUser && authUser.role === 'Admin') {
+      return res.status(400).json({
+        success: false,
+        error: 'Administrators are not permitted to book expert sessions. Please use a Client account.'
+      });
+    }
+
     // Block expert from booking their own slot
     const expertProfile = await Expert.findById(expert).populate('user');
     if (!expertProfile) {
@@ -160,6 +168,14 @@ const getBookingsByEmail = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please provide an email' });
     }
 
+    // Ensure caller is authorized (Admin or the owner of the email)
+    if (req.user.role !== 'Admin' && req.user.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view bookings for this email address.'
+      });
+    }
+
     // Find bookings and populate expert details for the frontend to display
     const bookings = await Booking.find({ 
       userEmail: email,
@@ -191,6 +207,24 @@ const updateBookingStatus = async (req, res) => {
 
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
+    }
+
+    // Verify caller has permissions (Admin, Client owner, or host Expert)
+    const isAdmin = req.user.role === 'Admin';
+    const isClientOwner = (booking.user && booking.user.toString() === req.user._id.toString()) || 
+                          (booking.userEmail && booking.userEmail.toLowerCase().trim() === req.user.email.toLowerCase().trim());
+    
+    let isExpertOwner = false;
+    if (req.user.role === 'Expert') {
+      const expertProfile = await Expert.findOne({ user: req.user._id });
+      isExpertOwner = expertProfile && booking.expert.toString() === expertProfile._id.toString();
+    }
+
+    if (!isAdmin && !isClientOwner && !isExpertOwner) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to modify the status of this booking.'
+      });
     }
 
     /**
@@ -231,10 +265,12 @@ const updateBookingStatus = async (req, res) => {
      */
     if (normalizedStatus === 'Cancelled') {
       const io = req.app.get('io');
-      io.to(booking.expert.toString()).emit('slot_released', { 
-        bookingDate: booking.bookingDate, 
-        slotTime: booking.slotTime 
-      });
+      if (io) {
+        io.to(booking.expert.toString()).emit('slot_released', { 
+          bookingDate: booking.bookingDate, 
+          slotTime: booking.slotTime 
+        });
+      }
     }
 
     res.status(200).json({ success: true, data: booking });
@@ -291,16 +327,26 @@ const getBookedSlots = async (req, res) => {
  */
 const markAsRated = async (req, res) => {
   try {
-    // Simply update the 'isRated' flag to true
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { isRated: true },
-      { new: true } // Return the updated document
-    );
+    const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
     }
+
+    // Ensure caller is authorized (Admin or Client owner)
+    const isAdmin = req.user.role === 'Admin';
+    const isClientOwner = (booking.user && booking.user.toString() === req.user._id.toString()) || 
+                          (booking.userEmail && booking.userEmail.toLowerCase().trim() === req.user.email.toLowerCase().trim());
+
+    if (!isAdmin && !isClientOwner) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to rate this session.'
+      });
+    }
+
+    booking.isRated = true;
+    await booking.save();
 
     res.status(200).json({ success: true, data: booking });
   } catch (error) {

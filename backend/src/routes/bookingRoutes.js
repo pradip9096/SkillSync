@@ -26,23 +26,23 @@ router.post('/', protect, createBooking);
 /**
  * Route: GET /
  * Purpose: Retrieve bookings for a specific user via email query parameter.
- * Access: Public.
+ * Access: Private (Requires authentication).
  */
-router.get('/', getBookingsByEmail);
+router.get('/', protect, getBookingsByEmail);
 
 /**
  * Route: PATCH /:id/status
  * Purpose: Update the status of a specific booking (e.g., Confirmed to Completed).
- * Access: Public.
+ * Access: Private (Requires authentication).
  */
-router.patch('/:id/status', updateBookingStatus);
+router.patch('/:id/status', protect, updateBookingStatus);
 
 /**
  * Route: PATCH /:id/rate
  * Purpose: Mark a booking as rated to prevent multiple ratings for the same session.
- * Access: Public.
+ * Access: Private (Requires authentication).
  */
-router.patch('/:id/rate', markAsRated);
+router.patch('/:id/rate', protect, markAsRated);
 
 /**
  * Route: GET /booked-slots/:expertId/:date
