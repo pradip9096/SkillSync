@@ -33,7 +33,8 @@ import {
   Mail,
   Phone,
   Briefcase,
-  DollarSign
+  DollarSign,
+  Lock
 } from 'lucide-react';
 
 const AdminDashboard = () => {
