@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Unauthorized Booking Access & Information Disclosure Vulnerabilities:**
+  - Secured `GET /api/v1/bookings`, `PATCH /api/v1/bookings/:id/status`, and `PATCH /api/v1/bookings/:id/rate` endpoints with JWT-based `protect` authentication middleware.
+  - Restricted email query lookups to own bookings or administrators, preventing anonymous users from harvesting booking records, names, or phone numbers.
+  - Enforced ownership verification checks on status changes and ratings to ensure only the Client owner, host Expert, or Admin can cancel or complete bookings.
+  - Proactively blocked Admin accounts from booking expert sessions directly, enforcing separation of duties.
 - **Admin Add Expert Modal Layout Clipping & Design Refinement:**
   - Prevented modal height truncation on smaller viewports by applying viewport constraints (`max-h-[90vh]`), layout structuring (`flex flex-col`), and internal scroll areas (`overflow-y-auto`) to the form body.
   - Styled header and footer blocks with static gray backgrounds (`bg-gray-50`) to ensure "Add Expert" and "Cancel" buttons remain pinned and accessible.
