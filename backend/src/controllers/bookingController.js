@@ -161,7 +161,10 @@ const getBookingsByEmail = async (req, res) => {
     }
 
     // Find bookings and populate expert details for the frontend to display
-    const bookings = await Booking.find({ userEmail: email }).populate('expert', 'name category');
+    const bookings = await Booking.find({ 
+      userEmail: email,
+      notes: { $ne: 'Blocked by Expert' }
+    }).populate('expert', 'name category');
 
     res.status(200).json({
       success: true,

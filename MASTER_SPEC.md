@@ -199,6 +199,9 @@ business logic integrity and prevent scheduling loop vulnerabilities.
   profile page (date picker, slot selector, guest input fields, and submission button).
   Rationale: Completely deactivates the booking workflow locally for self-profiles.
 
+- [MUST HAVE] Backend booking fetch API (`getBookingsByEmail`) must filter out and exclude slots with the notes 'Blocked by Expert'.
+  Rationale: Keeps the client-facing booking history clean and prevents experts from seeing self-bookings/blocked slots.
+
 - [SHOULD HAVE] Submit button text must change to "Self-Booking Disabled" when the page
   belongs to the logged-in user.
   Rationale: Offers clear, immediate visual confirmation of the deactivated state.
@@ -279,6 +282,7 @@ case-insensitive + trimmed}
   booking inputs in a disabled state and the submit button displaying "Self-Booking Disabled".
 * **AC 1.3:** The ExpertListing page rendered for a logged-in Expert must not display that
   Expert's own card in the grid.
+* **AC 1.4:** `GET /api/v1/bookings` querying by the expert's email must not return any booking objects where `notes === 'Blocked by Expert'` (blocked slots).
 
 ### Non-Goals
 
@@ -304,7 +308,7 @@ case-insensitive + trimmed}
 
 ### Known Bugs / Stability Risks
 
-None identified.
+- [MUST HAVE - Resolved 2026-05-26] Experts saw their own blocked slots (placeholder bookings) in their own "My History" client-facing page, making it look like they booked a session with themselves. Resolved by filtering out bookings with notes 'Blocked by Expert' in the backend `getBookingsByEmail` controller.
 
 ### Spec Change Log
 
@@ -312,6 +316,7 @@ None identified.
 |---|---|---|
 | 2026-05-25 | Agent | Initial implementation. Backend email + ID check added. Frontend card hidden and profile disabled. |
 | 2026-05-26 | Agent | Spec enriched to 15-block structure: flow, API spec, ACs, non-goals, dependencies, testing strategy, spec change log added. |
+| 2026-05-26 | Agent | Updated spec to exclude 'Blocked by Expert' slots from the client-facing booking history listing. |
 
 ### Status
 `Complete`
