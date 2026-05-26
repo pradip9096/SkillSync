@@ -456,6 +456,7 @@ None identified.
 |---|---|---|
 | 2026-05-25 | Agent | Initial implementation. Backend IST validation and frontend grid disabling added. |
 | 2026-05-26 | Agent | Spec enriched to 15-block structure: flow, API spec, ACs, non-goals, dependencies, testing strategy added. |
+| 2026-05-26 | Agent | Standardized past-slot calculation helper `isSlotInPast` across frontend and backend using absolute UTC offset epoch comparison. |
 
 ### Status
 `Complete`
@@ -628,6 +629,7 @@ Booking status updated to Completed])
 | 2026-05-10 | Agent | Bug fix iteration 3: added debug logging + timestamped backend error responses. |
 | 2026-05-25 | Agent | Extended to Expert Dashboard: "Complete" button shows as "Locked" for future sessions. |
 | 2026-05-26 | Agent | Spec enriched to 15-block structure: all missing blocks added. Known Bugs documented from log.md. |
+| 2026-05-26 | Agent | Standardized past-session calculation helper `isSessionPast` across MyBookings and Expert Dashboard using absolute UTC offset epoch comparison. |
 
 ### Status
 `Complete`
