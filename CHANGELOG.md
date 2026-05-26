@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Timezone Mismatches & Clock-Skew Safety:**
+  - Standardized date-time past checks on `ExpertDashboard.jsx` (slot availability grid and sessions list), `ExpertDetail.jsx` (available slots selector), and `MyBookings.jsx` (eligible completion check) to use UTC-offset absolute millisecond comparisons (`+05:30`) against `new Date().getTime()`. This aligns the client validation 100% with the backend's epoch validation logic, preventing phantom past-slot errors.
+  - Satisfied strict React hooks purity lint rules by replacing `Date.now()` with `new Date().getTime()`.
+- **Expert Dashboard Unblock Slot Rendering Mismatch:**
+  - Corrected the `getBookedSlots` backend controller response format to return full slot objects (containing `slotTime`, `userName`, and `notes`) instead of a flat array of strings. This enables the Expert Dashboard to successfully read `notes` and identify expert-blocked slots from client-booked slots, fixing the unblock functionality.
+  - Dynamically updated client-side socket event handlers and slot lookups in `ExpertDetail.jsx` to handle both strings and objects transparently.
+- **Real-Time Client View Updates on Expert Unblock:**
+  - Aligned the `slot_released` Socket.io event payload emitted by the `unblockSlot` controller to include the standard `bookingDate` and `slotTime` fields, enabling instant availability updates on connected client booking screens.
+
+### Added
+- **Nodemon Dev Startup Script:**
+  - Installed `nodemon` as a development dependency and added an `npm run dev` script in `backend/package.json` to monitor server file changes and automatically restart the backend process, preventing stale code deployment bugs during development.
+
 ### Added
 - **Feature Specification Standards & Tooling:**
   - Standardized all 10 User Interaction Flow plain-text blocks in `MASTER_SPEC.md` into highly readable, unambiguous Mermaid flowcharts with distinct actor swimlanes and explicit success/failure branching.

@@ -53,31 +53,11 @@ const MyBookings = () => {
    * @returns {boolean} True if the session start time has passed.
    */
   const isSessionPast = (date, time) => {
-    // We use Intl.DateTimeFormat to reliably get current components in the Asia/Kolkata timezone.
-    const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false };
-    const formatter = new Intl.DateTimeFormat('en-US', options);
-    const parts = formatter.formatToParts(new Date());
-    
-    const now = {};
-    parts.forEach(p => { if (p.type !== 'literal') now[p.type] = parseInt(p.value); });
-    
-    const [sYear, sMonth, sDay] = date.split('-').map(Number);
-    const [sHour, sMinute] = time.split(':').map(Number);
-    
-    // Step-by-step hierarchical comparison (Year -> Month -> Day -> Hour -> Minute)
-    if (now.year > sYear) return true;
-    if (now.year < sYear) return false;
-    
-    if (now.month > sMonth) return true;
-    if (now.month < sMonth) return false;
-    
-    if (now.day > sDay) return true;
-    if (now.day < sDay) return false;
-    
-    if (now.hour > sHour) return true;
-    if (now.hour < sHour) return false;
-    
-    return now.minute >= sMinute;
+    if (!date || !time) return false;
+    const sessionDateTime = new Date(`${date}T${time}:00+05:30`);
+    const sessionMs = sessionDateTime.getTime();
+    if (Number.isNaN(sessionMs)) return false;
+    return sessionMs <= new Date().getTime();
   };
 
   /**

@@ -33,6 +33,28 @@ API.interceptors.request.use(
   }
 );
 
+// Response interceptor: auto-clear stale/invalid tokens and redirect to login
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    // 401 ONLY: token is missing, expired, or points to a deleted user.
+    // Do NOT intercept 403 — that means the user exists but lacks permission for
+    // that specific route (e.g. Expert accessing Admin endpoints). Logging them out
+    // on 403 would destroy a perfectly valid session.
+    if (status === 401) {
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Hard redirect: forces AuthContext to reinitialise with no credentials
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 /**
  * Fetch a list of experts with optional filters.
  * 

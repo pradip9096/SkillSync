@@ -12,6 +12,24 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
+/**
+ * Decode a JWT token and check whether it is expired.
+ * Does NOT verify the signature (that is the server's job).
+ * Used only for proactive client-side session hygiene.
+ * @param {string} token - JWT string from localStorage.
+ * @returns {boolean} true if the token is valid and not expired.
+ */
+const isTokenValid = (token) => {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp is in seconds; Date.now() is in milliseconds
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 // Create the Context object
 const AuthContext = createContext(null);
 
@@ -24,16 +42,25 @@ export const AuthProvider = ({ children }) => {
   // Set up API base URL (consistent with services/api.js)
   const API_URL = 'http://localhost:5000/auth';
 
-  // Initialize: Load user details if token exists
+  // Initialize: Load user details if token exists AND is not expired
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
 
       if (storedToken && storedUser) {
+        // Proactively clear expired tokens before any API call is made.
+        // This prevents silent 401s deep inside the app from a stale session.
+        if (!isTokenValid(storedToken)) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setLoading(false);
+          return;
+        }
+
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-        
+
         // Attach token to axios default headers
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       }

@@ -55,29 +55,11 @@ const formatTime12H = (time24) => {
 
 // Helper: check if booking date/time has passed in IST timezone (UTC+5:30)
 const isSessionPast = (date, time) => {
-  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false };
-  const formatter = new Intl.DateTimeFormat('en-US', options);
-  const parts = formatter.formatToParts(new Date());
-  
-  const now = {};
-  parts.forEach(p => { if (p.type !== 'literal') now[p.type] = parseInt(p.value); });
-  
-  const [sYear, sMonth, sDay] = date.split('-').map(Number);
-  const [sHour, sMinute] = time.split(':').map(Number);
-  
-  if (now.year > sYear) return true;
-  if (now.year < sYear) return false;
-  
-  if (now.month > sMonth) return true;
-  if (now.month < sMonth) return false;
-  
-  if (now.day > sDay) return true;
-  if (now.day < sDay) return false;
-  
-  if (now.hour > sHour) return true;
-  if (now.hour < sHour) return false;
-  
-  return now.minute >= sMinute;
+  if (!date || !time) return false;
+  const sessionDateTime = new Date(`${date}T${time}:00+05:30`);
+  const sessionMs = sessionDateTime.getTime();
+  if (Number.isNaN(sessionMs)) return false;
+  return sessionMs <= new Date().getTime();
 };
 
 const ExpertDashboard = () => {
@@ -120,20 +102,11 @@ const ExpertDashboard = () => {
 
   // Helper: check if slot is in the past
   const isSlotInPast = useCallback((slotTime) => {
-    const now = new Date();
-    const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const todayStr = istNow.toISOString().split('T')[0];
-    
-    if (selectedDate < todayStr) return true;
-    if (selectedDate > todayStr) return false;
-    
-    const [sHour, sMinute] = slotTime.split(':').map(Number);
-    const nowHour = istNow.getUTCHours();
-    const nowMinute = istNow.getUTCMinutes();
-    
-    if (nowHour > sHour) return true;
-    if (nowHour === sHour && nowMinute >= sMinute) return true;
-    return false;
+    if (!selectedDate) return false;
+    const slotDateTime = new Date(`${selectedDate}T${slotTime}:00+05:30`);
+    const slotMs = slotDateTime.getTime();
+    if (Number.isNaN(slotMs)) return false;
+    return slotMs <= new Date().getTime();
   }, [selectedDate]);
 
   // Fetch expert profile info

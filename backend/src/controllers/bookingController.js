@@ -262,8 +262,12 @@ const getBookedSlots = async (req, res) => {
       status: { $ne: 'Cancelled' }
     });
     
-    // Extract only the slot times (e.g., ["10:00", "14:00"])
-    const bookedSlots = bookings.map(b => b.slotTime);
+    // Extract slot details needed by both client and expert dashboards
+    const bookedSlots = bookings.map(b => ({
+      slotTime: b.slotTime,
+      userName: b.userName,
+      notes: b.notes
+    }));
 
     res.status(200).json({
       success: true,

@@ -242,6 +242,8 @@ const unblockSlot = async (req, res) => {
     if (io) {
       io.to(expert._id.toString()).emit('slot_released', {
         expertId: expert._id.toString(),
+        bookingDate,
+        slotTime,
         date: bookingDate,
         slot: slotTime
       });

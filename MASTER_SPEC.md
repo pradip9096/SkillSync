@@ -166,6 +166,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Dynamic Availability Management (Slot Toggling)](#feature-dynamic-availability-management-slot-toggling) | `Generic Blueprint` | — | 2026-05-26 |
 | [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Generic Blueprint` | — | 2026-05-26 |
 | [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `In Progress` | SkillSync | 2026-05-26 |
+| [Systemic Database Consistency Architecture](#feature-systemic-database-consistency-architecture) | `Complete` | SkillSync | 2026-05-26 |
 
 ---
 
@@ -1680,14 +1681,25 @@ Allows all users to upload custom profile pictures, and allows Experts to upload
 ### User Interaction Flow
 
 ```mermaid
-graph TD
-    A[User] -->|Selects Image| B(Profile/Dashboard UI)
-    B -->|Submit| C{Upload Endpoint}
-    C -->|Invalid Type/Size| D[Error: Show feedback banner]
-    C -->|Valid| E[Save to /uploads]
-    E --> F[Update DB Document]
-    F --> G[Return new URL to UI]
-    G --> H[UI Updates Immediately]
+flowchart TD
+    subgraph Client/Expert
+        A([User]) --> B[Selects Image in Profile/Dashboard UI]
+        B --> C[Submits File]
+    end
+    
+    subgraph Backend API
+        C --> D{Upload Endpoint Validation
+        Type / Size}
+        D -->|Invalid Type/Size| E([400 Bad Request
+        Error Feedback])
+        D -->|Valid| F[Save to /uploads]
+        F --> G[Update DB Document]
+        G --> H([200 OK
+        Return new URL])
+    end
+    
+    E --> I[UI Shows Error Banner]
+    H --> J[UI Updates Immediately]
 ```
 
 ### API Specifications
@@ -1743,7 +1755,7 @@ graph TD
 
 ### Known Bugs / Stability Risks
 
-*None identified.*
+None identified.
 
 ### Spec Change Log
 
@@ -1753,6 +1765,120 @@ graph TD
 
 ### Status
 `In Progress`
+
+### Last Updated
+2026-05-26
+
+---
+
+## Feature: Systemic Database Consistency Architecture
+
+### Overview
+
+Integrates native MongoDB Replica Set ACID multi-document transactions (`session.withTransaction()`) globally across the backend to prevent partial data mutations and ensure system-wide data consistency.
+
+### Functional Requirements
+
+- [MUST HAVE] The backend must wrap complex database mutations (e.g., User Registration, Expert Creation, Cascading Deletions) inside MongoDB multi-document transactions.
+  Rationale: Ensures zero orphaned records (like a `User` without a corresponding `Expert`) remain if an operation fails midway.
+
+- [MUST HAVE] The transaction must completely abort and rollback all changes in the current session if any constituent operation throws an error.
+  Rationale: Maintains data integrity by preventing partial or corrupted states from being persisted.
+
+- [SHOULD HAVE] Complex operations must receive the `session` object explicitly in all Mongoose calls (e.g., `User.create([...], { session })`).
+  Rationale: Necessary for MongoDB to bind the operations to the active transaction bubble.
+
+- [CAN HAVE] Fallback mechanisms for non-replica set environments.
+  Rationale: Useful for local development where replica sets might not be configured, though staging/production must use replica sets.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] The database must run as a MongoDB Replica Set or Sharded Cluster.
+  Rationale: MongoDB multi-document transactions are not supported on standalone instances.
+
+### User Interaction Flow
+
+```mermaid
+flowchart TD
+    subgraph Client/Admin
+        A([User]) --> B[Triggers complex mutation
+        e.g., POST /auth/register]
+    end
+    
+    subgraph Backend Transaction Bubble
+        B --> C[Backend Controller:
+        mongoose.startSession]
+        C --> D[session.withTransaction]
+        D --> E[Operation 1: Create User
+        with session]
+        E --> F{Operation 1 Success?}
+        F -->|Yes| G[Operation 2: Create Expert Profile
+        with session]
+        F -->|No| H([Error Thrown])
+        G --> I{Operation 2 Success?}
+        I -->|Yes| J[Commit Transaction
+        Write to Main DB]
+        I -->|No| H
+        H --> K([Transaction Aborted
+        All partial data rolled back])
+    end
+    
+    J --> L([201 Created Response])
+    K --> M([500 / 400 Error Response])
+```
+
+### API Specifications
+
+* `POST /api/v1/auth/register` (and other complex endpoints)
+  Input: Standard registration payload
+  Validation: Enforces transaction session usage internally
+  Output: `{ success: true, user }`
+  Auth: Public / Admin depending on the specific endpoint
+
+### Edge Cases
+
+- When a multi-document transaction experiences a transient network error, MongoDB drivers retry the transaction automatically. If it still fails, it safely aborts.
+- When running on a standalone local database instead of a replica set, the transaction initialization will fail and must be handled gracefully or blocked.
+
+### Best Practices
+
+* Pass the `session` object as the final options argument in all Mongoose database calls within the transaction scope.
+* Use `session.withTransaction(async () => { ... })` instead of manually calling `session.startTransaction()` and `session.commitTransaction()` to leverage automatic retries and error handling.
+* Consult `docs/knowledge-base/mongodb-transactions.md` for architectural context and ASCII diagrams.
+
+### Acceptance Criteria
+
+* **AC 8.1:** Triggering a multi-document creation endpoint (like User + Expert registration) where the second operation is forced to fail must result in zero new documents created in any collection.
+* **AC 8.2:** Triggering a multi-document creation endpoint where all operations succeed must result in all new documents committed to the database simultaneously.
+
+### Non-Goals
+
+- This architecture does NOT automatically fix data that was orphaned prior to the implementation of transactions.
+- Does NOT apply to simple, single-document updates which are already atomic by default in MongoDB.
+
+### Dependencies
+
+- Service: MongoDB Replica Set (e.g., MongoDB Atlas) — multi-document transactions require a replica set to function.
+- Feature: User Authentication & RBAC — registration flows rely on these transactions for data integrity.
+
+### Testing Strategy
+
+- Unit: Mock `mongoose.startSession` to ensure controllers initiate and use sessions correctly.
+- Integration: Intentionally throw an error mid-transaction during a test run and assert that the database state remains unchanged.
+- Manual: Connect to a replica set, submit a registration request with valid User data but invalid Expert data, and verify no User document was created.
+
+### Known Bugs / Stability Risks
+
+None identified.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-26 | Agent | Initial spec created for Systemic Database Consistency Architecture. |
+
+### Status
+`Complete`
 
 ### Last Updated
 2026-05-26

@@ -11,12 +11,12 @@
  * - Creates a booking record on the server via POST request.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchExpertById, fetchBookedSlots, createBooking } from '../services/api';
 import socket from '../services/socket';
 import { useAuth } from '../context/AuthContext';
-import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle, X, ChevronRight } from 'lucide-react';
 
 /**
  * ExpertDetail Page Component.
@@ -54,7 +54,33 @@ const ExpertDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Lightbox state
+  const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed, number = open at that index
+
+  const openLightbox = (idx) => setLightboxIdx(idx);
+  const closeLightbox = useCallback(() => setLightboxIdx(null), []);
+  const lightboxPrev = useCallback(() => {
+    if (!expert?.gallery) return;
+    setLightboxIdx(i => (i - 1 + expert.gallery.length) % expert.gallery.length);
+  }, [expert]);
+  const lightboxNext = useCallback(() => {
+    if (!expert?.gallery) return;
+    setLightboxIdx(i => (i + 1) % expert.gallery.length);
+  }, [expert]);
+
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
+
+  // Keyboard handler: Escape closes lightbox, arrows navigate
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') lightboxPrev();
+      if (e.key === 'ArrowRight') lightboxNext();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxIdx, closeLightbox, lightboxPrev, lightboxNext]);
 
   // Pre-fill form from user details
   useEffect(() => {
@@ -86,22 +112,11 @@ const ExpertDetail = () => {
    * @returns {boolean} True if the slot is in the past, false otherwise.
    */
   const isSlotInPast = (slotTime) => {
-    const now = new Date();
-    const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const todayStr = istNow.toISOString().split('T')[0];
-    
-    // If selected date is not today, it can't be in the past
-    if (selectedDate !== todayStr) return false;
-    
-    const [sHour, sMinute] = slotTime.split(':').map(Number);
-    // Crucial Note: Because we manually added the 5.5-hour offset to istNow,
-    // calling .getUTCHours() actually gives us the hour in India.
-    const nowHour = istNow.getUTCHours();
-    const nowMinute = istNow.getUTCMinutes();
-    
-    if (nowHour > sHour) return true;
-    if (nowHour === sHour && nowMinute >= sMinute) return true;
-    return false;
+    if (!selectedDate) return false;
+    const slotDateTime = new Date(`${selectedDate}T${slotTime}:00+05:30`);
+    const slotMs = slotDateTime.getTime();
+    if (Number.isNaN(slotMs)) return false;
+    return slotMs <= new Date().getTime();
   };
 
   // Predefined time slots available for booking
@@ -148,14 +163,14 @@ const ExpertDetail = () => {
     // Listener for when a slot is booked by someone else
     socket.on('slot_booked', (data) => {
       if (data.bookingDate === selectedDate) {
-        setBookedSlots((prev) => [...prev, data.slotTime]);
+        setBookedSlots((prev) => [...prev, { slotTime: data.slotTime }]);
       }
     });
 
     // Listener for when a booking is cancelled, releasing the slot
     socket.on('slot_released', (data) => {
       if (data.bookingDate === selectedDate) {
-        setBookedSlots((prev) => prev.filter(slot => slot !== data.slotTime));
+        setBookedSlots((prev) => prev.filter(s => (typeof s === 'string' ? s : s.slotTime) !== data.slotTime));
       }
     });
 
@@ -248,7 +263,7 @@ const ExpertDetail = () => {
         </div>
         <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Confirmed!</h2>
         <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-          Your session with <span className="font-bold text-gray-900">{expert.name}</span> is set for <span className="font-bold text-blue-600">{selectedDate}</span> at <span className="font-bold text-blue-600">{selectedSlot}</span>.
+          Your session with <span className="font-bold text-gray-900">{expert.name}</span> is set for <span className="font-bold text-blue-600">{selectedDate}</span> at <span className="font-bold text-blue-600">{timeSlots.find(s => s.value === selectedSlot)?.label || selectedSlot}</span>.
         </p>
         <div className="flex items-center justify-center gap-2 text-gray-400 text-sm italic">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -324,20 +339,6 @@ const ExpertDetail = () => {
                   </span>
                 </div>
               </div>
-
-              {/* Expert Media Gallery */}
-              {expert.gallery && expert.gallery.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Professional Gallery</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {expert.gallery.map((imgSrc, idx) => (
-                      <div key={idx} className="rounded-xl overflow-hidden shadow-sm border border-gray-100 aspect-square">
-                        <img src={imgSrc} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -404,7 +405,7 @@ const ExpertDetail = () => {
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Available Slots</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {timeSlots.map((slot) => {
-                  const isBooked = bookedSlots.includes(slot.value);
+                  const isBooked = bookedSlots.some(s => (typeof s === 'string' ? s : s.slotTime) === slot.value);
                   const isPassed = isSlotInPast(slot.value);
                   const isDisabled = isBooked || isPassed || isOwnProfile;
 
@@ -577,6 +578,94 @@ const ExpertDetail = () => {
             </form>
           )}
         </div>
+
+        {/* Full-Width: Professional Gallery */}
+        {expert.gallery && expert.gallery.length > 0 && (
+          <div className="mt-12 bg-white rounded-3xl border border-gray-100 p-8 shadow-xl animate-slide-up">
+            <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+              <span className="text-2xl">🖼️</span> Professional Gallery
+              <span className="text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border">
+                {expert.gallery.length} {expert.gallery.length === 1 ? 'Photo' : 'Photos'}
+              </span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {expert.gallery.map((imgSrc, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 aspect-square cursor-zoom-in group relative"
+                  onDoubleClick={() => openLightbox(idx)}
+                  title="Double-click to view full size"
+                >
+                  <img
+                    src={imgSrc}
+                    alt={`Gallery ${idx + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=G${idx+1}&background=e0e7ff&color=4f46e5&size=300`; }}
+                  />
+                  {/* Hover hint overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black uppercase tracking-widest bg-black/50 px-2 py-1 rounded-full">
+                      Double-click
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Lightbox Modal */}
+            {lightboxIdx !== null && expert.gallery[lightboxIdx] && (
+              <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+                onClick={closeLightbox}
+              >
+                {/* Close button */}
+                <button
+                  onClick={closeLightbox}
+                  className="absolute top-5 right-5 z-10 p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+                  title="Close (Esc)"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                {/* Image counter */}
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/60 text-sm font-bold tracking-widest">
+                  {lightboxIdx + 1} / {expert.gallery.length}
+                </div>
+
+                {/* Prev arrow */}
+                {expert.gallery.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); lightboxPrev(); }}
+                    className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+                    title="Previous (←)"
+                  >
+                    <ChevronLeft className="w-7 h-7" />
+                  </button>
+                )}
+
+                {/* Full-size image */}
+                <img
+                  src={expert.gallery[lightboxIdx]}
+                  alt={`Gallery ${lightboxIdx + 1}`}
+                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                  onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=G${lightboxIdx+1}&background=e0e7ff&color=4f46e5&size=512`; }}
+                />
+
+                {/* Next arrow */}
+                {expert.gallery.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); lightboxNext(); }}
+                    className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+                    title="Next (→)"
+                  >
+                    <ChevronRight className="w-7 h-7" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Client Reviews Section */}
         <div className="mt-12 bg-white rounded-3xl border border-gray-100 p-8 shadow-xl animate-slide-up delay-200">

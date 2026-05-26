@@ -5,7 +5,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 ## 🚀 Features
 - **Landing Page:** A landing page introducing the platform, key value propositions, and quick navigation.
 - **Expert Discovery:** Responsive grid of experts with search, category filtering, and rating metrics.
-- **India-Specific Localization:** Fully localized Indian context including Indian Rupee (`₹`) display, IST-anchored time scheduling/locks, and standard 10-digit mobile number input layout with automatic database `+91` prefixing.
+- **India-Specific Localization:** Fully localized Indian context including Indian Rupee (`₹`) display, IST-anchored time scheduling/locks (using standardized UTC offset epoch millisecond comparisons across client and server), and standard 10-digit mobile number input layout with automatic database `+91` prefixing.
 - **Real-Time Availability:** Live time slot status synchronization via Socket.io rooms to reflect bookings instantly.
 - **Conflict-Free Booking:** Two-layer concurrency defense (pre-check query and compound unique partial database index) to prevent duplicate bookings.
 - **Robust Multi-Document Consistency:** ACID-compliant MongoDB transactions implemented across distributed collections (User, Expert, Booking) to completely eliminate partial-data corruption and orphaned records during creation or deletion workflows.
@@ -96,9 +96,8 @@ You can boot both the frontend and backend simultaneously using the provided aut
    - To seed experts: `node src/seeds/expertSeeder.js`
    - To seed admin user: `node src/seeds/userSeeder.js`
 5. Start the server:
-   ```bash
-   npm run dev # or node src/app.js
-   ```
+   - For development (with auto-reload): `npm run dev`
+   - For production: `npm start`
 
 ### Frontend Setup
 1. Navigate to the frontend directory:
