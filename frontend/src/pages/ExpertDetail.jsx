@@ -69,6 +69,8 @@ const ExpertDetail = () => {
   }, [expert]);
 
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
+  const isAdmin = !!(user && user.role === 'Admin');
+  const isBookingDisabled = isOwnProfile || isAdmin;
 
   // Keyboard handler: Escape closes lightbox, arrows navigate
   useEffect(() => {
@@ -393,7 +395,7 @@ const ExpertDetail = () => {
                       return istNow.toISOString().split('T')[0];
                     })()}
                     value={selectedDate}
-                    disabled={isOwnProfile}
+                    disabled={isBookingDisabled}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
@@ -407,7 +409,7 @@ const ExpertDetail = () => {
                 {timeSlots.map((slot) => {
                   const isBooked = bookedSlots.some(s => (typeof s === 'string' ? s : s.slotTime) === slot.value);
                   const isPassed = isSlotInPast(slot.value);
-                  const isDisabled = isBooked || isPassed || isOwnProfile;
+                  const isDisabled = isBooked || isPassed || isBookingDisabled;
 
                   return (
                     <button
@@ -480,7 +482,7 @@ const ExpertDetail = () => {
                       type="text" 
                       placeholder="Enter your name"
                       value={formData.userName}
-                      disabled={isOwnProfile}
+                      disabled={isBookingDisabled}
                       onChange={(e) => setFormData({...formData, userName: e.target.value})}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
@@ -497,7 +499,7 @@ const ExpertDetail = () => {
                       type="email" 
                       placeholder="name@example.com"
                       value={formData.userEmail}
-                      disabled={isOwnProfile}
+                      disabled={isBookingDisabled}
                       onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
@@ -519,7 +521,7 @@ const ExpertDetail = () => {
                       pattern="[0-9]{10}"
                       title="Please enter a 10-digit mobile number"
                       value={formData.userPhone}
-                      disabled={isOwnProfile}
+                      disabled={isBookingDisabled}
                       onChange={(e) => {
                         let val = e.target.value.replace(/\D/g, ''); 
                         setFormData({...formData, userPhone: val.slice(0, 10)});
@@ -538,7 +540,7 @@ const ExpertDetail = () => {
                       type="text" 
                       placeholder="Briefly describe your goals..."
                       value={formData.notes}
-                      disabled={isOwnProfile}
+                      disabled={isBookingDisabled}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
@@ -549,11 +551,11 @@ const ExpertDetail = () => {
               <div className="pt-6">
                 {/* Submission Button */}
                 <button 
-                  disabled={isSubmitting || !selectedSlot || isOwnProfile}
+                  disabled={isSubmitting || !selectedSlot || isBookingDisabled}
                   type="submit"
                   className={`
                     w-full py-6 rounded-[2rem] font-black text-xl tracking-tight transition-all duration-500
-                    ${isSubmitting || !selectedSlot || isOwnProfile
+                    ${isSubmitting || !selectedSlot || isBookingDisabled
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95'
                     }
@@ -563,6 +565,8 @@ const ExpertDetail = () => {
                     <span className="flex items-center justify-center gap-3">
                       <Loader2 className="w-6 h-6 animate-spin" /> Finalizing Booking...
                     </span>
+                  ) : isAdmin ? (
+                    'Booking Disabled for Admins'
                   ) : isOwnProfile ? (
                     'Self-Booking Disabled'
                   ) : !selectedSlot ? (
