@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Availability Schema Migration (Decoupled Slot Blocking):**
+  - Created a dedicated `Availability` collection in MongoDB (`Availability.js`) with a compound unique index on `{ expert, bookingDate, slotTime }` to store expert availability blocks separately from client bookings.
+  - Implemented an automated seed/migration utility `migrateBlockedSlots.js` to transfer existing placeholders (`notes: 'Blocked by Expert'`) from `bookings` to `availabilities` atomically.
+  - Created an integration test suite `test_availability_migration.js` to verify block creation, lookups, double-booking rejection, and unblocking.
+
+### Changed
+- **Backend Controllers for Decoupled Availability:**
+  - Modified `createBooking` and `getBookedSlots` in `bookingController.js` to check both `Booking` and `Availability` collections, merging their outputs for the frontend with zero breaking changes.
+  - Modified `blockSlot` and `unblockSlot` in `expertDashboardController.js` to perform create/delete operations on the `Availability` collection instead of `Booking`.
+  - Modified `getExpertBookings` to query only the `Booking` collection (which is now naturally clean of blocks).
+
 ### Fixed
 - **Admin Layout Hardening & Role Isolation:**
   - Disabled interactive date selectors, slots grids, and client information inputs in `ExpertDetail.jsx` when viewed by an Admin account, updating the action button text to a static `'Booking Disabled for Admins'`.

@@ -33,10 +33,12 @@ This is a two-package JavaScript application:
   - `src/controllers/expertDashboardController.js` - Expert portal and slot blocking handlers.
   - `src/middleware/authMiddleware.js` - JWT authentication verification and role checks.
   - `src/models/User.js` - Mongoose User schema with password hashing.
+  - `src/models/Availability.js` - Mongoose Availability schema for expert calendar blocks.
   - `src/routes/authRoutes.js` - Auth and profile routes mounting.
   - `src/routes/adminRoutes.js` - Admin dashboard routing endpoints.
   - `src/routes/expertDashboardRoutes.js` - Expert dashboard routing endpoints.
   - `src/seeds/userSeeder.js` - Admin bootstrapping utility.
+  - `src/seeds/migrateBlockedSlots.js` - One-time availability data migration utility.
 - `frontend/`: React + Vite client.
   - `src/context/AuthContext.jsx` - Global authentication context state.
   - `src/components/ProtectedRoute.jsx` - Routing guard wrapper based on authentication/role roles.
@@ -94,8 +96,9 @@ You can boot both the frontend and backend simultaneously using the provided aut
    JWT_SECRET=your_jwt_secret_key
    ```
 4. Seed the database (Optional):
-   - To seed experts: `node src/seeds/expertSeeder.js`
-   - To seed admin user: `node src/seeds/userSeeder.js`
+    - To seed experts: `node src/seeds/expertSeeder.js`
+    - To seed admin user: `node src/seeds/userSeeder.js`
+    - To migrate legacy blocked slots: `node src/seeds/migrateBlockedSlots.js`
 5. Start the server:
    - For development (with auto-reload): `npm run dev`
    - For production: `npm start`

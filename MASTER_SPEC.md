@@ -167,6 +167,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Generic Blueprint` | — | 2026-05-26 |
 | [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `In Progress` | SkillSync | 2026-05-26 |
 | [Systemic Database Consistency Architecture](#feature-systemic-database-consistency-architecture) | `Complete` | SkillSync | 2026-05-26 |
+| [Availability Schema Migration](#feature-availability-schema-migration) | `Complete` | SkillSync | 2026-05-26 |
 
 ---
 
@@ -1910,6 +1911,100 @@ None identified.
 | Date | Author | Summary |
 |---|---|---|
 | 2026-05-26 | Agent | Initial spec created for Systemic Database Consistency Architecture. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-26
+
+---
+
+## Feature: Availability Schema Migration
+
+### Overview
+Migrates expert calendar unavailability blocks from the overloaded `Booking` collection into a dedicated `Availability` collection. This decouples transactional client history logs from expert scheduling locks, cleaning up dashboards and ensuring proper database separation of concerns.
+
+### Functional Requirements
+
+- [MUST HAVE] Create a separate `Availability` Mongoose model containing reference to the expert, bookingDate, slotTime, and a notes field.
+  Rationale: Enforces clean database models separating scheduling overrides from actual client transaction bookings.
+
+- [MUST HAVE] The `Availability` schema must implement a compound unique index on `{ expert: 1, bookingDate: 1, slotTime: 1 }` to prevent double-blocking slots.
+  Rationale: Prevents race conditions or database corruption where multiple blocks could be created for the same slot.
+
+- [MUST HAVE] Include a database migration script `migrateBlockedSlots.js` to migrate existing legacy blocks (`notes === 'Blocked by Expert'`) into the new collection atomically.
+  Rationale: Ensures backward compatibility of existing calendar blocks without data loss.
+
+- [MUST HAVE] The `createBooking` endpoint must reject client bookings if the slot is blocked in the `Availability` collection.
+  Rationale: Hard security safeguard preventing clients from scheduling sessions over blocked slots.
+
+- [MUST HAVE] The `/api/v1/bookings/booked-slots/:expertId/:date` endpoint must fetch records from both collections and merge them to preserve frontend compatibility.
+  Rationale: Ensures zero breaking changes in client-side booking and expert dashboard layouts.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Compound unique index operations must be executed and returned with HTTP 400 Bad Request if a duplicate slot is blocked.
+  Rationale: Prevents system crashes and reports meaningful conflict feedback.
+
+### User Interaction Flow
+
+```
+[Expert] -> Click Slot on Dashboard -> [System creates Availability record]
+  |-- Success --> Slot state changes to "Blocked" (red) in real-time
+  |-- Failure --> Error alert shown, slot state remains unchanged
+```
+
+### API Specifications
+
+* `POST /api/v1/expert-dashboard/block-slot`
+  Input: { bookingDate: String, slotTime: String }
+  Validation: bookingDate and slotTime required, slot not in the past, expert profile exists, slot not already booked or blocked
+  Output: { success: Boolean, data: Object }
+  Auth: Private (Expert Only)
+
+* `POST /api/v1/expert-dashboard/unblock-slot`
+  Input: { bookingDate: String, slotTime: String }
+  Validation: bookingDate and slotTime required, block record exists
+  Output: { success: Boolean, message: String }
+  Auth: Private (Expert Only)
+
+### Edge Cases
+
+- When a client is viewing the expert profile page and attempts to book a slot at the exact moment the expert blocks it, the backend must reject the booking with an HTTP 400 conflict error.
+
+### Best Practices
+
+* Ensure `bookingDate` is handled as a standard string formatted as `YYYY-MM-DD` and no Date methods are called directly on it to prevent runtime crashes.
+
+### Acceptance Criteria
+
+* **AC 11.1:** Verification that blocking a slot writes a record to the `Availability` collection and unblocking deletes it.
+* **AC 11.2:** Verification that client booking attempts on blocked slots are blocked and rejected by the server.
+* **AC 11.3:** Verification that `getBookedSlots` merges bookings and availability records into a unified array.
+
+### Non-Goals
+
+- This feature does NOT handle payment holds or cancellation policies.
+
+### Dependencies
+
+- Feature: Real-Time Booking & Scheduling Engine — depends on live Socket.io integrations to broadcast slot releases and blocks.
+
+### Testing Strategy
+
+- Unit/Integration: Test suite `test_availability_migration.js` executing block, lookups, booking conflict rejection, and unblocking.
+- Manual: Log in as Expert and Client to verify slot blocking grid.
+
+### Known Bugs / Stability Risks
+
+None identified.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-26 | Agent | Initial spec created for Availability Schema Migration. |
 
 ### Status
 `Complete`

@@ -7,6 +7,7 @@
 
 const Booking = require('../models/Booking');
 const Expert = require('../models/Expert');
+const Availability = require('../models/Availability');
 
 /**
  * Purpose: Create a new booking after checking for existing conflicts.
@@ -103,6 +104,20 @@ const createBooking = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'This time slot is already booked.'
+      });
+    }
+
+    // Check if the slot is blocked in Availability collection
+    const existingBlock = await Availability.findOne({
+      expert,
+      bookingDate,
+      slotTime
+    });
+
+    if (existingBlock) {
+      return res.status(400).json({
+        success: false,
+        error: 'This time slot is blocked by the expert.'
       });
     }
 
@@ -300,13 +315,26 @@ const getBookedSlots = async (req, res) => {
       bookingDate: date,
       status: { $ne: 'Cancelled' }
     });
+
+    // Fetch availability blocks
+    const blocks = await Availability.find({
+      expert: expertId,
+      bookingDate: date
+    });
     
     // Extract slot details needed by both client and expert dashboards
-    const bookedSlots = bookings.map(b => ({
-      slotTime: b.slotTime,
-      userName: b.userName,
-      notes: b.notes
-    }));
+    const bookedSlots = [
+      ...bookings.map(b => ({
+        slotTime: b.slotTime,
+        userName: b.userName,
+        notes: b.notes
+      })),
+      ...blocks.map(a => ({
+        slotTime: a.slotTime,
+        userName: 'Blocked Slot',
+        notes: a.notes || 'Blocked by Expert'
+      }))
+    ];
 
     res.status(200).json({
       success: true,

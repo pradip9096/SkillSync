@@ -10,6 +10,7 @@
 
 const Expert = require('../models/Expert');
 const Booking = require('../models/Booking');
+const Availability = require('../models/Availability');
 
 /**
  * @desc    Get all bookings for the logged-in Expert
@@ -160,20 +161,29 @@ const blockSlot = async (req, res) => {
     if (existingBooking) {
       return res.status(400).json({
         success: false,
-        error: 'This time slot is already booked or blocked'
+        error: 'This time slot is already booked.'
       });
     }
 
-    // Create the blocking booking record
-    const booking = await Booking.create({
+    // Check if slot is already blocked
+    const existingBlock = await Availability.findOne({
       expert: expert._id,
-      user: req.user._id,
-      userName: 'Blocked Slot',
-      userEmail: req.user.email,
-      userPhone: req.user.phone || '+910000000000',
+      bookingDate,
+      slotTime
+    });
+
+    if (existingBlock) {
+      return res.status(400).json({
+        success: false,
+        error: 'This time slot is already blocked.'
+      });
+    }
+
+    // Create the blocking record in Availability
+    const block = await Availability.create({
+      expert: expert._id,
       bookingDate,
       slotTime,
-      status: 'Confirmed',
       notes: 'Blocked by Expert'
     });
 
@@ -185,7 +195,7 @@ const blockSlot = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: booking
+      data: block
     });
   } catch (error) {
     res.status(500).json({
@@ -219,23 +229,21 @@ const unblockSlot = async (req, res) => {
       });
     }
 
-    // Find the specific blocked booking created by the expert
-    const booking = await Booking.findOne({
+    // Find the specific blocked slot in Availability
+    const block = await Availability.findOne({
       expert: expert._id,
       bookingDate,
-      slotTime,
-      userEmail: req.user.email,
-      notes: 'Blocked by Expert'
+      slotTime
     });
 
-    if (!booking) {
+    if (!block) {
       return res.status(404).json({
         success: false,
         error: 'Blocked slot record not found'
       });
     }
 
-    await Booking.findByIdAndDelete(booking._id);
+    await Availability.findByIdAndDelete(block._id);
 
     // Real-time notification: Broadcast slot release to client listeners
     const io = req.app.get('io');
