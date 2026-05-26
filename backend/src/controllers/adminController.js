@@ -90,7 +90,7 @@ const updateBookingStatusByAdmin = async (req, res) => {
     if (status === 'Cancelled' && oldStatus !== 'Cancelled') {
       const io = req.app.get('io');
       if (io) {
-        const dateStr = booking.bookingDate.toISOString().split('T')[0];
+        const dateStr = booking.bookingDate;
         io.to(booking.expert.toString()).emit('slot_released', {
           expertId: booking.expert.toString(),
           date: dateStr,
@@ -128,7 +128,7 @@ const deleteBookingByAdmin = async (req, res) => {
 
     const expertId = booking.expert.toString();
     const slotTime = booking.slotTime;
-    const dateStr = booking.bookingDate.toISOString().split('T')[0];
+    const dateStr = booking.bookingDate;
 
     await Booking.findByIdAndDelete(req.params.id);
 
