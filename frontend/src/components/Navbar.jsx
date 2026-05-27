@@ -59,7 +59,7 @@ const Navbar = () => {
             </Link>
 
             {/* My History / Bookings Link */}
-            {(!user || user.role !== 'Admin') && (
+            {(!user || user.role === 'Client') && (
               <Link 
                 to="/my-bookings" 
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${

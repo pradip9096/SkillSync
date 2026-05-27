@@ -70,8 +70,9 @@ const ExpertDetail = () => {
 
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
   const isAdmin = !!(user && user.role === 'Admin');
+  const isExpert = !!(user && user.role === 'Expert');
   const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > Date.now());
-  const isBookingDisabled = isOwnProfile || isAdmin || isSuspended;
+  const isBookingDisabled = isOwnProfile || isAdmin || isExpert || isSuspended;
 
   // Keyboard handler: Escape closes lightbox, arrows navigate
   useEffect(() => {
@@ -595,6 +596,8 @@ const ExpertDetail = () => {
                     </span>
                   ) : isAdmin ? (
                     'Booking Disabled for Admins'
+                  ) : isExpert ? (
+                    'Booking Disabled for Experts'
                   ) : isOwnProfile ? (
                     'Self-Booking Disabled'
                   ) : !selectedSlot ? (

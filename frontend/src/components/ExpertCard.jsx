@@ -10,6 +10,7 @@
 
 import { Link } from 'react-router-dom';
 import { Star, Briefcase, Award } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * ExpertCard Component.
@@ -30,6 +31,8 @@ import { Star, Briefcase, Award } from 'lucide-react';
  * Side effects: None.
  */
 const ExpertCard = ({ expert, index }) => {
+  const { user } = useAuth();
+  
   const isPlaceholder = !expert.profileImage || 
     expert.profileImage.includes('placehold.co') || 
     expert.profileImage.includes('placehold.it') || 
@@ -97,7 +100,7 @@ const ExpertCard = ({ expert, index }) => {
             to={`/expert/${expert._id}`}
             className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
           >
-            View Profile & Book
+            {user && (user.role === 'Expert' || user.role === 'Admin') ? 'View Profile' : 'View Profile & Book'}
           </Link>
         </div>
       </div>
