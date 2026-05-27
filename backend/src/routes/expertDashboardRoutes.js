@@ -16,7 +16,8 @@ const {
   updateExpertProfile,
   blockSlot,
   unblockSlot,
-  rateClient
+  rateClient,
+  getExpertAnalytics
 } = require('../controllers/expertDashboardController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -27,6 +28,9 @@ router.use(restrictTo('Expert'));
 // Sessions / bookings list
 router.get('/bookings', getExpertBookings);
 router.post('/bookings/:id/rate-client', rateClient);
+
+// Business Analytics
+router.get('/analytics', getExpertAnalytics);
 
 // Professional profile configurations
 router.get('/profile', getExpertProfile);

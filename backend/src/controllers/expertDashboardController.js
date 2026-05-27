@@ -13,6 +13,7 @@ const Booking = require('../models/Booking');
 const Availability = require('../models/Availability');
 const User = require('../models/User');
 const ClientReview = require('../models/ClientReview');
+const Review = require('../models/Review');
 
 /**
  * @desc    Get all bookings for the logged-in Expert
@@ -460,6 +461,153 @@ const rateClient = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get dashboard analytics metrics for the logged-in Expert
+ * @route   GET /expert-dashboard/analytics
+ * @access  Private (Expert Only)
+ */
+const getExpertAnalytics = async (req, res) => {
+  try {
+    const expert = await Expert.findOne({ user: req.user._id });
+    if (!expert) {
+      return res.status(404).json({ success: false, error: 'Expert profile not found' });
+    }
+
+    // Fetch all bookings for this expert
+    const bookings = await Booking.find({ expert: expert._id });
+    
+    // Fetch all blocked slots for this expert
+    const blockedSlots = await Availability.find({ expert: expert._id });
+
+    // Fetch recent reviews for this expert
+    const recentReviews = await Review.find({ expert: expert._id })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Initial counts
+    let totalBookings = bookings.length;
+    let completedCount = 0;
+    let confirmedCount = 0;
+    let pendingCount = 0;
+    let cancelledCount = 0;
+    let lateCancelledCount = 0;
+
+    // Monthly trends map (YYYY-MM) -> { month, count, revenue }
+    const monthlyTrendsMap = {};
+
+    // Weekly distribution map (0-6) -> count
+    const weekdayDistribution = Array(7).fill(0);
+
+    // Hourly distribution map (HH:mm) -> count
+    const hourlyDistribution = {};
+
+    // Helper: Map day index to name
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    bookings.forEach(b => {
+      const status = b.status;
+      if (status === 'Completed') completedCount++;
+      else if (status === 'Confirmed') confirmedCount++;
+      else if (status === 'Pending') pendingCount++;
+      else if (status === 'Cancelled') cancelledCount++;
+      else if (status === 'Late Cancellation') lateCancelledCount++;
+
+      // Process only Completed/Confirmed sessions for trends & distribution
+      if (status === 'Completed' || status === 'Confirmed') {
+        // Monthly trend
+        if (b.bookingDate) {
+          const parts = b.bookingDate.split('-'); // YYYY-MM-DD
+          if (parts.length === 3) {
+            const yyyymm = `${parts[0]}-${parts[1]}`;
+            // Let's get month display name
+            const dateObj = new Date(`${b.bookingDate}T00:00:00`);
+            const monthName = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+            
+            if (!monthlyTrendsMap[yyyymm]) {
+              monthlyTrendsMap[yyyymm] = { month: monthName, count: 0, revenue: 0 };
+            }
+            monthlyTrendsMap[yyyymm].count += 1;
+            if (status === 'Completed') {
+              monthlyTrendsMap[yyyymm].revenue += expert.hourlyRate;
+            }
+          }
+        }
+
+        // Day of week distribution
+        if (b.bookingDate) {
+          const dateObj = new Date(`${b.bookingDate}T00:00:00`);
+          const dayIndex = dateObj.getDay();
+          if (!Number.isNaN(dayIndex)) {
+            weekdayDistribution[dayIndex]++;
+          }
+        }
+
+        // Time slot distribution
+        if (b.slotTime) {
+          hourlyDistribution[b.slotTime] = (hourlyDistribution[b.slotTime] || 0) + 1;
+        }
+      }
+    });
+
+    // Format Monthly Trends: Sort keys chronologically
+    const monthlyTrends = Object.keys(monthlyTrendsMap)
+      .sort()
+      .map(key => monthlyTrendsMap[key]);
+
+    // Format Weekly distribution
+    const weeklyTrends = weekdays.map((day, idx) => ({
+      day,
+      count: weekdayDistribution[idx]
+    }));
+
+    // Format Hourly distribution
+    const hourlyTrends = Object.keys(hourlyDistribution)
+      .sort()
+      .map(slot => ({
+        slot,
+        count: hourlyDistribution[slot]
+      }));
+
+    // General stats
+    const totalBlockedCount = blockedSlots.length;
+    const totalEarnings = completedCount * expert.hourlyRate;
+    
+    // Utilization rate: Completed / (All Bookings + Blocked slots)
+    const divisor = totalBookings + totalBlockedCount;
+    const utilizationRate = divisor > 0 
+      ? parseFloat(((completedCount / divisor) * 100).toFixed(1)) 
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      analytics: {
+        expertId: expert._id,
+        hourlyRate: expert.hourlyRate,
+        rating: expert.rating,
+        numReviews: expert.numReviews,
+        counts: {
+          totalBookings,
+          completedCount,
+          confirmedCount,
+          pendingCount,
+          cancelledCount,
+          lateCancelledCount,
+          totalBlockedCount
+        },
+        totalEarnings,
+        utilizationRate,
+        monthlyTrends,
+        weeklyTrends,
+        hourlyTrends,
+        recentReviews
+      }
+    });
+  } catch (error) {
+    console.error('API Error in getExpertAnalytics:', error);
+    res.status(500).json({ success: false, error: 'Server error retrieving analytics data' });
+  }
+};
+
 module.exports = {
   getExpertBookings,
   getExpertProfile,
@@ -468,5 +616,6 @@ module.exports = {
   unblockSlot,
   uploadGalleryImage,
   deleteGalleryImage,
-  rateClient
+  rateClient,
+  getExpertAnalytics
 };

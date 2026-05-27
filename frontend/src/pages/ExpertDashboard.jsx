@@ -19,7 +19,8 @@ import {
   updateBookingStatus,
   uploadGalleryImage,
   deleteGalleryImage,
-  rateClient
+  rateClient,
+  fetchExpertDashboardAnalytics
 } from '../services/api';
 import socket from '../services/socket';
 import { 
@@ -39,7 +40,8 @@ import {
   Image,
   Trash2,
   Star,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 
 // Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
@@ -97,6 +99,10 @@ const ExpertDashboard = () => {
   const [hourlyRate, setHourlyRate] = useState('');
   const [description, setDescription] = useState('');
   const [gallery, setGallery] = useState([]);
+
+  // Analytics states
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -192,6 +198,29 @@ const ExpertDashboard = () => {
       loadBookedSlots();
     }
   }, [expertId, selectedDate, loadBookedSlots]);
+
+  // Fetch dashboard business analytics metrics
+  const loadAnalytics = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      const { data } = await fetchExpertDashboardAnalytics();
+      if (data && data.success) {
+        setAnalytics(data.analytics);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Failed to load business analytics data.');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
+  // Fetch analytics data when tab switches to analytics
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      loadAnalytics();
+    }
+  }, [activeTab, loadAnalytics]);
 
   // Set up Socket.io connection for real-time availability updates
   useEffect(() => {
@@ -533,6 +562,18 @@ const ExpertDashboard = () => {
           >
             <Image className="w-4 h-4" />
             Media Gallery
+          </button>
+
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 pb-4 px-2 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'analytics' 
+                ? 'border-purple-600 text-purple-600 font-extrabold' 
+                : 'border-transparent text-gray-500 hover:text-purple-600'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Business Analytics
           </button>
         </div>
 
@@ -907,6 +948,207 @@ const ExpertDashboard = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: BUSINESS ANALYTICS */}
+          {activeTab === 'analytics' && (
+            <div>
+              {analyticsLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="w-12 h-12 text-purple-600 animate-spin mb-4" />
+                  <p className="text-gray-500 font-bold tracking-wide uppercase text-xs">Assembling Insights...</p>
+                </div>
+              ) : analytics ? (
+                <div className="space-y-10">
+                  
+                  {/* KPI Statistics Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* KPI 1: Revenue */}
+                    <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden group animate-fade-in">
+                      <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <IndianRupee className="w-32 h-32" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-purple-100">Total Earnings</span>
+                      <h3 className="text-3xl font-black mt-2">₹{analytics.totalEarnings.toLocaleString('en-IN')}</h3>
+                      <p className="text-xs text-purple-200 mt-2 font-bold">Based on profile hourly rate</p>
+                    </div>
+
+                    {/* KPI 2: Completed Hours */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md relative overflow-hidden group hover:border-purple-200 transition-all duration-300 animate-fade-in delay-100">
+                      <div className="absolute -right-4 -bottom-4 opacity-5 text-purple-600 group-hover:scale-110 transition-transform duration-500">
+                        <CheckCircle className="w-32 h-32" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-gray-400">Hours Conducted</span>
+                      <h3 className="text-3xl font-black mt-2 text-gray-900">{analytics.counts.completedCount} Hrs</h3>
+                      <p className="text-xs text-gray-500 mt-2 font-bold">Completed client sessions</p>
+                    </div>
+
+                    {/* KPI 3: Slot Utilization */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md relative overflow-hidden group hover:border-purple-200 transition-all duration-300 animate-fade-in delay-200">
+                      <div className="absolute -right-4 -bottom-4 opacity-5 text-indigo-600 group-hover:scale-110 transition-transform duration-500">
+                        <Calendar className="w-32 h-32" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-gray-400">Calendar Utilization</span>
+                      <h3 className="text-3xl font-black mt-2 text-gray-900">{analytics.utilizationRate}%</h3>
+                      <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="bg-indigo-600 h-full rounded-full transition-all duration-1000" 
+                          style={{ width: `${Math.min(analytics.utilizationRate, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* KPI 4: Average Client Rating */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md relative overflow-hidden group hover:border-purple-200 transition-all duration-300 animate-fade-in delay-300">
+                      <div className="absolute -right-4 -bottom-4 opacity-5 text-amber-500 group-hover:scale-110 transition-transform duration-500">
+                        <Star className="w-32 h-32" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-gray-400">Global Rating</span>
+                      <h3 className="text-3xl font-black mt-2 text-gray-900 flex items-center gap-1">
+                        ★ {analytics.rating ? analytics.rating.toFixed(1) : '4.5'}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-2 font-bold">{analytics.numReviews} client reviews</p>
+                    </div>
+                  </div>
+
+                  {/* Booking Density Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    {/* Monthly Revenue (Bar Chart) */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md">
+                      <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-purple-600" /> Monthly Revenue Trend
+                      </h3>
+                      {analytics.monthlyTrends.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                          <AlertCircle className="w-10 h-10 mb-2" />
+                          <p className="text-sm font-semibold">No monthly data available yet</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-end justify-between gap-3 h-52 pt-6 px-4">
+                          {analytics.monthlyTrends.map((trend, i) => {
+                            const maxRevenue = Math.max(...analytics.monthlyTrends.map(t => t.revenue || 1));
+                            const heightPercent = maxRevenue > 0 ? ((trend.revenue / maxRevenue) * 100) : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
+                                {/* Hover Tooltip */}
+                                <div className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none font-bold whitespace-nowrap shadow-xl z-10">
+                                  ₹{trend.revenue.toLocaleString('en-IN')} ({trend.count} sessions)
+                                </div>
+                                {/* Column Bar */}
+                                <div className="w-full bg-purple-50 rounded-t-lg h-full flex items-end">
+                                  <div 
+                                    className="w-full bg-gradient-to-t from-purple-600 to-indigo-500 rounded-t-lg group-hover:from-purple-500 group-hover:to-indigo-400 transition-all duration-500 cursor-pointer shadow-md"
+                                    style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{trend.month}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Weekly Distribution (Horizontal Progress Bars) */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md">
+                      <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-indigo-600" /> Weekly Session Volume
+                      </h3>
+                      <div className="space-y-4">
+                        {analytics.weeklyTrends.map((trend, i) => {
+                          const maxCount = Math.max(...analytics.weeklyTrends.map(w => w.count || 1));
+                          const percent = maxCount > 0 ? ((trend.count / maxCount) * 100) : 0;
+                          return (
+                            <div key={i} className="flex items-center gap-4">
+                              <span className="w-20 text-xs font-black text-gray-500 uppercase tracking-wider">{trend.day.slice(0, 3)}</span>
+                              <div className="flex-grow bg-gray-50 h-3 rounded-full overflow-hidden border border-gray-100/50">
+                                <div 
+                                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-1000"
+                                  style={{ width: `${percent}%` }}
+                                ></div>
+                              </div>
+                              <span className="w-8 text-right text-xs font-bold text-gray-700">{trend.count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hourly Slot Density Map */}
+                  <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md">
+                    <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-indigo-600" /> Time Slot Booking Density
+                    </h3>
+                    {analytics.hourlyTrends.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <AlertCircle className="w-10 h-10 mb-2" />
+                        <p className="text-sm font-semibold">No hourly slot statistics available yet</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {analytics.hourlyTrends.map((trend, i) => (
+                          <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                            <span className="block text-xs font-black text-gray-400">{formatTime12H(trend.slot)}</span>
+                            <span className="block text-lg font-black text-gray-900 mt-1">{trend.count}</span>
+                            <span className="text-[10px] text-gray-500 font-semibold">{trend.count === 1 ? 'booking' : 'bookings'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Client Reviews List */}
+                  <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md">
+                    <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                      <Star className="w-5 h-5 text-amber-500" /> Recent Client Reviews
+                    </h3>
+                    {analytics.recentReviews.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                        <AlertCircle className="w-12 h-12 mb-2" />
+                        <p className="text-base font-semibold">No reviews or ratings received yet</p>
+                        <p className="text-sm text-gray-300 mt-1">Feedback will appear here once clients rate completed sessions.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {analytics.recentReviews.map((rev, i) => (
+                          <div key={i} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-gray-900">{rev.userName}</span>
+                                <span className="text-xs text-gray-400 font-medium">
+                                  {new Date(rev.createdAt).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                              {rev.comment && <p className="text-gray-600 text-sm mt-1">{rev.comment}</p>}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {Array.from({ length: 5 }).map((_, idx) => (
+                                <Star 
+                                  key={idx} 
+                                  className={`w-4 h-4 ${idx < rev.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-200'}`} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-400">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-lg font-bold">Failed to load analytics data.</p>
                 </div>
               )}
             </div>

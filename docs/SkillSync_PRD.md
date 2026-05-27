@@ -47,6 +47,7 @@
 | **Availability Schema Migration** | Decouple expert availability blocks from the Booking schema into a dedicated Availability model. | *Should Have (Completed)* | *Medium* |
 | **Two-Sided P2P Feedback Loop** | Enable experts to rate clients (1-5 stars and text) post-session to protect marketplace safety. | *Could Have (Completed)* | *Medium* |
 | **Cancellation Protection** | Enforce cancellation windows (e.g. no cancellations within 2 hours of session start, strike-based suspension). | *Should Have (Completed)* | *Medium* |
+| **Expert Business Analytics** | Add a dashboard tab for experts featuring revenue, utilization tracking, slot distribution trends, and client review logs. | *Should Have (Completed)* | *Medium* |
 
 ## 5. Agile User Stories & Acceptance Criteria
 
@@ -90,6 +91,12 @@
   * **Acceptance Criteria:**
     * **Given** a session is booked, it cannot be transitioned to "Completed" status until its scheduled duration has fully ended (start time + 1 hour).
     * **Given** a client has no ratings history, their status is rendered as "New Client" rather than a raw numeric average in all dashboards.
+
+* **User Story AN-01:** As an Expert, I want a Business Analytics dashboard so that I can monitor my weekly/monthly earnings, time slot utilization, and review feedback.
+  * **Acceptance Criteria:**
+    * **Given** an Expert is authenticated and logged into the portal
+    * **When** they click on the "Business Analytics" tab
+    * **Then** the portal fetches and renders dynamic KPI metrics (Total Earnings, Completed Hours, Calendar Utilization, Average Rating), native CSS charts representing monthly trends, weekly booking volume, and hourly slot distribution, as well as a list of the last 5 client reviews.
 
 ## 6. Technical & Non-Functional Specifications
 * **Security & Compliance:** 

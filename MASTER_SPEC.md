@@ -170,6 +170,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Availability Schema Migration](#feature-availability-schema-migration) | `Complete` | SkillSync | 2026-05-26 |
 | [Late Cancellation & Penalty Cooldown](#feature-late-cancellation--penalty-cooldown) | `Complete` | SkillSync | 2026-05-27 |
 | [Two-Sided P2P Feedback System](#feature-two-sided-p2p-feedback-system) | `Complete` | SkillSync | 2026-05-27 |
+| [Expert Business Analytics Dashboard](#feature-expert-business-analytics-dashboard) | `Complete` | SkillSync | 2026-05-27 |
 
 ---
 
@@ -2200,6 +2201,143 @@ None identified.
 |---|---|---|
 | 2026-05-27 | Agent | Spec created and status marked Complete for Two-Sided P2P Feedback System. |
 | 2026-05-27 | Agent | Enhanced spec to require "New Client" display fallback when client has 0 reviews. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-27
+
+---
+
+## Feature: Expert Business Analytics Dashboard
+
+### Overview
+
+Provides an analytics suite for experts to track commercial performance, scheduling utilization, slot density trends, and client reviews on the Expert Portal. It compiles dynamic data across bookings, availability blocks, and reviews, presenting it through a premium, glassmorphic UI tab in their dashboard.
+
+### Functional Requirements
+
+- [MUST HAVE] Render key KPI cards on the dashboard representing:
+  - **Total Earnings**: Calculated dynamically as `completedCount * hourlyRate` (based on the expert's current rate).
+  - **Completed Hours**: Count of sessions marked as `"Completed"`.
+  - **Calendar Utilization**: Calculated as `(completedCount / (totalBookings + totalBlockedCount || 1)) * 100` to measure calendar efficiency, accounting for blocked slots.
+  - **Average Rating**: The expert's rolling review rating.
+- [MUST HAVE] Render interactive, responsive charts built with CSS/Tailwind:
+  - **Monthly Revenue & Volume Column Chart**: Compares completed sessions count and estimated earnings grouped by month (`YYYY-MM`).
+  - **Weekly Distribution Progress Bars**: Visualizes booking volume across days of the week (Sunday-Saturday).
+  - **Hourly Slot Density Grid**: High-fidelity heat map highlighting most frequently booked time slots.
+- [MUST HAVE] Render a list of the last 5 client reviews, displaying client name, star rating, creation date, and optional text feedback.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] **Visual Styling**: Match the application's premium glassmorphic UI theme (vibrant color indicators, smooth transition micro-animations, and clean typography).
+- [MUST HAVE] **No Heavy External Chart Libraries**: All charts must be implemented natively with CSS/Tailwind flex/grid elements to avoid bundling or build errors (such as with Recharts/Chart.js in Vite environment).
+- [MUST HAVE] **Timezone Alignment**: Match Indian Standard Time (IST, UTC+5:30) date boundaries for sorting and grouping trends.
+
+### User Interaction Flow
+
+```mermaid
+flowchart TD
+    A([Expert User]) --> B[Navigates to Expert Dashboard]
+    B --> C[Clicks 'Business Analytics' Tab]
+    C --> D[Sends GET /expert-dashboard/analytics]
+    D --> E{Backend queries MongoDB}
+    E --> F[Aggregates Bookings, Availability Blocks, and Reviews]
+    F --> G[Computes KPIs, Trends, and Distributions]
+    G --> H[Returns JSON Payload]
+    H --> I[Frontend renders KPI cards & CSS charts]
+```
+
+### API Specifications
+
+* `GET /expert-dashboard/analytics`
+  - Output:
+    ```json
+    {
+      "success": true,
+      "analytics": {
+        "expertId": "ObjectId",
+        "hourlyRate": 1200,
+        "rating": 4.5,
+        "numReviews": 2,
+        "counts": {
+          "totalBookings": 5,
+          "completedCount": 3,
+          "confirmedCount": 1,
+          "pendingCount": 0,
+          "cancelledCount": 1,
+          "lateCancelledCount": 0,
+          "totalBlockedCount": 1
+        },
+        "totalEarnings": 3600,
+        "utilizationRate": 50.0,
+        "monthlyTrends": [
+          { "month": "Apr 2026", "count": 2, "revenue": 1200 },
+          { "month": "May 2026", "count": 2, "revenue": 2400 }
+        ],
+        "weeklyTrends": [
+          { "day": "Sunday", "count": 0 },
+          { "day": "Monday", "count": 2 },
+          { "day": "Tuesday", "count": 0 },
+          { "day": "Wednesday", "count": 1 },
+          { "day": "Thursday", "count": 0 },
+          { "day": "Friday", "count": 1 },
+          { "day": "Saturday", "count": 0 }
+        ],
+        "hourlyTrends": [
+          { "slot": "10:00", "count": 2 },
+          { "slot": "14:00", "count": 1 },
+          { "slot": "18:00", "count": 1 }
+        ],
+        "recentReviews": [...]
+      }
+    }
+    ```
+  - Auth: Private (Expert Only)
+
+### Edge Cases
+
+- **Zero Total Bookings & Blocks**: Divisor fallback ensures calendar utilization defaults to `0%` rather than throwing a division by zero error.
+- **Role Isolation**: Strictly returns `403 Forbidden` if a non-expert attempts to access the endpoint.
+- **Past Slot Completion Validation**: Ensure future bookings are not marked as completed to keep metrics realistic.
+
+### Best Practices
+
+- Cache calculations if datasets grow large, or paginate booking lookups if necessary.
+- Compute earnings using dynamic multiplication, as historical prices are not saved in the `Booking` schema.
+
+### Acceptance Criteria
+
+- **AC 16.1**: Opening the dashboard loads the "Business Analytics" tab cleanly, fetching metrics via the `/expert-dashboard/analytics` endpoint.
+- **AC 16.2**: Average rating, earnings, and utilization rates match the database records exactly.
+- **AC 16.3**: Chart hover states and tooltips show accurate counts and amounts dynamically.
+- **AC 16.4**: Non-experts are blocked from query paths via RBAC checks.
+
+### Non-Goals
+
+- Providing downloadable exports (CSV/PDF) of analytics data.
+- Enforcing live socket updates for the analytics dashboard (manual tab switch/refresh updates data).
+
+### Dependencies
+
+- Feature: User Authentication & RBAC (verifies logged-in expert credentials).
+- Feature: Availability Schema Migration (references decoupled blocks for utilization math).
+
+### Testing Strategy
+
+- **Automated**: Run `node test_expert_analytics.js` verifying aggregate counters, monthly trend groupings, slot distributions, and security boundaries.
+- **Manual**: Create and complete bookings, verify that the analytics numbers refresh on tab load, and check chart styling on different viewport sizes.
+
+### Known Bugs / Stability Risks
+
+- **Time-Lock Validation**: When testing analytics seed data, completed sessions must have booking dates strictly in the past, or else the model's pre-save validation hooks block save operations (Time-lock violation).
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-27 | Agent | Initial specification created for Expert Business Analytics Dashboard. |
 
 ### Status
 `Complete`

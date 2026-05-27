@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Expert Business Analytics Dashboard**:
+  - Implemented the `/expert-dashboard/analytics` endpoint in [expertDashboardController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/expertDashboardController.js) and [expertDashboardRoutes.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/routes/expertDashboardRoutes.js) to return expert earnings, session counts, calendar utilization rates, trends, slot distributions, and reviews.
+  - Implemented frontend API fetch helper `fetchExpertDashboardAnalytics` in [api.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/services/api.js).
+  - Designed the premium "Business Analytics" dashboard panel in [ExpertDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDashboard.jsx) with KPI stats, custom CSS-based monthly earnings bar charts, weekly distribution charts, hourly slot density charts, and user review displays.
+  - Created integration test suite [test_expert_analytics.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/test_expert_analytics.js) verifying 4 major analytical aggregation scenarios and security boundaries.
 - **Graceful Default Ratings UX**:
   - Enhanced [Profile.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/Profile.jsx), [ExpertDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDashboard.jsx), and [AdminDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/AdminDashboard.jsx) to render a gray `"New Client"` badge instead of raw `5.0` averages when `numReviews === 0`.
 - **Database Transaction Prerequisite Docs**:

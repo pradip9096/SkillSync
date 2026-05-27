@@ -17,6 +17,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Availability Slot Blocking:** Dynamic grid allowing experts to block/unblock slots in real-time, instantly broadcasting availability status to all connected client browsers.
 - **Late Cancellation Lock & Strike-Suspension System:** Enforces a 2-hour IST-anchored cancellation window for Clients and Experts (Admins exempt). Tracks user cancellations, recording `"Late Cancellation"` statuses, and automatically suspends scheduling/booking privileges for 7 days if a user accumulates 3 late cancellation strikes. Admins can reset user strikes and lift suspensions instantly.
 - **Two-Sided P2P Feedback System:** Implements a double-sided trust network allowing Experts to rate and review Clients (1-5 stars with comments) post-session. Client reputation rating badges are rendered in real-time on the Expert Portal sessions table, Client profile dashboard, and the Admin Panel user manager directory.
+- **Expert Business Analytics Dashboard:** A premium, glassmorphic analytics dashboard tab for experts to monitor total earnings, completed sessions, calendar utilization percentages, and interactive monthly/weekly/hourly booking density charts.
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack

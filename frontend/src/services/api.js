@@ -185,5 +185,6 @@ export const uploadGalleryImage = (formData) => API.post('/expert-dashboard/gall
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 export const deleteGalleryImage = (filename) => API.delete(`/expert-dashboard/gallery/${filename}`);
+export const fetchExpertDashboardAnalytics = () => API.get('/expert-dashboard/analytics');
 
 export default API;
