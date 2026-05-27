@@ -297,10 +297,21 @@ const AdminDashboard = () => {
     }
   };
 
-  // Filter bookings list based on search bar (by client email)
-  const filteredBookings = bookings.filter(b => 
-    b.userEmail?.toLowerCase().includes(bookingSearch.toLowerCase())
-  );
+  // Filter bookings list based on search bar (by client/expert name and email)
+  const filteredBookings = bookings.filter(b => {
+    const searchVal = bookingSearch.toLowerCase().trim();
+    if (!searchVal) return true;
+    
+    const clientEmail = b.userEmail?.toLowerCase() || '';
+    const clientName = b.userName?.toLowerCase() || '';
+    const expertName = b.expert?.name?.toLowerCase() || '';
+    const expertEmail = b.expert?.user?.email?.toLowerCase() || '';
+    
+    return clientEmail.includes(searchVal) || 
+           clientName.includes(searchVal) || 
+           expertName.includes(searchVal) || 
+           expertEmail.includes(searchVal);
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/50 py-10 px-4 sm:px-6 lg:px-8">
@@ -488,7 +499,7 @@ const AdminDashboard = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="Search bookings by client email..."
+                      placeholder="Search by client/expert name or email..."
                       value={bookingSearch}
                       onChange={(e) => setBookingSearch(e.target.value)}
                       className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
@@ -517,6 +528,9 @@ const AdminDashboard = () => {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="font-bold text-indigo-700">{b.expert?.name || 'Deleted Expert'}</div>
                               <div className="text-xs text-gray-400">{b.expert?.category}</div>
+                              {b.expert?.user?.email && (
+                                <div className="text-xs text-gray-500 font-semibold">{b.expert.user.email}</div>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                               <div className="font-semibold text-xs">

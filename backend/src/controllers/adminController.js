@@ -42,7 +42,14 @@ const getAllUsers = async (req, res) => {
 const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({})
-      .populate('expert', 'name category')
+      .populate({
+        path: 'expert',
+        select: 'name category user',
+        populate: {
+          path: 'user',
+          select: 'email'
+        }
+      })
       .sort({ bookingDate: -1, slotTime: -1 });
     res.status(200).json({
       success: true,
