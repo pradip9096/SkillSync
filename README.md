@@ -21,11 +21,26 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack
-- **Frontend:** React + Vite
-- **Backend:** Node.js, Express
-- **Database:** MongoDB
-- **Real-Time Communication:** Socket.io
-- **Security:** JSON Web Tokens (JWT), password hashing with bcryptjs
+
+### Frontend Core
+- **React (v19.2):** Component-driven interface library.
+- **Vite (v8.0):** Ultra-fast compilation bundler and development server.
+- **Tailwind CSS (v3.4):** Utility-first styling framework with custom glassmorphism components.
+- **React Router DOM (v7.1):** Declarative component-based routing engine.
+- **Lucide React (v1.14):** Lightweight, premium SVG iconography package.
+- **Axios (v1.16):** Promise-based HTTP client utilizing custom request/response interceptors to handle automatic token attachment and authorization failures.
+- **Socket.io Client (v4.8):** Real-time persistent bidirectional WebSocket clients featuring automatic long-polling failover.
+
+### Backend Core
+- **Node.js (v18+) & Express (v5.2):** Robust event-driven Javascript runtime and minimalist server framework.
+- **Mongoose (v9.6) & MongoDB Atlas:** Schema-based ODM layer connecting to cloud-hosted NoSQL cluster. Enforces ACID transactions (`session.withTransaction()`) across multiple collections and handles schema validations/indexes.
+- **Socket.io (v4.8):** WebSockets engine structured around Room boundaries to broadcast slot status updates instantly to target client listeners.
+- **Multer (v2.1):** Multipart/form-data parser utility to secure local media uploads.
+- **Nodemon (v3.1):** Auto-reloading hot-reload development server.
+
+### Security & Localization
+- **JSON Web Tokens (JWT) & BcryptJS (v3.0):** Cryptographically signed access tokens and salted password hashing algorithm.
+- **Asia/Kolkata timezone standard:** Anchored integer millisecond calculations executing IST (UTC+5:30) timezone locks.
 
 ## 📂 Project Structure
 This is a two-package JavaScript application:
