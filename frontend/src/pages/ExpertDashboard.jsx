@@ -376,6 +376,12 @@ const ExpertDashboard = () => {
       return;
     }
 
+    if (isNaN(hourlyRate) || Number(hourlyRate) < 100) {
+      setErrorMsg('Hourly rate must be at least 100 rupees.');
+      setProfileSaving(false);
+      return;
+    }
+
     try {
       const { data } = await updateExpertDashboardProfile({
         experience: Number(experience),
@@ -798,7 +804,7 @@ const ExpertDashboard = () => {
                       type="number"
                       min="100"
                       required
-                      placeholder="e.g. 1500"
+                      placeholder="e.g. 1500 (Min ₹100)"
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(e.target.value)}
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm"

@@ -82,10 +82,10 @@ const registerUser = async (req, res) => {
         });
       }
 
-      if (isNaN(hourlyRate) || Number(hourlyRate) < 0) {
+      if (isNaN(hourlyRate) || Number(hourlyRate) < 100) {
         return res.status(400).json({
           success: false,
-          error: 'Hourly rate must be a valid positive number'
+          error: 'Hourly rate must be at least 100 rupees'
         });
       }
     }

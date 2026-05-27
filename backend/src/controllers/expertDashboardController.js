@@ -94,7 +94,14 @@ const updateExpertProfile = async (req, res) => {
       expert.experience = Number(req.body.experience);
     }
     if (req.body.hourlyRate !== undefined) {
-      expert.hourlyRate = Number(req.body.hourlyRate);
+      const rate = Number(req.body.hourlyRate);
+      if (isNaN(rate) || rate < 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'Hourly rate must be at least 100 rupees'
+        });
+      }
+      expert.hourlyRate = rate;
     }
     if (req.body.description !== undefined) {
       expert.description = req.body.description;

@@ -58,10 +58,11 @@ const expertSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a description']
   },
-  // Rate charged per hour of session (USD)
+  // Rate charged per hour of session (INR)
   hourlyRate: {
     type: Number,
-    required: [true, 'Please add an hourly rate']
+    required: [true, 'Please add an hourly rate'],
+    min: [100, 'Hourly rate must be at least 100 rupees']
   },
   // Reference to the user credentials account associated with this expert
   user: {

@@ -70,8 +70,8 @@ const Register = () => {
         setErrorMsg('Experience must be a positive number.');
         return;
       }
-      if (isNaN(hourlyRate) || Number(hourlyRate) < 0) {
-        setErrorMsg('Hourly rate must be a positive number.');
+      if (isNaN(hourlyRate) || Number(hourlyRate) < 100) {
+        setErrorMsg('Hourly rate must be at least 100 rupees.');
         return;
       }
     }
@@ -281,9 +281,9 @@ const Register = () => {
                   <input
                     id="hourlyRate"
                     type="number"
-                    min="0"
+                    min="100"
                     required
-                    placeholder="e.g. 1500"
+                    placeholder="e.g. 1500 (Min ₹100)"
                     value={hourlyRate}
                     onChange={(e) => setHourlyRate(e.target.value)}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"

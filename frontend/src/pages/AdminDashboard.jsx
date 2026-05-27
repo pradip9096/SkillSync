@@ -243,6 +243,12 @@ const AdminDashboard = () => {
       return;
     }
 
+    if (isNaN(newExpertHourlyRate) || Number(newExpertHourlyRate) < 100) {
+      setModalError('Hourly rate must be at least 100 rupees.');
+      setModalSubmitting(false);
+      return;
+    }
+
     try {
       const expertData = {
         email: newExpertEmail,
@@ -796,7 +802,7 @@ const AdminDashboard = () => {
                         type="number"
                         required
                         min="100"
-                        placeholder="e.g. 1500"
+                        placeholder="e.g. 1500 (Min ₹100)"
                         value={newExpertHourlyRate}
                         onChange={(e) => setNewExpertHourlyRate(e.target.value)}
                         className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"

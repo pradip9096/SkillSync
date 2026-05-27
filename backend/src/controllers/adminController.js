@@ -184,6 +184,14 @@ const createExpertByAdmin = async (req, res) => {
       });
     }
 
+    // Hourly rate validation
+    if (isNaN(hourlyRate) || Number(hourlyRate) < 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Hourly rate must be at least 100 rupees'
+      });
+    }
+
     // Check if account already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
