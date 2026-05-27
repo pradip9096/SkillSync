@@ -45,32 +45,57 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 ## 📂 Project Structure
 This is a two-package JavaScript application:
 - `backend/`: Node.js, Express, MongoDB, and Socket.io API.
-  - `src/controllers/authController.js` - Registration and login handlers.
-  - `src/controllers/adminController.js` - System-wide dashboard action handlers.
-  - `src/controllers/expertDashboardController.js` - Expert portal and slot blocking handlers.
-  - `src/middleware/authMiddleware.js` - JWT authentication verification and role checks.
+  - `src/controllers/authController.js` - Registration and login credentials handlers.
+  - `src/controllers/adminController.js` - System-wide dashboard override handlers.
+  - `src/controllers/expertDashboardController.js` - Expert portal biography and availability blocking handlers.
+  - `src/controllers/bookingController.js` - Client session booking, completion, and cancellation handlers.
+  - `src/controllers/expertController.js` - Public directory filters and reviews aggregation query handlers.
+  - `src/controllers/reviewController.js` - Client review and rating submission handlers.
+  - `src/middleware/authMiddleware.js` - JWT verification and role authentication checks.
   - `src/models/User.js` - Mongoose User schema with password hashing.
+  - `src/models/Expert.js` - Mongoose Expert schema for listing bios and hourly rates.
+  - `src/models/Booking.js` - Mongoose Booking schema managing transaction states.
   - `src/models/Availability.js` - Mongoose Availability schema for expert calendar blocks.
   - `src/models/ClientReview.js` - Mongoose ClientReview schema for expert reviews of clients.
-  - `src/routes/authRoutes.js` - Auth and profile routes mounting.
-  - `src/routes/adminRoutes.js` - Admin dashboard routing endpoints.
-  - `src/routes/expertDashboardRoutes.js` - Expert dashboard routing endpoints.
-  - `src/seeds/userSeeder.js` - Admin bootstrapping utility.
-  - `src/seeds/migrateBlockedSlots.js` - One-time availability data migration utility.
+  - `src/models/Review.js` - Mongoose Review schema storing client ratings.
+  - `src/routes/authRoutes.js` - Auth and profile route mounts.
+  - `src/routes/adminRoutes.js` - Admin dashboard route endpoints.
+  - `src/routes/expertDashboardRoutes.js` - Expert dashboard route endpoints.
+  - `src/routes/bookingRoutes.js` - Booking creation and update route endpoints.
+  - `src/routes/expertRoutes.js` - Public expert directory query route endpoints.
+  - `src/routes/reviewRoutes.js` - Review submission route endpoints.
+  - `src/seeds/userSeeder.js` - Admin, client, and expert account seeder utility.
+  - `src/seeds/expertSeeder.js` - Active expert portrait asset seeder utility.
+  - `src/seeds/migrateBlockedSlots.js` - Decoupled availability slot migration script.
 - `frontend/`: React + Vite client.
+  - `src/services/api.js` - Axios API services configuration and helpers.
   - `src/context/AuthContext.jsx` - Global authentication context state.
   - `src/components/ProtectedRoute.jsx` - Routing guard wrapper based on authentication/role roles.
-  - `src/pages/Login.jsx` & `Register.jsx` - Credentials-based screens.
+  - `src/pages/Login.jsx` & `Register.jsx` - Conditional credentials registration and login.
   - `src/pages/Profile.jsx` - User account settings update screen.
-  - `src/pages/AdminDashboard.jsx` - System administration monitoring tab console.
-  - `src/pages/ExpertDashboard.jsx` - Expert session management, profile editor, and interactive slot blocking grid.
+  - `src/pages/AdminDashboard.jsx` - System administration console with real-time searches.
+  - `src/pages/ExpertDashboard.jsx` - Expert session manager, custom charts, and blocking grid.
+  - `src/pages/ExpertListing.jsx` - Category-filterable and searchable expert directory grid.
+  - `src/pages/ExpertDetail.jsx` - Detailed expert profile with slot selector.
+  - `src/pages/MyBookings.jsx` - Protected client-only session list view.
 
 ## 📖 Documentation
 Strategic planning, specifications, and architecture references are available in the `docs/` folder:
 - **Product Requirement Document (PRD):** [docs/SkillSync_PRD.md](docs/SkillSync_PRD.md) - Details product features, BDD scenarios, and risk vectors.
 - **Strategic Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) - Outlines release phases (Phase 1-4) and prioritization frameworks.
 - **Feature Plan Blueprint:** [docs/feature-plan-anatomy.txt](docs/feature-plan-anatomy.txt) - The standard visual component hierarchy template for planning files.
-- **Knowledge Base:** Internal engineering resources and database architecture references (e.g. [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md), [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md), [direnv & Start Script Guide](docs/knowledge-base/direnv-start-script-guide.md)).
+- **Standards & Catalog:**
+  - [Feature Requirements Taxonomy](docs/feature_definitions.md) - Formal industry standards (IREB, SAFe, FDD) applied to this project.
+  - [Standard Features Catalog](docs/STANDARD_FEATURE_CATALOG.md) - Standard specifications mapping index.
+  - [Changelog Policy](docs/CHANGELOG_POLICY.md) - Enforced guidelines for maintaining clean changelogs.
+  - [Documentation Strategy](docs/DOCUMENTATION_STRATEGY.md) - Architecture design planning process.
+- **Knowledge Base:** Internal engineering resources and database architecture references:
+  - [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md) - ACID concurrency guidelines.
+  - [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md) - Admin credentials and concurrent testing guide.
+  - [direnv & Start Script Guide](docs/knowledge-base/direnv-start-script-guide.md) - Environment loading documentation.
+  - [Admin Booking Rights](docs/knowledge-base/admin-booking-rights.md) - Admin dashboard boundaries.
+  - [Expert and Client Rights](docs/knowledge-base/expert-and-client-rights.md) - Security guidelines for user actions.
+  - [Background Jobs Comparison](docs/knowledge-base/background-jobs-comparison.md) - Comparative analysis of `node-cron`, `Agenda`, and `BullMQ`.
 - **Feature Plans:** Detailed technical design references for each implemented feature:
   - [Expert Directory](docs/feature-plan-expert-directory.md)
   - [Atomic Booking Engine](docs/feature-plan-atomic-booking-engine.md)
