@@ -27,7 +27,7 @@ clear_port 5000 "Backend"
 clear_port 5173 "Frontend"
 
 echo -e "${BLUE}Starting Backend...${NC}"
-(cd backend && npm start) &
+(cd backend && npm run dev) &
 BACKEND_PID=$!
 
 echo -e "${BLUE}Starting Frontend...${NC}"
