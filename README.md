@@ -26,7 +26,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **React (v19.2):** Component-driven interface library.
 - **Vite (v8.0):** Ultra-fast compilation bundler and development server.
 - **Tailwind CSS (v3.4):** Utility-first styling framework with custom glassmorphism components.
-- **React Router DOM (v7.1):** Declarative component-based routing engine.
+- **React Router DOM (v7.15):** Declarative component-based routing engine.
 - **Lucide React (v1.14):** Lightweight, premium SVG iconography package.
 - **Axios (v1.16):** Promise-based HTTP client utilizing custom request/response interceptors to handle automatic token attachment and authorization failures.
 - **Socket.io Client (v4.8):** Real-time persistent bidirectional WebSocket clients featuring automatic long-polling failover.
@@ -36,6 +36,8 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Mongoose (v9.6) & MongoDB Atlas:** Schema-based ODM layer connecting to cloud-hosted NoSQL cluster. Enforces ACID transactions (`session.withTransaction()`) across multiple collections and handles schema validations/indexes.
 - **Socket.io (v4.8):** WebSockets engine structured around Room boundaries to broadcast slot status updates instantly to target client listeners.
 - **Multer (v2.1):** Multipart/form-data parser utility to secure local media uploads.
+- **dotenv (v17.4):** Zero-dependency module that loads environment variables from a `.env` file into `process.env`.
+- **CORS (v2.8):** Express middleware to enable Cross-Origin Resource Sharing with various options.
 - **Nodemon (v3.1):** Auto-reloading hot-reload development server.
 
 ### Security & Localization
@@ -45,6 +47,8 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 ## 📂 Project Structure
 This is a two-package JavaScript application:
 - `backend/`: Node.js, Express, MongoDB, and Socket.io API.
+  - `src/app.js` - Server entry point, route mounting, and Socket.io server initialization.
+  - `src/config/db.js` - MongoDB Atlas connection configuration using Mongoose.
   - `src/controllers/authController.js` - Registration and login credentials handlers.
   - `src/controllers/adminController.js` - System-wide dashboard override handlers.
   - `src/controllers/expertDashboardController.js` - Expert portal biography and availability blocking handlers.
@@ -52,6 +56,7 @@ This is a two-package JavaScript application:
   - `src/controllers/expertController.js` - Public directory filters and reviews aggregation query handlers.
   - `src/controllers/reviewController.js` - Client review and rating submission handlers.
   - `src/middleware/authMiddleware.js` - JWT verification and role authentication checks.
+  - `src/middleware/uploadMiddleware.js` - Multer configuration for expert portfolio uploads.
   - `src/models/User.js` - Mongoose User schema with password hashing.
   - `src/models/Expert.js` - Mongoose Expert schema for listing bios and hourly rates.
   - `src/models/Booking.js` - Mongoose Booking schema managing transaction states.
@@ -67,10 +72,19 @@ This is a two-package JavaScript application:
   - `src/seeds/userSeeder.js` - Admin, client, and expert account seeder utility.
   - `src/seeds/expertSeeder.js` - Active expert portrait asset seeder utility.
   - `src/seeds/migrateBlockedSlots.js` - Decoupled availability slot migration script.
+  - `src/seeds/recreate_booking_index.js` - Database index synchronization utility script.
 - `frontend/`: React + Vite client.
+  - `src/main.jsx` - Application mounting entry point.
+  - `src/App.jsx` - App component mounting routes.
+  - `src/App.css` - Global CSS containing custom layouts.
+  - `src/index.css` - Custom design system tokens and glassmorphism styling.
   - `src/services/api.js` - Axios API services configuration and helpers.
+  - `src/services/socket.js` - Real-time Socket.io stateful client connections.
   - `src/context/AuthContext.jsx` - Global authentication context state.
   - `src/components/ProtectedRoute.jsx` - Routing guard wrapper based on authentication/role roles.
+  - `src/components/ExpertCard.jsx` - Reusable expert summary card component.
+  - `src/components/Navbar.jsx` - Global site navigation header.
+  - `src/pages/Home.jsx` - Brand introduction landing page.
   - `src/pages/Login.jsx` & `Register.jsx` - Conditional credentials registration and login.
   - `src/pages/Profile.jsx` - User account settings update screen.
   - `src/pages/AdminDashboard.jsx` - System administration console with real-time searches.
