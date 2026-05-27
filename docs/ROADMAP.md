@@ -57,6 +57,6 @@ We utilize a two-tiered approach to ensure sustainable growth:
 ## 🏗️ Technical Adaptability Strategy
 To ensure the product can sustainably absorb new features down the line, we adhere to the following engineering practices:
 1. **Modular Architecture:** Controllers, services, and models are strictly separated. Adding Payments (Phase 4) will not require rewriting the core Booking engine (Phase 1).
-2. **API Versioning:** Using `/api/v1/...` ensures that future mobile apps or integrations won't break when we upgrade endpoints for new features.
+2. **Clean Resource-Based Paths:** Mounting API routes directly under resource root contexts (e.g., `/bookings`, `/auth`, `/expert-dashboard`) ensures clean structures and reduces request routing hops.
 3. **Feature Toggles:** New UI features can be deployed behind configuration flags, allowing us to test them in production without risking stability.
 4. **Schema Extensibility:** Leveraging MongoDB's NoSQL flexibility allows us to add new data requirements (like `paymentStatus`) later without painful database migrations.

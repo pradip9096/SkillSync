@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Graceful Default Ratings UX**:
+  - Enhanced [Profile.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/Profile.jsx), [ExpertDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDashboard.jsx), and [AdminDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/AdminDashboard.jsx) to render a gray `"New Client"` badge instead of raw `5.0` averages when `numReviews === 0`.
+- **Database Transaction Prerequisite Docs**:
+  - Documented the MongoDB replica set requirement for transaction support in the [README.md](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/README.md).
+
+### Changed
+- **Completion Time-Lock Refinement**:
+  - Tightened completion check in [Booking.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/Booking.js) Mongoose hooks to check against slot end time (start time + 1 hour) instead of start time.
+  - Refined status update controller in [bookingController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/bookingController.js) to enforce completion locks based on slot end times.
+- **Route Guard Protection**:
+  - Bound `/my-bookings` route with `allowedRoles={['Client']}` in [App.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/App.jsx) to prevent Experts and Admins from manually accessing client booking histories.
+- **Specification Alignment**:
+  - Removed outdated `/api/v1` prefixes globally from [MASTER_SPEC.md](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/MASTER_SPEC.md) to align with actual codebase paths.
+
 - **Two-Sided P2P Feedback System:**
   - Created `ClientReview` Mongoose schema in [ClientReview.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/ClientReview.js) to store expert reviews of clients post-session.
   - Added `rating` (default `5.0`) and `numReviews` fields to `User` schema in [User.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/User.js).

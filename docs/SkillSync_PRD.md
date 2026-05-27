@@ -86,6 +86,11 @@
     * **When** the 3rd strike is recorded
     * **Then** the user's account is automatically suspended (`suspendedUntil` is set to 7 days from the cancellation time), preventing them from booking or scheduling new slots until the cooldown period expires or an Admin resets their penalties.
 
+* **User Story FB-01:** As a Domain Expert or Platform Admin, I want the system to enforce strict completion time-locks and display clear default status labels so that scheduling integrity is preserved and new client records are transparent.
+  * **Acceptance Criteria:**
+    * **Given** a session is booked, it cannot be transitioned to "Completed" status until its scheduled duration has fully ended (start time + 1 hour).
+    * **Given** a client has no ratings history, their status is rendered as "New Client" rather than a raw numeric average in all dashboards.
+
 ## 6. Technical & Non-Functional Specifications
 * **Security & Compliance:** 
   - All incoming HTTP POST payloads must be strictly validated against a schema (Joi/Zod).
