@@ -273,15 +273,15 @@ const updateBookingStatus = async (req, res) => {
       if (Number.isNaN(sessionMs)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid booking date or slot time. Cannot verify session start time.'
+          error: 'Invalid booking date or slot time. Cannot verify session end time.'
         });
       }
 
-      // Check if current time is before the session time
-      if (nowMs < sessionMs) {
+      // Check if current time is before the session end time (start time + 1 hour)
+      if (nowMs < sessionMs + 60 * 60 * 1000) {
         return res.status(400).json({
           success: false,
-          error: `Time-lock violation: This session is scheduled for ${booking.bookingDate} ${booking.slotTime} IST and cannot be completed yet.`
+          error: `Time-lock violation: This session is scheduled for ${booking.bookingDate} ${booking.slotTime} IST and cannot be completed yet until the hour has passed.`
         });
       }
     }

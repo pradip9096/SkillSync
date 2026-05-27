@@ -54,9 +54,9 @@ function App() {
             {/* Detailed view for a specific expert */}
             <Route path="/expert/:id" element={<ExpertDetail />} />
             
-            {/* User's booking history page (protected) */}
+            {/* User's booking history page (protected, Clients only) */}
             <Route path="/my-bookings" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['Client']}>
                 <MyBookings />
               </ProtectedRoute>
             } />

@@ -113,9 +113,9 @@ bookingSchema.pre('save', async function () {
     if (!sessionTime) {
       throw new Error('Invalid booking date or slot time.'); 
     }
-    // Compare current time with the session time
-    if (Date.now() < sessionTime.getTime()) {
-      throw new Error('Time-lock violation: Session has not started yet.');
+    // Compare current time with the session end time (start time + 1 hour)
+    if (Date.now() < sessionTime.getTime() + 60 * 60 * 1000) {
+      throw new Error('Time-lock violation: Session has not ended yet.');
     }
   }
 });
@@ -130,14 +130,15 @@ bookingSchema.pre('findOneAndUpdate', async function () {
   const status = update.status || (update.$set && update.$set.status);
   
   if (status === 'Completed') {
-    // Attempt to extract booking details from the update object
-    const bookingDate = update.bookingDate || (update.$set && update.$set.bookingDate);
-    const slotTime = update.slotTime || (update.$set && update.$set.slotTime);
-    
-    if (bookingDate && slotTime) {
+    // Fetch the booking document to ensure we have its date and time slot
+    const booking = await this.model.findOne(this.getQuery());
+    if (booking) {
+      const bookingDate = update.bookingDate || (update.$set && update.$set.bookingDate) || booking.bookingDate;
+      const slotTime = update.slotTime || (update.$set && update.$set.slotTime) || booking.slotTime;
+      
       const sessionTime = parseISTSessionTime(bookingDate, slotTime);
-      if (sessionTime && Date.now() < sessionTime.getTime()) {
-        throw new Error('Time-lock violation: Session has not started yet.');
+      if (sessionTime && Date.now() < sessionTime.getTime() + 60 * 60 * 1000) {
+        throw new Error('Time-lock violation: Session has not ended yet.');
       }
     }
   }

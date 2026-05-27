@@ -187,9 +187,16 @@ const Profile = () => {
             </div>
             
             <div className="flex items-center gap-3 flex-wrap">
-              {role === 'Client' && numReviews > 0 && (
-                <span className="text-xs font-black uppercase tracking-wider px-4 py-2 rounded-2xl border border-amber-400/30 bg-amber-500/20 text-amber-100 backdrop-blur-md">
-                  ★ {rating.toFixed(1)} Reputation ({numReviews} {numReviews === 1 ? 'review' : 'reviews'})
+              {role === 'Client' && (
+                <span className={`text-xs font-black uppercase tracking-wider px-4 py-2 rounded-2xl border backdrop-blur-md ${
+                  numReviews === 0 
+                    ? 'border-gray-400/30 bg-gray-500/20 text-gray-200' 
+                    : 'border-amber-400/30 bg-amber-500/20 text-amber-100'
+                }`}>
+                  {numReviews === 0 
+                    ? 'New Client' 
+                    : `★ ${rating.toFixed(1)} Reputation (${numReviews} ${numReviews === 1 ? 'review' : 'reviews'})`
+                  }
                 </span>
               )}
               <span className={`text-xs font-black uppercase tracking-wider px-4 py-2 rounded-2xl border backdrop-blur-md ${

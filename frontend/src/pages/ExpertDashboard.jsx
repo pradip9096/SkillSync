@@ -559,10 +559,16 @@ const ExpertDashboard = () => {
                         <div className="font-bold text-gray-900 flex items-center gap-1.5">
                           <User className="w-4 h-4 text-gray-400" />
                           <span>{b.userName}</span>
-                          {b.user && typeof b.user === 'object' && b.user.numReviews > 0 && (
-                            <span className="ml-2 inline-flex items-center gap-0.5 text-xs font-black text-amber-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full" title={`Client Reputation: ${b.user.rating.toFixed(1)} stars based on ${b.user.numReviews} reviews`}>
-                              ★ {b.user.rating.toFixed(1)} <span className="text-[10px] text-amber-400">({b.user.numReviews})</span>
-                            </span>
+                          {b.user && typeof b.user === 'object' && (
+                            b.user.numReviews > 0 ? (
+                              <span className="ml-2 inline-flex items-center gap-0.5 text-xs font-black text-amber-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full" title={`Client Reputation: ${b.user.rating.toFixed(1)} stars based on ${b.user.numReviews} reviews`}>
+                                ★ {b.user.rating.toFixed(1)} <span className="text-[10px] text-amber-400">({b.user.numReviews})</span>
+                              </span>
+                            ) : (
+                              <span className="ml-2 inline-flex items-center gap-0.5 text-xs font-black text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-0.5 rounded-full" title="New Client: No reviews yet">
+                                New Client
+                              </span>
+                            )
                           )}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">

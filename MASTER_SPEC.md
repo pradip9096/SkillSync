@@ -177,14 +177,12 @@ A partially filled section is `Draft` regardless of the Status field value.
 
 ### Overview
 
-Restricts registered experts from booking slots or sessions with themselves to preserve
-business logic integrity and prevent scheduling loop vulnerabilities.
+Restricts booking privileges exclusively to the `'Client'` role, thereby preventing registered Experts and Administrators from scheduling expert sessions, protecting scheduling loop vulnerabilities, and ensuring clean role-based boundaries.
 
 ### Functional Requirements
 
-- [MUST HAVE] Backend API must reject booking POST submissions where the authenticated
-  user ID matches the expert's associated user ID.
-  Rationale: Server-side validation safeguard is non-negotiable for system data integrity.
+- [MUST HAVE] Backend API must restrict booking creation strictly to authenticated users with the `'Client'` role (returning `403 Forbidden` with an explanation for Admins or Experts).
+  Rationale: Server-side validation safeguard is non-negotiable for system data integrity and strict RBAC.
 
 - [MUST HAVE] Backend API must reject booking POST submissions where the customer email
   matches the expert's credential email (case-insensitive, whitespace-trimmed).
@@ -198,32 +196,28 @@ business logic integrity and prevent scheduling loop vulnerabilities.
   their own detail profile page directly.
   Rationale: Notifies the expert that they are on their own page and explains that self-booking is disabled.
 
-- [MUST HAVE] Frontend must disable all booking interactive elements on the expert's own
-  profile page (date picker, slot selector, guest input fields, and submission button).
-  Rationale: Completely deactivates the booking workflow locally for self-profiles.
+- [MUST HAVE] Frontend must disable all booking interactive elements on any expert's
+  profile page for logged-in Experts and Admins (date picker, slot selector, guest input fields, and submission button).
+  Rationale: Deactivates the booking workflow locally for all non-client accounts.
 
 - [MUST HAVE] Backend booking fetch API (`getBookingsByEmail`) must filter out and exclude slots with the notes 'Blocked by Expert'.
   Rationale: Keeps the client-facing booking history clean and prevents experts from seeing self-bookings/blocked slots.
 
 - [SHOULD HAVE] Submit button text must change to "Self-Booking Disabled" when the page
-  belongs to the logged-in user.
-  Rationale: Offers clear, immediate visual confirmation of the deactivated state.
+  belongs to the logged-in user, "Booking Disabled for Experts" for other experts, and "Booking Disabled for Admins" for admins.
+  Rationale: Offers clear, immediate visual confirmation of the deactivated state based on user role.
 
-- [CAN HAVE] Admin-level override to allow a specific expert to book themselves for
-  demonstration or testing purposes.
-  Rationale: Operational edge case for platform administrators.
+- [MUST HAVE] Frontend must hide the "My History" page link in the Navbar for logged-in Expert and Admin accounts, and the `/my-bookings` route must be protected to redirect non-Client accounts to `/`.
+  Rationale: Prevents system administration or expert accounts from accessing client history pages.
 
 - [MUST HAVE] Backend API must reject booking POST submissions initiated by users with the `'Admin'` role.
   Rationale: Prevents system administration accounts from contaminating booking lists and charts.
 
-- [MUST HAVE] Frontend must disable all booking interactive elements and date pickers for logged-in Admin accounts, and update the submit button text to "Booking Disabled for Admins".
-  Rationale: Clear visual feedback that scheduling is restricted for system administrators.
-
 ### Non-Functional Requirements
 
 - [MUST HAVE] Email comparisons must be case-insensitive and whitespace-trimmed.
-  Rationale: Prevents self-booking bypass through casing (e.g. `Sarah@skillsync.com` vs
-  `sarah@skillsync.com`) or leading/trailing spaces.
+  Rationale: Prevents self-booking bypass through casing (e.g. `Sarah@test.com` vs
+  `sarah@test.com`) or leading/trailing spaces.
 
 - [MUST HAVE] The `isOwnProfile` computation on the frontend must be reactive — it must
   update instantly when authentication state changes (e.g., login while on the profile page).
@@ -258,19 +252,20 @@ case-insensitive + trimmed}
 
 ### API Specifications
 
-* `POST /api/v1/bookings`
+* `POST /bookings`
   Input: `{ expertId, date, slot, userName, userEmail, userPhone }`
   Validation:
     - Populate `expert.user` reference
-    - If `req.user._id === expert.user._id` → 400
-    - If `userEmail.toLowerCase().trim() === expert.user.email.toLowerCase().trim()` → 400
+    - If `req.user` is defined and `req.user.role !== 'Client'` → 403 Forbidden
+    - If `req.user._id === expert.user._id` → 400 Bad Request
+    - If `userEmail.toLowerCase().trim() === expert.user.email.toLowerCase().trim()` → 400 Bad Request
   Output: `{ booking }` on success
   Auth: Optional (guest or authenticated Client)
 
 ### Edge Cases
 
 - When an expert accesses their own profile while logged out, the page behaves normally.
-  As soon as they log in, the page must dynamically compute `isOwnProfile` and apply all
+  As soon as they log in, the page must dynamically compute `isOwnProfile` / `isExpert` / `isAdmin` and apply all
   disabled states instantly without a page reload.
 - When an expert registers a guest booking with a different name but their own email, the
   backend must block it based on email validation alone.
@@ -284,22 +279,23 @@ case-insensitive + trimmed}
 
 ### Acceptance Criteria
 
-* **AC 1.1:** `POST /api/v1/bookings` with `userEmail` matching the expert's registered email
+* **AC 1.1:** `POST /bookings` with `userEmail` matching the expert's registered email
   (case-insensitive) must return `400 Bad Request` with a message indicating self-booking
   is not permitted.
 * **AC 1.2:** An authenticated Expert accessing their own ExpertDetail page must see all
   booking inputs in a disabled state and the submit button displaying "Self-Booking Disabled".
 * **AC 1.3:** The ExpertListing page rendered for a logged-in Expert must not display that
   Expert's own card in the grid.
-* **AC 1.4:** `GET /api/v1/bookings` querying by the expert's email must not return any booking objects where `notes === 'Blocked by Expert'` (blocked slots).
+* **AC 1.4:** `GET /bookings` querying by the expert's email must not return any booking objects where `notes === 'Blocked by Expert'` (blocked slots).
 * **AC 1.5:** An authenticated Admin accessing any ExpertDetail profile page must see all booking inputs in a disabled state, and the submit button displaying "Booking Disabled for Admins".
-* **AC 1.6:** `POST /api/v1/bookings` from a logged-in user with the `'Admin'` role must return `400 Bad Request` with an appropriate error message.
+* **AC 1.6:** `POST /bookings` from a logged-in user with the `'Admin'` or `'Expert'` role must return `403 Forbidden` with an appropriate error message indicating that scheduling is restricted to Client accounts.
+* **AC 1.7:** Access to `/my-bookings` must be strictly restricted to the `'Client'` role; other roles attempting to access it are redirected to `/`.
 
 ### Non-Goals
 
 - Does not restrict an Expert from viewing their own profile page — only from booking.
-- Does not prevent Experts from booking sessions with OTHER experts.
-- Does not restrict Admin users from viewing or managing bookings globally — only from creating client bookings.
+- Does not permit Experts from booking sessions with other experts.
+- Does not restrict Admin users from viewing or managing bookings globally — only from creating bookings.
 
 ### Dependencies
 
@@ -312,7 +308,7 @@ case-insensitive + trimmed}
 
 - Unit: Test email comparison utility for case-insensitive, trimmed matching
   (e.g., `"  Sarah@test.com"` should match `"sarah@test.com"`).
-- Integration: `POST /api/v1/bookings` with matching email → assert 400;
+- Integration: `POST /bookings` with matching email → assert 400;
   with different email → assert 201.
 - Manual: Log in as an Expert, navigate to own profile, verify all inputs are disabled
   and the yellow banner is visible.
@@ -405,13 +401,13 @@ slot datetime vs Date.now}
 
 ### API Specifications
 
-* `POST /api/v1/dashboard/block-slot`
+* `POST /expert-dashboard/block-slot`
   Input: `{ expertId, date, slot }`
   Validation: If `slot datetime (IST, UTC+5:30) < Date.now()` → 400 Bad Request
   Output: `{ message: "Slot blocked" }` on success
   Auth: Expert role required
 
-* `POST /api/v1/dashboard/unblock-slot`
+* `POST /expert-dashboard/unblock-slot`
   Input: `{ expertId, date, slot }`
   Validation: If `slot datetime (IST, UTC+5:30) < Date.now()` → 400 Bad Request
   Output: `{ message: "Slot unblocked" }` on success
@@ -433,7 +429,7 @@ slot datetime vs Date.now}
 
 ### Acceptance Criteria
 
-* **AC 2.1:** `POST /api/v1/dashboard/block-slot` for a slot dated yesterday must return
+* **AC 2.1:** `POST /expert-dashboard/block-slot` for a slot dated yesterday must return
   `400 Bad Request`.
 * **AC 2.2:** Expert Dashboard displaying today's date must render all hourly slots prior
   to the current IST clock time as disabled with a "Passed" label, and all future slots
@@ -556,7 +552,7 @@ Booking status updated to Completed])
 
 ### API Specifications
 
-* `PATCH /api/v1/bookings/:id/status`
+* `PATCH /bookings/:id/status`
   Input: `{ status: "Completed" }`
   Validation:
     - Parse: `new Date(booking.date + "T" + booking.slot + ":00+05:30").getTime()`
@@ -583,7 +579,7 @@ Booking status updated to Completed])
 
 ### Acceptance Criteria
 
-* **AC 3.1:** `PATCH /api/v1/bookings/:id/status` with `{ status: "Completed" }` for a
+* **AC 3.1:** `PATCH /bookings/:id/status` with `{ status: "Completed" }` for a
   session scheduled 1 hour in the future must return `400 Bad Request` with a timestamped
   error body containing `sessionTime` and `currentTime`.
 * **AC 3.2:** The "Mark as Completed" button on the MyBookings page must be invisible or
@@ -724,17 +720,17 @@ phone: '+919876543210']
 
 ### API Specifications
 
-* `POST /api/v1/auth/register`
+* `POST /auth/register`
   Input: `{ name, email, password, phone: "+91XXXXXXXXXX" }` (frontend prepends `+91`)
   Validation: Mongoose regex `^\+91[0-9]{10}$`
   Auth: Public
 
-* `POST /api/v1/bookings`
+* `POST /bookings`
   Input: `{ ..., userPhone: "+91XXXXXXXXXX" }`
   Validation: Mongoose regex `^\+91[0-9]{10}$`
   Auth: Optional
 
-* `GET /api/v1/auth/me`
+* `GET /auth/me`
   Output: `{ user: { phone: "+91XXXXXXXXXX", ... } }`
   Frontend: strips `+91` before rendering in input
   Auth: Bearer JWT required
@@ -1016,7 +1012,7 @@ by submitted rating display])
 
 ### API Specifications
 
-* `POST /api/v1/experts/:id/rate`
+* `POST /experts/:id/rate`
   Input: `{ bookingId, rating (integer 1–5), comment (optional string) }`
   Validation:
     - Booking must exist and have status `Completed`
@@ -1026,7 +1022,7 @@ by submitted rating display])
   Side effects: `booking.isRated = true`; `expert.averageRating` and `expert.numReviews` updated
   Auth: Client role required
 
-* `GET /api/v1/experts/:id/reviews`
+* `GET /experts/:id/reviews`
   Output: `[{ rating, comment, userName, createdAt }]`
   Auth: Public
 
@@ -1045,9 +1041,9 @@ by submitted rating display])
 
 ### Acceptance Criteria
 
-* **AC 6.1:** `POST /api/v1/experts/:id/rate` for a booking with status `"Confirmed"`
+* **AC 6.1:** `POST /experts/:id/rate` for a booking with status `"Confirmed"`
   must return `400 Bad Request`.
-* **AC 6.2:** `POST /api/v1/experts/:id/rate` for a booking where `isRated` is `true`
+* **AC 6.2:** `POST /experts/:id/rate` for a booking where `isRated` is `true`
   must return `400 Bad Request`.
 * **AC 6.3:** Successful rating submission must update `expert.averageRating` using
   the formula: `((oldAvg * count) + newRating) / (count + 1)`.
@@ -1175,17 +1171,17 @@ Client redirects to Login page])
 
 ### API Specifications
 
-* `POST /api/v1/auth/register`
+* `POST /auth/register`
   Input: `{ name, email, password, role }`
   Output: `{ token, user }` (no password field in response)
   Auth: Public
 
-* `POST /api/v1/auth/login`
+* `POST /auth/login`
   Input: `{ email, password }`
   Output: `{ token, user }`
   Auth: Public
 
-* `GET /api/v1/auth/me`
+* `GET /auth/me`
   Output: `{ user }` (no password field)
   Auth: Bearer JWT required
 
@@ -1324,28 +1320,28 @@ Disabled — within 500ms])
 
 ### API Specifications
 
-* `GET /api/v1/bookings/booked-slots/:expertId/:date`
+* `GET /bookings/booked-slots/:expertId/:date`
   Output: `[slot strings]` (already booked or blocked slots for that expert/date)
   Auth: Public
 
-* `POST /api/v1/bookings`
+* `POST /bookings`
   Input: `{ expert, userName, userEmail, userPhone, bookingDate, slotTime, notes }`
   Validation: Slot not in booked-slots list; unique index enforcement; creator must NOT be Admin.
   Output: `{ success: true, data: booking }`
   Auth: Private (Client or Expert role required)
 
-* `GET /api/v1/bookings`
+* `GET /bookings`
   Input: query parameter `email`
   Validation: Authenticated user matches queried email, or user has `'Admin'` role.
   Output: `{ success: true, count, data: [bookings] }`
   Auth: Private (Client, Expert, or Admin role required)
 
-* `PATCH /api/v1/bookings/:id/status`
+* `PATCH /bookings/:id/status`
   Input: `{ status }` (Confirmed | Completed | Cancelled)
   Validation: Caller must be the Client owner, host Expert, or Admin.
   Auth: Private (Client, Expert, or Admin role required)
 
-* `PATCH /api/v1/bookings/:id/rate`
+* `PATCH /bookings/:id/rate`
   Input: none
   Validation: Caller must be the Client owner or Admin.
   Auth: Private (Client or Admin role required)
@@ -1477,13 +1473,13 @@ No API call made])
 
 ### API Specifications
 
-* `POST /api/v1/dashboard/block-slot`
+* `POST /expert-dashboard/block-slot`
   Input: `{ expertId, date, slot }`
   Validation: slot must be in the future (target timezone); slot must not have an active booking
   Output: `{ message: "Slot blocked" }`
   Auth: Expert role required
 
-* `POST /api/v1/dashboard/unblock-slot`
+* `POST /expert-dashboard/unblock-slot`
   Input: `{ expertId, date, slot }`
   Validation: slot must be in the future (target timezone)
   Output: `{ message: "Slot unblocked" }`
@@ -1867,7 +1863,7 @@ flowchart TD
 
 ### API Specifications
 
-* `POST /api/v1/auth/register` (and other complex endpoints)
+* `POST /auth/register` (and other complex endpoints)
   Input: Standard registration payload
   Validation: Enforces transaction session usage internally
   Output: `{ success: true, user }`
@@ -1942,7 +1938,7 @@ Migrates expert calendar unavailability blocks from the overloaded `Booking` col
 - [MUST HAVE] The `createBooking` endpoint must reject client bookings if the slot is blocked in the `Availability` collection.
   Rationale: Hard security safeguard preventing clients from scheduling sessions over blocked slots.
 
-- [MUST HAVE] The `/api/v1/bookings/booked-slots/:expertId/:date` endpoint must fetch records from both collections and merge them to preserve frontend compatibility.
+- [MUST HAVE] The `/bookings/booked-slots/:expertId/:date` endpoint must fetch records from both collections and merge them to preserve frontend compatibility.
   Rationale: Ensures zero breaking changes in client-side booking and expert dashboard layouts.
 
 ### Non-Functional Requirements
@@ -1960,13 +1956,13 @@ Migrates expert calendar unavailability blocks from the overloaded `Booking` col
 
 ### API Specifications
 
-* `POST /api/v1/expert-dashboard/block-slot`
+* `POST /expert-dashboard/block-slot`
   Input: { bookingDate: String, slotTime: String }
   Validation: bookingDate and slotTime required, slot not in the past, expert profile exists, slot not already booked or blocked
   Output: { success: Boolean, data: Object }
   Auth: Private (Expert Only)
 
-* `POST /api/v1/expert-dashboard/unblock-slot`
+* `POST /expert-dashboard/unblock-slot`
   Input: { bookingDate: String, slotTime: String }
   Validation: bookingDate and slotTime required, block record exists
   Output: { success: Boolean, message: String }
@@ -2058,13 +2054,13 @@ Protects expert schedules by preventing late cancellations within a 2-hour windo
 
 ### API Specifications
 
-* `PATCH /api/v1/bookings/:id/status`
+* `PATCH /bookings/:id/status`
   Input: { status: "Cancelled" }
   Validation: booking exists, user owns/hosts booking, check 2-hour window relative to slot start time (IST), check if slot is in the past.
   Output: { success: true, booking: Object }
   Auth: Private (Client owner, host Expert, or Admin bypass)
 
-* `POST /api/v1/admin/users/:id/reset-penalties`
+* `POST /admin/users/:id/reset-penalties`
   Input: None
   Validation: user exists, sender is administrator.
   Output: { success: true, message: String }
@@ -2139,6 +2135,8 @@ Establishes a double-sided reputation network by allowing Experts to rate and re
 
 - [MUST HAVE] Default reputation score. New client accounts must start with a clean record default rating of `5.0` with `0` reviews.
   Rationale: Represents a clean record for new marketplace participants.
+- [MUST HAVE] UI Fallback. If a client has 0 reviews (`numReviews === 0`), the UI must display "New Client" (or "No Reviews") rather than rendering a numeric 5.0 star rating, ensuring clear visual distinction from accounts with a rating history.
+  Rationale: Prevents confusion between new accounts and accounts with perfect 5-star history.
 - [MUST HAVE] Secure validation. Written comments must have leading/trailing whitespace trimmed, and rating scale must strictly be between 1 and 5.
   Rationale: Ensures high data hygiene standards.
 
@@ -2156,7 +2154,7 @@ Establishes a double-sided reputation network by allowing Experts to rate and re
 
 ### API Specifications
 
-* `POST /api/v1/expert-dashboard/bookings/:id/rate-client`
+* `POST /expert-dashboard/bookings/:id/rate-client`
   Input: { rating: Number, comment: String }
   Validation: booking exists, status is 'Completed', caller is host expert, not already client-rated, rating is between 1 and 5.
   Output: { success: true, data: UserObject, review: ClientReviewObject }
@@ -2173,10 +2171,11 @@ Establishes a double-sided reputation network by allowing Experts to rate and re
 
 ### Acceptance Criteria
 
-* **AC 13.1:** Rating a client on a completed booking successfully saves the review and updates the client's User rating and review count.
-* **AC 13.2:** Double rating the same booking is blocked by the backend.
-* **AC 13.3:** The reputation stars display correctly next to the client's name on the Expert Dashboard sessions list.
-* **AC 13.4:** The user's settings profile displays their reputation score.
+* **AC 15.1:** Rating a client on a completed booking successfully saves the review and updates the client's User rating and review count.
+* **AC 15.2:** Double rating the same booking is blocked by the backend.
+* **AC 15.3:** The reputation badge displays correctly next to the client's name on the Expert Dashboard sessions list (showing the star rating for established clients, and "New Client" for clients with 0 reviews).
+* **AC 15.4:** The user's settings profile displays their reputation score or "New Client" badge.
+* **AC 15.5:** The Admin Dashboard and other rating display panels render "New Client" or "No Reviews" instead of a raw 5.0 star rating if `numReviews === 0`.
 
 ### Non-Goals
 
@@ -2200,6 +2199,7 @@ None identified.
 | Date | Author | Summary |
 |---|---|---|
 | 2026-05-27 | Agent | Spec created and status marked Complete for Two-Sided P2P Feedback System. |
+| 2026-05-27 | Agent | Enhanced spec to require "New Client" display fallback when client has 0 reviews. |
 
 ### Status
 `Complete`
