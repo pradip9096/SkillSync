@@ -1,8 +1,0 @@
-{
-    "chat.tools.terminal.autoApprove": {
-        "/^cd /home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System && node - <<'NODE'\nconst bookingDate='2026-05-10';\nconst slotTime='10:00';\nconst sessionDate = new Date\\(`\\$\\{bookingDate\\}T\\$\\{slotTime\\}:00Z`\\);\nconst sessionMs = sessionDate\\.getTime\\(\\) - \\(5\\.5 \\* 60 \\* 60 \\* 1000\\);\nconsole\\.log\\('sessionDate UTC:', sessionDate\\.toISOString\\(\\)\\);\nconsole\\.log\\('sessionMs UTC:', new Date\\(sessionMs\\)\\.toISOString\\(\\)\\);\nconsole\\.log\\('now UTC:', new Date\\(\\)\\.toISOString\\(\\)\\);\nconsole\\.log\\('session local:', new Date\\(sessionMs\\)\\.toString\\(\\)\\);\nNODE$/": {
-            "approve": true,
-            "matchCommandLine": true
-        }
-    }
-}
