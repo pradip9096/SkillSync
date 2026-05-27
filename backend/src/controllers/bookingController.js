@@ -72,11 +72,11 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Block admin from booking expert sessions
-    if (authUser && authUser.role === 'Admin') {
-      return res.status(400).json({
+    // Block non-client users (Admins and Experts) from booking expert sessions
+    if (authUser && authUser.role !== 'Client') {
+      return res.status(403).json({
         success: false,
-        error: 'Administrators are not permitted to book expert sessions. Please use a Client account.'
+        error: `${authUser.role === 'Admin' ? 'Administrators' : 'Experts'} are not permitted to book expert sessions. Please use a Client account.`
       });
     }
 

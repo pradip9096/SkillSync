@@ -60,11 +60,11 @@ This document details the rights held by both the **Expert** (Service Provider) 
 ### 1. Functional Separation: Should an expert have client functionality?
 * **Concept:** Can an account with the `Expert` role perform consumer booking tasks (such as booking other experts)?
 * **Current System Implementation:**
-  * **Supported Dual Capability:** In the current codebase, an authenticated account with the `Expert` role can browse other experts, book sessions with them, and manage or cancel those bookings identically to a client account. The system only restricts experts from booking sessions with themselves to prevent self-booking logic issues.
-  * **Authentication & Routing:** Expert user tokens are accepted by the public directory and booking endpoints.
-* **Design Considerations for the Future:**
-  * **Scheduling Vulnerabilities:** Allowing experts to book other experts can lead to scheduling conflicts where an expert is booked as a service provider during the same time slot they have reserved as a consumer.
-  * **Strict Role Separation:** For future iterations where strict calendar consistency is paramount, booking endpoints should be restricted to the `Client` role only, prompting experts to create a separate client account if they wish to book services.
+  * **Strict Role Isolation:** The booking endpoint restricts session creations exclusively to the `'Client'` role. Accounts with the `'Expert'` or `'Admin'` roles are forbidden from booking sessions.
+  * **The Rationale:**
+    * **Preventing Scheduling Collisions:** Blocking experts from booking other experts prevents scheduling conflicts where a provider is booked for a session during the same hour they reserved a slot as a client.
+    * **Billing & Accounting Integrity:** Keeps the payout routing for experts cleanly segregated from client invoice transactions.
+  * **Client Account Requirement:** If an expert wishes to book another expert, they must create and log into a separate account configured with the `'Client'` role.
 
 ### 2. Peer-to-Peer Messaging: Should we apply expert-to-expert communication?
 * **Concept:** Implementing direct peer communication channels between different experts.
