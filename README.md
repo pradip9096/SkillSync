@@ -72,7 +72,7 @@ Strategic planning, specifications, and architecture references are available in
 
 ### Prerequisites
 - Node.js (v18+ recommended)
-- MongoDB running locally or a MongoDB Atlas URI
+- MongoDB (Requires a replica set configuration if running a local standalone instance to support MongoDB Transactions, or a MongoDB Atlas cluster URI which has transactions enabled by default)
 
 ### Quick Start (Recommended)
 You can boot both the frontend and backend simultaneously using the provided auto-start script from the project root:
