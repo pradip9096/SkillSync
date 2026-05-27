@@ -610,9 +610,10 @@ const ExpertDetail = () => {
             </form>
           )}
         </div>
+      </div>
 
-        {/* Full-Width: Professional Gallery */}
-        {expert.gallery && expert.gallery.length > 0 && (
+      {/* Full-Width: Professional Gallery */}
+      {expert.gallery && expert.gallery.length > 0 && (
           <div className="mt-12 bg-white rounded-3xl border border-gray-100 p-8 shadow-xl animate-slide-up">
             <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
               <span className="text-2xl">🖼️</span> Professional Gallery
@@ -762,7 +763,6 @@ const ExpertDetail = () => {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 };
