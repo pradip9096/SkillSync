@@ -59,12 +59,12 @@ This document details the rights held by both the **Expert** (Service Provider) 
 
 ### 1. Functional Separation: Should an expert have client functionality?
 * **Concept:** Can an account with the `Expert` role perform consumer booking tasks (such as booking other experts)?
-* **The Design Decision:**
-  * **Strict Role Isolation:** Experts do not share the same dashboard or database interfaces as Clients. Expert accounts cannot book expert sessions.
-  * **The Rationale:**
-    * **Preventing Scheduling Collisions:** Allowing an expert to book sessions under their provider account creates complex booking overlaps (e.g., they could be booked as an expert and a client at the same time).
-    * **Billing & Accounting Separation:** Provider accounts receive payouts, while consumer accounts are billed for services. Mixing these pipelines inside a single account record compromises transaction tracing.
-  * **Best Practice Workflow:** If a registered expert wants to book another expert, they should register and log in using a dedicated `Client` account. This maintains clean schedules, database indexes, and profile metrics.
+* **Current System Implementation:**
+  * **Supported Dual Capability:** In the current codebase, an authenticated account with the `Expert` role can browse other experts, book sessions with them, and manage or cancel those bookings identically to a client account. The system only restricts experts from booking sessions with themselves to prevent self-booking logic issues.
+  * **Authentication & Routing:** Expert user tokens are accepted by the public directory and booking endpoints.
+* **Design Considerations for the Future:**
+  * **Scheduling Vulnerabilities:** Allowing experts to book other experts can lead to scheduling conflicts where an expert is booked as a service provider during the same time slot they have reserved as a consumer.
+  * **Strict Role Separation:** For future iterations where strict calendar consistency is paramount, booking endpoints should be restricted to the `Client` role only, prompting experts to create a separate client account if they wish to book services.
 
 ### 2. Peer-to-Peer Messaging: Should we apply expert-to-expert communication?
 * **Concept:** Implementing direct peer communication channels between different experts.
