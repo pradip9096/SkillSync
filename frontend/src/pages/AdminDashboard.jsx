@@ -148,7 +148,7 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Failed to update booking status.');
+      setErrorMsg(err.response?.data?.error || 'Failed to update booking status.');
     } finally {
       setActionLoading(null);
     }

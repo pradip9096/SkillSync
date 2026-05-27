@@ -84,6 +84,7 @@ const updateBookingStatusByAdmin = async (req, res) => {
     booking.status = status;
     
     // Note: Admin updates bypass the model's pre-save time checks for 'Completed' status
+    booking.bypassTimeLock = true;
     await booking.save();
 
     // If cancelled or late cancelled, broadcast socket event so the slot is released immediately in real-time

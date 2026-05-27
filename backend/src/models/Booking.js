@@ -108,7 +108,7 @@ bookingSchema.pre('save', async function () {
     this.active = true;
   }
 
-  if (this.isModified('status') && this.status === 'Completed') {
+  if (this.isModified('status') && this.status === 'Completed' && !this.bypassTimeLock && !this._bypassTimeLock) {
     const sessionTime = parseISTSessionTime(this.bookingDate, this.slotTime);
     if (!sessionTime) {
       throw new Error('Invalid booking date or slot time.'); 
