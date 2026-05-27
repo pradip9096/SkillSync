@@ -52,3 +52,26 @@ This document details the rights held by both the **Expert** (Service Provider) 
 * **The Rationale:**
   * **Marketplace Quality Control:** In a decentralized platform, peer reviews act as an organic filter. High-performing experts are highlighted, while low-performing ones are naturally filtered down.
   * **Consumer Advocacy:** Reviews provide social proof, lowering the barrier of entry for new users trying to decide which expert to trust with their time and money.
+
+---
+
+## Part 3: Architecture & Design Considerations
+
+### 1. Functional Separation: Should an expert have client functionality?
+* **Concept:** Can an account with the `Expert` role perform consumer booking tasks (such as booking other experts)?
+* **The Design Decision:**
+  * **Strict Role Isolation:** Experts do not share the same dashboard or database interfaces as Clients. Expert accounts cannot book expert sessions.
+  * **The Rationale:**
+    * **Preventing Scheduling Collisions:** Allowing an expert to book sessions under their provider account creates complex booking overlaps (e.g., they could be booked as an expert and a client at the same time).
+    * **Billing & Accounting Separation:** Provider accounts receive payouts, while consumer accounts are billed for services. Mixing these pipelines inside a single account record compromises transaction tracing.
+  * **Best Practice Workflow:** If a registered expert wants to book another expert, they should register and log in using a dedicated `Client` account. This maintains clean schedules, database indexes, and profile metrics.
+
+### 2. Peer-to-Peer Messaging: Should we apply expert-to-expert communication?
+* **Concept:** Implementing direct peer communication channels between different experts.
+* **The Design Decision:**
+  * **Communication Restrictiveness:** Peer-to-peer expert communication channels are not implemented on the platform. Socket.io communication is used exclusively for real-time calendar updates.
+  * **The Rationale:**
+    * **Preventing Platform Disintermediation:** Allowing direct off-session communication channels increases platform leakage, where service providers bypass platform booking options to negotiate private off-platform payments.
+    * **Complexity Overhead:** Real-time peer messaging requires substantial database entities (e.g., `Message`, `ChatRoom`), socket persistence, unread trackers, and moderation features.
+    * **Core Value Alignment:** SkillSync’s primary conversion metric is connecting clients to experts. Expert-to-expert messaging does not directly drive booking conversions.
+
