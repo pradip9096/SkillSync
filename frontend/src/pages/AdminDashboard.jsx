@@ -36,7 +36,9 @@ import {
   Briefcase,
   IndianRupee,
   Lock,
-  ChevronDown
+  ChevronDown,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
@@ -75,6 +77,7 @@ const AdminDashboard = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newExpertEmail, setNewExpertEmail] = useState('');
   const [newExpertPassword, setNewExpertPassword] = useState('');
+  const [showNewExpertPassword, setShowNewExpertPassword] = useState(false);
   const [newExpertName, setNewExpertName] = useState('');
   const [newExpertPhone, setNewExpertPhone] = useState('');
   const [newExpertCategory, setNewExpertCategory] = useState('Technology');
@@ -259,6 +262,7 @@ const AdminDashboard = () => {
         // Reset fields
         setNewExpertEmail('');
         setNewExpertPassword('');
+        setShowNewExpertPassword(false);
         setNewExpertName('');
         setNewExpertPhone('');
         setNewExpertCategory('Technology');
@@ -676,7 +680,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Password */}
+                   {/* Password */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Password</label>
                     <div className="relative rounded-lg shadow-sm">
@@ -684,13 +688,20 @@ const AdminDashboard = () => {
                         <Lock className="h-4 w-4 text-gray-400" />
                       </div>
                       <input
-                        type="password"
+                        type={showNewExpertPassword ? "text" : "password"}
                         required
                         placeholder="••••••••"
                         value={newExpertPassword}
                         onChange={(e) => setNewExpertPassword(e.target.value)}
-                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
+                        className="block w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-xs font-semibold transition-all duration-200 hover:border-indigo-200"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewExpertPassword(!showNewExpertPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                      >
+                        {showNewExpertPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
 

@@ -11,7 +11,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchUserProfile, updateUserProfile, uploadProfileImage } from '../services/api';
-import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail, Camera } from 'lucide-react';
+import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail, Camera, Eye, EyeOff } from 'lucide-react';
 
 const Profile = () => {
   const { user } = useAuth(); // Use auth helper to get user details
@@ -23,6 +23,8 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState('');
   const [rating, setRating] = useState(5.0);
   const [numReviews, setNumReviews] = useState(0);
@@ -362,12 +364,19 @@ const Profile = () => {
                     </div>
                     <input
                       id="pass"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="•••••••• (Min 6 chars)"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
                 </div>
 
@@ -381,12 +390,19 @@ const Profile = () => {
                     </div>
                     <input
                       id="confirmPass"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
                 </div>
               </div>
