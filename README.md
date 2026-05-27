@@ -93,35 +93,6 @@ This is a two-package JavaScript application:
   - `src/pages/ExpertDetail.jsx` - Detailed expert profile with slot selector.
   - `src/pages/MyBookings.jsx` - Protected client-only session list view.
 
-## 📖 Documentation
-Strategic planning, specifications, and architecture references are available in the `docs/` folder:
-- **Product Requirement Document (PRD):** [docs/SkillSync_PRD.md](docs/SkillSync_PRD.md) - Details product features, BDD scenarios, and risk vectors.
-- **Strategic Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) - Outlines release phases (Phase 1-4) and prioritization frameworks.
-- **Feature Plan Blueprint:** [docs/feature-plan-anatomy.txt](docs/feature-plan-anatomy.txt) - The standard visual component hierarchy template for planning files.
-- **Standards & Catalog:**
-  - [Feature Requirements Taxonomy](docs/feature_definitions.md) - Formal industry standards (IREB, SAFe, FDD) applied to this project.
-  - [Standard Features Catalog](docs/STANDARD_FEATURE_CATALOG.md) - Standard specifications mapping index.
-  - [Changelog Policy](docs/CHANGELOG_POLICY.md) - Enforced guidelines for maintaining clean changelogs.
-  - [Documentation Strategy](docs/DOCUMENTATION_STRATEGY.md) - Architecture design planning process.
-- **Knowledge Base:** Internal engineering resources and database architecture references:
-  - [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md) - ACID concurrency guidelines.
-  - [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md) - Admin credentials and concurrent testing guide.
-  - [direnv & Start Script Guide](docs/knowledge-base/direnv-start-script-guide.md) - Environment loading documentation.
-  - [Admin Booking Rights](docs/knowledge-base/admin-booking-rights.md) - Admin dashboard boundaries.
-  - [Expert and Client Rights](docs/knowledge-base/expert-and-client-rights.md) - Security guidelines for user actions.
-  - [Background Jobs Comparison](docs/knowledge-base/background-jobs-comparison.md) - Comparative analysis of `node-cron`, `Agenda`, and `BullMQ`.
-- **Feature Plans:** Detailed technical design references for each implemented feature:
-  - [Expert Directory](docs/feature-plan-expert-directory.md)
-  - [Atomic Booking Engine](docs/feature-plan-atomic-booking-engine.md)
-  - [Real-Time Slot Updates](docs/feature-plan-realtime-slot-updates.md)
-  - [Expert Detail & Booking Form](docs/feature-plan-expert-detail-booking-form.md)
-  - [My Bookings History](docs/feature-plan-my-bookings.md)
-  - [Home Landing Page](docs/feature-plan-home-landing-page.md)
-  - [India-Specific Localization](docs/feature-plan-india-localization.md)
-  - [Smart Image Placeholders](docs/feature-plan-image-placeholders.md)
-  - [JWT Authentication & RBAC](docs/feature-plan-jwt-authentication-rbac.md)
-- **Standards:**
-  - [Feature Requirements Taxonomy](docs/feature_definitions.md) - Formal industry standards (IREB, SAFe, FDD) applied to this project.
 
 ## ⚙️ Getting Started
 
