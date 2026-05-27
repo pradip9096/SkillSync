@@ -11,6 +11,8 @@
 const Expert = require('../models/Expert');
 const Booking = require('../models/Booking');
 const Availability = require('../models/Availability');
+const User = require('../models/User');
+const ClientReview = require('../models/ClientReview');
 
 /**
  * @desc    Get all bookings for the logged-in Expert
@@ -29,6 +31,7 @@ const getExpertBookings = async (req, res) => {
 
     // Find all bookings associated with this expert
     const bookings = await Booking.find({ expert: expert._id })
+      .populate('user', 'name email phone rating numReviews')
       .sort({ bookingDate: -1, slotTime: -1 });
 
     res.status(200).json({
@@ -357,6 +360,99 @@ const deleteGalleryImage = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Submit a numerical rating for a client and update their rolling average rating
+ * @route   POST /expert-dashboard/bookings/:id/rate-client
+ * @access  Private (Expert Only)
+ */
+const rateClient = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const bookingId = req.params.id;
+
+    // Validate inputs
+    if (!rating) {
+      return res.status(400).json({ success: false, error: 'Rating is required.' });
+    }
+
+    const numericRating = Number(rating);
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ success: false, error: 'Rating must be a number between 1 and 5.' });
+    }
+
+    // Find the expert profile of the logged-in user
+    const expert = await Expert.findOne({ user: req.user._id });
+    if (!expert) {
+      return res.status(404).json({ success: false, error: 'Expert profile not found for this account' });
+    }
+
+    // Verify the booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found.' });
+    }
+
+    // Ensure the booking belongs to this expert
+    if (booking.expert.toString() !== expert._id.toString()) {
+      return res.status(401).json({ success: false, error: 'Not authorized to rate this session.' });
+    }
+
+    // Ensure the booking is completed
+    if (booking.status !== 'Completed') {
+      return res.status(400).json({ success: false, error: 'You can only rate completed sessions.' });
+    }
+
+    // Ensure the booking has not been client-rated yet
+    if (booking.isClientRated) {
+      return res.status(400).json({ success: false, error: 'This client has already been rated for this session.' });
+    }
+
+    // Find the Client (User) associated with this booking
+    if (!booking.user) {
+      return res.status(400).json({ success: false, error: 'Cannot rate a session with no registered user account.' });
+    }
+
+    const clientUser = await User.findById(booking.user);
+    if (!clientUser) {
+      return res.status(404).json({ success: false, error: 'Client account not found.' });
+    }
+
+    // Create the ClientReview document
+    const clientReview = await ClientReview.create({
+      client: clientUser._id,
+      expert: expert._id,
+      expertName: expert.name,
+      rating: numericRating,
+      comment: comment || undefined,
+      booking: bookingId
+    });
+
+    /**
+     * Calculate new average rating:
+     * Formula: New Average = ((Current Average * Current Count) + New Rating) / (Current Count + 1)
+     */
+    const currentTotal = clientUser.rating * clientUser.numReviews;
+    clientUser.numReviews += 1;
+    clientUser.rating = (currentTotal + numericRating) / clientUser.numReviews;
+
+    // Save the updated client document
+    await clientUser.save();
+
+    // Mark the booking as client-rated
+    booking.isClientRated = true;
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      data: clientUser,
+      review: clientReview
+    });
+  } catch (error) {
+    console.error('API Error in rateClient:', error);
+    res.status(500).json({ success: false, error: error.message || 'Server error rating client' });
+  }
+};
+
 module.exports = {
   getExpertBookings,
   getExpertProfile,
@@ -364,5 +460,6 @@ module.exports = {
   blockSlot,
   unblockSlot,
   uploadGalleryImage,
-  deleteGalleryImage
+  deleteGalleryImage,
+  rateClient
 };

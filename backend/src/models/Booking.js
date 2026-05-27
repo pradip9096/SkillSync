@@ -64,6 +64,11 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Tracks if the expert has already rated the client for this session
+  isClientRated: {
+    type: Boolean,
+    default: false
+  },
   // Optional notes provided by the user during booking
   notes: {
     type: String

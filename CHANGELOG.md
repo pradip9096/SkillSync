@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Two-Sided P2P Feedback System:**
+  - Created `ClientReview` Mongoose schema in [ClientReview.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/ClientReview.js) to store expert reviews of clients post-session.
+  - Added `rating` (default `5.0`) and `numReviews` fields to `User` schema in [User.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/User.js).
+  - Added `isClientRated` check boolean field to `Booking` schema in [Booking.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/Booking.js).
+  - Implemented `/bookings/:id/rate-client` API route and `rateClient` controller in [expertDashboardController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/expertDashboardController.js) and [expertDashboardRoutes.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/routes/expertDashboardRoutes.js) to validate completes, authenticate host expert, build review documents, and update client ratings.
+  - Created integration test suite [test_client_feedback.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/test_client_feedback.js) verifying 6 key feedback constraints and rolling average math.
+  - Refactored [ExpertDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDashboard.jsx) to display client ratings, render Completed feedback buttons, and handle submission ratings modal.
+  - Refactored [Profile.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/Profile.jsx) to render client reputation score inside the settings header banner.
+  - Refactored [AdminDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/AdminDashboard.jsx) to show a `Reputation` column in the Users manager directory.
 - **Late Cancellation Lock & Strike-Suspension System:**
   - Added a new `"Late Cancellation"` status to the `Booking` schema's enum in [Booking.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/Booking.js).
   - Added `active` boolean field on Booking model, synced using a pre-save Mongoose hook, to allow unique indexing on `{ expert, bookingDate, slotTime }` only when a booking is active (`active: true`).

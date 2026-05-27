@@ -390,6 +390,7 @@ const AdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Email</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Role</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Phone</th>
+                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Reputation</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Strikes</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Suspension</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Joined Date</th>
@@ -413,6 +414,17 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-500">{u.phone || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {u.role === 'Client' && u.numReviews > 0 ? (
+                              <span className="font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded" title={`${u.rating.toFixed(1)} based on ${u.numReviews} sessions`}>
+                                ★ {u.rating.toFixed(1)} ({u.numReviews})
+                              </span>
+                            ) : u.role === 'Client' ? (
+                              <span className="text-gray-300 italic text-xs">New Client</span>
+                            ) : (
+                              <span className="text-gray-300 italic text-xs">N/A</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`font-bold px-2 py-0.5 rounded border ${u.lateCancellationsCount > 0 ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
                               {u.lateCancellationsCount || 0} / 3

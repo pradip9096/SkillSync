@@ -147,6 +147,18 @@ export const rateExpert = (expertId, rating, comment, bookingId) => API.post(`/e
  */
 export const markBookingAsRated = (bookingId) => API.patch(`/bookings/${bookingId}/rate`);
 
+/**
+ * Submit a rating for a client by an expert.
+ * 
+ * Purpose: Submits a review and rating for a client after a completed session.
+ * @param {string} bookingId - The booking ID.
+ * @param {number} rating - The rating value (1-5).
+ * @param {string} [comment] - Optional comment.
+ * @returns {Promise<import('axios').AxiosResponse>} A promise resolving to the API response.
+ * Side effects: Performs a POST network request.
+ */
+export const rateClient = (bookingId, rating, comment) => API.post(`/expert-dashboard/bookings/${bookingId}/rate-client`, { rating, comment });
+
 // --- Profile APIs ---
 export const fetchUserProfile = () => API.get('/auth/profile');
 export const updateUserProfile = (profileData) => API.put('/auth/profile', profileData);

@@ -18,7 +18,8 @@ import {
   fetchBookedSlots,
   updateBookingStatus,
   uploadGalleryImage,
-  deleteGalleryImage
+  deleteGalleryImage,
+  rateClient
 } from '../services/api';
 import socket from '../services/socket';
 import { 
@@ -36,7 +37,9 @@ import {
   FileText,
   AlertCircle,
   Image,
-  Trash2
+  Trash2,
+  Star,
+  X
 } from 'lucide-react';
 
 // Helper: Convert 24-hour time (e.g. "14:00") to 12-hour format with AM/PM (e.g. "02:00 PM")
@@ -102,6 +105,12 @@ const ExpertDashboard = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Rating Client modal states
+  const [rateModalBooking, setRateModalBooking] = useState(null);
+  const [clientRating, setClientRating] = useState(5);
+  const [clientComment, setClientComment] = useState('');
+  const [isRatingSubmit, setIsRatingSubmit] = useState(false);
 
   // Predefined hourly slots (09:00 - 22:00, lunch at 13:00)
   const timeSlots = [
@@ -243,6 +252,40 @@ const ExpertDashboard = () => {
       if (confirmNormal) {
         await handleStatusChange(booking._id, 'Cancelled');
       }
+    }
+  };
+
+  const openRateClientModal = (booking) => {
+    setRateModalBooking(booking);
+    setClientRating(5);
+    setClientComment('');
+    setErrorMsg('');
+  };
+
+  const closeRateClientModal = () => {
+    setRateModalBooking(null);
+  };
+
+  const handleRateClientSubmit = async (e) => {
+    e.preventDefault();
+    if (!rateModalBooking) return;
+    try {
+      setIsRatingSubmit(true);
+      setErrorMsg('');
+      
+      await rateClient(rateModalBooking._id, clientRating, clientComment);
+      
+      setSuccessMsg(`Successfully submitted rating for client ${rateModalBooking.userName}!`);
+      
+      // Reload bookings to update isClientRated and user ratings status
+      await loadBookings();
+      
+      closeRateClientModal();
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to submit client rating');
+    } finally {
+      setIsRatingSubmit(false);
     }
   };
 
@@ -509,7 +552,12 @@ const ExpertDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-bold text-gray-900 flex items-center gap-1.5">
                           <User className="w-4 h-4 text-gray-400" />
-                          {b.userName}
+                          <span>{b.userName}</span>
+                          {b.user && typeof b.user === 'object' && b.user.numReviews > 0 && (
+                            <span className="ml-2 inline-flex items-center gap-0.5 text-xs font-black text-amber-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full" title={`Client Reputation: ${b.user.rating.toFixed(1)} stars based on ${b.user.numReviews} reviews`}>
+                              ★ {b.user.rating.toFixed(1)} <span className="text-[10px] text-amber-400">({b.user.numReviews})</span>
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
                           <Phone className="w-3.5 h-3.5 text-gray-400" />
@@ -576,8 +624,23 @@ const ExpertDashboard = () => {
                             )}
                           </div>
                         )}
-                        {b.status !== 'Confirmed' && (
-                          <span className="text-xs text-gray-400 italic">Completed / Cancelled</span>
+                        {b.status === 'Completed' && (
+                          <div className="flex justify-end gap-2 items-center">
+                            {b.isClientRated ? (
+                              <span className="text-xs text-green-600 font-bold bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg">Rated</span>
+                            ) : (
+                              <button
+                                onClick={() => openRateClientModal(b)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-black border border-amber-200 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                Rate Client
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {['Cancelled', 'Late Cancellation'].includes(b.status) && (
+                          <span className="text-xs text-gray-400 italic">Cancelled</span>
                         )}
                       </td>
                     </tr>
@@ -840,6 +903,96 @@ const ExpertDashboard = () => {
         </div>
 
       </div>
+
+      {/* Rate Client Modal */}
+      {rateModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={closeRateClientModal}>
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-100 m-4 animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
+                Rate Client: {rateModalBooking.userName}
+              </h3>
+              <button 
+                onClick={closeRateClientModal} 
+                className="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRateClientSubmit} className="space-y-6">
+              {/* Stars selector */}
+              <div className="space-y-2 text-center">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">Session Experience</label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setClientRating(star)}
+                      className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star 
+                        className={`w-10 h-10 ${
+                          star <= clientRating 
+                            ? 'text-amber-500 fill-amber-500' 
+                            : 'text-gray-200'
+                        }`} 
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs font-bold text-gray-400 italic">
+                  {clientRating === 5 && 'Excellent client (5/5)'}
+                  {clientRating === 4 && 'Good client (4/5)'}
+                  {clientRating === 3 && 'Average client (3/5)'}
+                  {clientRating === 2 && 'Poor client (2/5)'}
+                  {clientRating === 1 && 'Abusive / No Show client (1/5)'}
+                </p>
+              </div>
+
+              {/* Comment text area */}
+              <div className="space-y-2">
+                <label htmlFor="clientComment" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Written Feedback (Optional)</label>
+                <textarea
+                  id="clientComment"
+                  rows="4"
+                  placeholder="Share details of the client's behavior, punctuality, or goals..."
+                  value={clientComment}
+                  onChange={(e) => setClientComment(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 font-semibold transition-all text-sm resize-none"
+                />
+              </div>
+
+              {/* Submit / Cancel Buttons */}
+              <div className="flex gap-4 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={closeRateClientModal}
+                  className="flex-1 py-3 border border-gray-200 hover:bg-gray-50 text-gray-500 font-bold rounded-2xl transition-all cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRatingSubmit}
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-purple-500/10 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer text-sm"
+                >
+                  {isRatingSubmit ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    'Submit Feedback'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

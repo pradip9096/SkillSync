@@ -60,6 +60,18 @@ const userSchema = new mongoose.Schema({
   suspendedUntil: {
     type: Date,
     default: null
+  },
+  // Client's average rating as reviewed by experts
+  rating: {
+    type: Number,
+    min: [1, 'Rating must be at least 1'],
+    max: [5, 'Rating cannot be more than 5'],
+    default: 5.0
+  },
+  // Total number of ratings client has received
+  numReviews: {
+    type: Number,
+    default: 0
   }
 }, {
   // Automatically manage createdAt and updatedAt fields

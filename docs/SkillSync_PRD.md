@@ -25,8 +25,8 @@
 
 * **In-Scope Features (Phase 1 MVP):** Home Page; India Specific Localization; Placeholder Images; Expert directory with pagination/search/filter; Expert profile views; Real-time slot availability broadcasting via Socket.io; Atomic booking engine (DB-level locking); Booking history tracking by email.
 * **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock; Endpoint Hardening & Ownership Verification; Availability Schema Migration (Decoupled Slot Blocking).
-* **In-Scope Features (Phase 3):** Post-session Rating & Review System; Booking Cancellation Protection time-locks (Late Cancellation and Strike/Cooldown Penalty System).
-* **In-Scope Features (Phase 4 - Future Development):** Two-Sided peer-to-peer feedback loops (Experts rating Clients).
+* **In-Scope Features (Phase 3):** Post-session Rating & Review System; Booking Cancellation Protection time-locks (Late Cancellation and Strike/Cooldown Penalty System); Two-Sided peer-to-peer feedback loops (Experts rating Clients).
+* **In-Scope Features (Phase 4 - Future Development):** None.
 * **Out-of-Scope Elements:** Payment processing and gateways; Integrated video/audio conferencing (booking handles scheduling only).
 
 ## 4. Functional Specifications & Prioritization
@@ -45,7 +45,7 @@
 | **Booking History** | "My Bookings" page allowing users to look up their booking history and status. | *Should Have* | *Medium* |
 | **Review Feature** | Allow users to leave a rating and review for an expert post-session. | *Could Have* | *Medium* |
 | **Availability Schema Migration** | Decouple expert availability blocks from the Booking schema into a dedicated Availability model. | *Should Have (Completed)* | *Medium* |
-| **Two-Sided P2P Feedback Loop** | Enable experts to rate clients (1-5 stars and text) post-session to protect marketplace safety. | *Could Have* | *Medium* |
+| **Two-Sided P2P Feedback Loop** | Enable experts to rate clients (1-5 stars and text) post-session to protect marketplace safety. | *Could Have (Completed)* | *Medium* |
 | **Cancellation Protection** | Enforce cancellation windows (e.g. no cancellations within 2 hours of session start, strike-based suspension). | *Should Have (Completed)* | *Medium* |
 
 ## 5. Agile User Stories & Acceptance Criteria

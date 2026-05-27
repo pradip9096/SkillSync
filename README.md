@@ -16,6 +16,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Expert Portal Dashboard:** Specialized dashboard for registered experts to view client appointments (rendered in 12-hour AM/PM format), update profile info (experience, hourly rate, and biography), and block/unblock time slots.
 - **Availability Slot Blocking:** Dynamic grid allowing experts to block/unblock slots in real-time, instantly broadcasting availability status to all connected client browsers.
 - **Late Cancellation Lock & Strike-Suspension System:** Enforces a 2-hour IST-anchored cancellation window for Clients and Experts (Admins exempt). Tracks user cancellations, recording `"Late Cancellation"` statuses, and automatically suspends scheduling/booking privileges for 7 days if a user accumulates 3 late cancellation strikes. Admins can reset user strikes and lift suspensions instantly.
+- **Two-Sided P2P Feedback System:** Implements a double-sided trust network allowing Experts to rate and review Clients (1-5 stars with comments) post-session. Client reputation rating badges are rendered in real-time on the Expert Portal sessions table, Client profile dashboard, and the Admin Panel user manager directory.
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack
@@ -34,6 +35,7 @@ This is a two-package JavaScript application:
   - `src/middleware/authMiddleware.js` - JWT authentication verification and role checks.
   - `src/models/User.js` - Mongoose User schema with password hashing.
   - `src/models/Availability.js` - Mongoose Availability schema for expert calendar blocks.
+  - `src/models/ClientReview.js` - Mongoose ClientReview schema for expert reviews of clients.
   - `src/routes/authRoutes.js` - Auth and profile routes mounting.
   - `src/routes/adminRoutes.js` - Admin dashboard routing endpoints.
   - `src/routes/expertDashboardRoutes.js` - Expert dashboard routing endpoints.

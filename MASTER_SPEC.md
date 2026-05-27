@@ -169,6 +169,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Systemic Database Consistency Architecture](#feature-systemic-database-consistency-architecture) | `Complete` | SkillSync | 2026-05-26 |
 | [Availability Schema Migration](#feature-availability-schema-migration) | `Complete` | SkillSync | 2026-05-26 |
 | [Late Cancellation & Penalty Cooldown](#feature-late-cancellation--penalty-cooldown) | `Complete` | SkillSync | 2026-05-27 |
+| [Two-Sided P2P Feedback System](#feature-two-sided-p2p-feedback-system) | `Complete` | SkillSync | 2026-05-27 |
 
 ---
 
@@ -2108,6 +2109,97 @@ None identified.
 | Date | Author | Summary |
 |---|---|---|
 | 2026-05-27 | Agent | Spec created and status marked Complete for Late Cancellation & Penalty Cooldown. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-27
+
+---
+
+## Feature: Two-Sided P2P Feedback System
+
+### Overview
+
+Establishes a double-sided reputation network by allowing Experts to rate and review Clients after a completed session. Client ratings and feedback metrics are stored in the database, updating the client's rolling average, and are displayed on the Expert Portal sessions list, client profile dashboard, and the Admin Panel.
+
+### Functional Requirements
+
+- [MUST HAVE] Allow Experts to rate and review Clients only for bookings with status `'Completed'`.
+  Rationale: Prevents speculative or premature reviews before the session has concluded.
+- [MUST HAVE] Enforce that each booking can only have one client rating submitted by the expert (`isClientRated` check).
+  Rationale: Prevents duplicate review submissions for a single appointment.
+- [MUST HAVE] Ensure that only the host Expert of the booking is authorized to submit the rating.
+  Rationale: Restricts rating capabilities to the party who actually completed the session with the client.
+- [MUST HAVE] Automatically update the Client (`User` document) average rating and reviews count upon successful review creation using the rolling average formula.
+  Rationale: Guarantees real-time recalculation and persistence of user reputation scores.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Default reputation score. New client accounts must start with a clean record default rating of `5.0` with `0` reviews.
+  Rationale: Represents a clean record for new marketplace participants.
+- [MUST HAVE] Secure validation. Written comments must have leading/trailing whitespace trimmed, and rating scale must strictly be between 1 and 5.
+  Rationale: Ensures high data hygiene standards.
+
+### User Interaction Flow
+
+```
+[Expert] -> Completed Session List -> Clicks "Rate Client" -> [Rating Modal Opens]
+  |-- Selects star rating (1-5) and types optional comment
+  |-- Submits -> [System verifies authorization and completed status]
+        |--> Creates ClientReview document
+        |--> Updates User (Client) rating rolling average and count
+        |--> Sets Booking.isClientRated = true
+        |--> Frontend displays green "Rated" badge
+```
+
+### API Specifications
+
+* `POST /api/v1/expert-dashboard/bookings/:id/rate-client`
+  Input: { rating: Number, comment: String }
+  Validation: booking exists, status is 'Completed', caller is host expert, not already client-rated, rating is between 1 and 5.
+  Output: { success: true, data: UserObject, review: ClientReviewObject }
+  Auth: Private (Expert Only)
+
+### Edge Cases
+
+- **Rating Unauthenticated Bookings**: Blocked in the backend by verifying if `booking.user` reference exists, returning 400 Bad Request.
+- **Expert Demotion**: If an expert is demoted to client, their active sessions remain but they cannot access `/expert-dashboard` to rate sessions.
+
+### Best Practices
+
+* Copy the expert's display name (`expertName`) into the `ClientReview` document during creation to avoid expensive MongoDB aggregation populates when displaying comments.
+
+### Acceptance Criteria
+
+* **AC 13.1:** Rating a client on a completed booking successfully saves the review and updates the client's User rating and review count.
+* **AC 13.2:** Double rating the same booking is blocked by the backend.
+* **AC 13.3:** The reputation stars display correctly next to the client's name on the Expert Dashboard sessions list.
+* **AC 13.4:** The user's settings profile displays their reputation score.
+
+### Non-Goals
+
+- This feature does NOT display client written feedback comments publicly on the expert listing directories (they are only visible to the expert panel/admins).
+
+### Dependencies
+
+- Feature: User Authentication & RBAC (requires authentication roles to verify Expert identity and track Client User records).
+
+### Testing Strategy
+
+- Unit/Integration: Test suite `test_client_feedback.js` verifying validations, authority boundaries, average math, and constraints.
+- Manual: Go to Expert Portal, complete session, rate client, view client profile, and confirm rating displays.
+
+### Known Bugs / Stability Risks
+
+None identified.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-27 | Agent | Spec created and status marked Complete for Two-Sided P2P Feedback System. |
 
 ### Status
 `Complete`
