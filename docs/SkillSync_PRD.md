@@ -25,8 +25,8 @@
 
 * **In-Scope Features (Phase 1 MVP):** Home Page; India Specific Localization; Placeholder Images; Expert directory with pagination/search/filter; Expert profile views; Real-time slot availability broadcasting via Socket.io; Atomic booking engine (DB-level locking); Booking history tracking by email.
 * **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock; Endpoint Hardening & Ownership Verification; Availability Schema Migration (Decoupled Slot Blocking).
-* **In-Scope Features (Phase 3):** Post-session Rating & Review System.
-* **In-Scope Features (Phase 4 - Future Development):** Two-Sided peer-to-peer feedback loops (Experts rating Clients); Booking Cancellation Protection time-locks.
+* **In-Scope Features (Phase 3):** Post-session Rating & Review System; Booking Cancellation Protection time-locks (Late Cancellation and Strike/Cooldown Penalty System).
+* **In-Scope Features (Phase 4 - Future Development):** Two-Sided peer-to-peer feedback loops (Experts rating Clients).
 * **Out-of-Scope Elements:** Payment processing and gateways; Integrated video/audio conferencing (booking handles scheduling only).
 
 ## 4. Functional Specifications & Prioritization
@@ -46,7 +46,7 @@
 | **Review Feature** | Allow users to leave a rating and review for an expert post-session. | *Could Have* | *Medium* |
 | **Availability Schema Migration** | Decouple expert availability blocks from the Booking schema into a dedicated Availability model. | *Should Have (Completed)* | *Medium* |
 | **Two-Sided P2P Feedback Loop** | Enable experts to rate clients (1-5 stars and text) post-session to protect marketplace safety. | *Could Have* | *Medium* |
-| **Cancellation Protection** | Enforce cancellation windows (e.g. no cancellations within 2 hours of session start). | *Should Have* | *Low* |
+| **Cancellation Protection** | Enforce cancellation windows (e.g. no cancellations within 2 hours of session start, strike-based suspension). | *Should Have (Completed)* | *Medium* |
 
 ## 5. Agile User Stories & Acceptance Criteria
 
@@ -73,6 +73,18 @@
     * **Given** the user is viewing a time slot
     * **When** the slot is rendered
     * **Then** it must strictly adhere to Indian Standard Time (IST) and phone inputs must default to +91.
+
+* **User Story BK-03:** As an Expert, I want my calendar to be protected against last-minute cancellations so that I do not lose booking opportunities.
+  * **Acceptance Criteria:**
+    * **Given** a confirmed booking is scheduled in less than 2 hours from the current time (in IST)
+    * **When** the Client or Expert attempts to cancel the session
+    * **Then** the system rejects the cancellation as standard, records a `"Late Cancellation"` status instead, releases the slot, and registers a late cancellation penalty strike on the cancelling user's account.
+
+* **User Story BK-04:** As the System Administrator, I want to automatically suspend users who repeatedly cancel sessions late so that we deter marketplace abuse.
+  * **Acceptance Criteria:**
+    * **Given** a user accumulates 3 `"Late Cancellation"` strikes
+    * **When** the 3rd strike is recorded
+    * **Then** the user's account is automatically suspended (`suspendedUntil` is set to 7 days from the cancellation time), preventing them from booking or scheduling new slots until the cooldown period expires or an Admin resets their penalties.
 
 ## 6. Technical & Non-Functional Specifications
 * **Security & Compliance:** 

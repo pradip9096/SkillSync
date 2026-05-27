@@ -50,6 +50,16 @@ const userSchema = new mongoose.Schema({
       /^\+91[0-9]{10}$/,
       'Please add a valid Indian phone number starting with +91'
     ]
+  },
+  // Number of late cancellations accumulated
+  lateCancellationsCount: {
+    type: Number,
+    default: 0
+  },
+  // Suspension end timestamp
+  suspendedUntil: {
+    type: Date,
+    default: null
   }
 }, {
   // Automatically manage createdAt and updatedAt fields

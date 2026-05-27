@@ -56,7 +56,7 @@ const bookingSchema = new mongoose.Schema({
   // Current status of the booking
   status: {
     type: String,
-    enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled'],
+    enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'Late Cancellation'],
     default: 'Confirmed'
   },
   // Tracks if the user has already rated this session
@@ -67,6 +67,11 @@ const bookingSchema = new mongoose.Schema({
   // Optional notes provided by the user during booking
   notes: {
     type: String
+  },
+  // Helper field to enforce compound uniqueness for active bookings
+  active: {
+    type: Boolean,
+    default: true
   }
 }, {
   // Automatically manage createdAt and updatedAt fields
@@ -91,6 +96,13 @@ const parseISTSessionTime = (bookingDate, slotTime) => {
  * Side effects: Throws an error to prevent saving if the session time has not yet passed.
  */
 bookingSchema.pre('save', async function () {
+  // Synchronize the active field state with the status
+  if (['Cancelled', 'Late Cancellation'].includes(this.status)) {
+    this.active = false;
+  } else {
+    this.active = true;
+  }
+
   if (this.isModified('status') && this.status === 'Completed') {
     const sessionTime = parseISTSessionTime(this.bookingDate, this.slotTime);
     if (!sessionTime) {
@@ -129,13 +141,13 @@ bookingSchema.pre('findOneAndUpdate', async function () {
 /**
  * Compound Unique Index
  * Prevents double booking for the same expert, date, and time slot.
- * The partial filter ensures that 'Cancelled' bookings do not block new bookings for the same slot.
+ * The partial filter ensures that 'Cancelled' and 'Late Cancellation' bookings do not block new bookings for the same slot.
  */
 bookingSchema.index(
   { expert: 1, bookingDate: 1, slotTime: 1 }, 
   { 
     unique: true,
-    partialFilterExpression: { status: { $ne: 'Cancelled' } }
+    partialFilterExpression: { active: true }
   }
 );
 

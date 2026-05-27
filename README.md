@@ -15,8 +15,8 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Admin Dashboard Console:** Centralized console for administrators to view register lists, override booking statuses, cancel/delete bookings with real-time slot release, and add/delete expert accounts. Enforces strict UI-level role isolation, disabling customer scheduling selectors on expert detail profiles and hiding client-facing personal history paths.
 - **Expert Portal Dashboard:** Specialized dashboard for registered experts to view client appointments (rendered in 12-hour AM/PM format), update profile info (experience, hourly rate, and biography), and block/unblock time slots.
 - **Availability Slot Blocking:** Dynamic grid allowing experts to block/unblock slots in real-time, instantly broadcasting availability status to all connected client browsers.
-
-
+- **Late Cancellation Lock & Strike-Suspension System:** Enforces a 2-hour IST-anchored cancellation window for Clients and Experts (Admins exempt). Tracks user cancellations, recording `"Late Cancellation"` statuses, and automatically suspends scheduling/booking privileges for 7 days if a user accumulates 3 late cancellation strikes. Admins can reset user strikes and lift suspensions instantly.
+- **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack
 - **Frontend:** React + Vite
@@ -52,7 +52,7 @@ Strategic planning, specifications, and architecture references are available in
 - **Product Requirement Document (PRD):** [docs/SkillSync_PRD.md](docs/SkillSync_PRD.md) - Details product features, BDD scenarios, and risk vectors.
 - **Strategic Roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) - Outlines release phases (Phase 1-4) and prioritization frameworks.
 - **Feature Plan Blueprint:** [docs/feature-plan-anatomy.txt](docs/feature-plan-anatomy.txt) - The standard visual component hierarchy template for planning files.
-- **Knowledge Base:** Internal engineering resources and database architecture references (e.g. [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md), [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md)).
+- **Knowledge Base:** Internal engineering resources and database architecture references (e.g. [MongoDB Transactions](docs/knowledge-base/mongodb-transactions.md), [Admin Roles & Session Guide](docs/knowledge-base/admin-and-session-guide.md), [direnv & Start Script Guide](docs/knowledge-base/direnv-start-script-guide.md)).
 - **Feature Plans:** Detailed technical design references for each implemented feature:
   - [Expert Directory](docs/feature-plan-expert-directory.md)
   - [Atomic Booking Engine](docs/feature-plan-atomic-booking-engine.md)

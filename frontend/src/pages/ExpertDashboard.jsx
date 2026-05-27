@@ -62,6 +62,16 @@ const isSessionPast = (date, time) => {
   return sessionMs <= new Date().getTime();
 };
 
+const isWithinTwoHours = (date, time) => {
+  if (!date || !time) return false;
+  const sessionDateTime = new Date(`${date}T${time}:00+05:30`);
+  const sessionMs = sessionDateTime.getTime();
+  if (Number.isNaN(sessionMs)) return false;
+  const nowMs = new Date().getTime();
+  const twoHoursInMs = 2 * 60 * 60 * 1000;
+  return sessionMs > nowMs && (sessionMs - nowMs) <= twoHoursInMs;
+};
+
 const ExpertDashboard = () => {
   // Navigation tabs: 'sessions', 'availability', 'profile', 'gallery'
   const [activeTab, setActiveTab] = useState('sessions');
@@ -217,6 +227,25 @@ const ExpertDashboard = () => {
     }
   };
 
+  const handleCancelClick = async (booking) => {
+    const isWithinTwo = isWithinTwoHours(booking.bookingDate, booking.slotTime);
+    if (isWithinTwo) {
+      const confirmLate = window.confirm(
+        "Warning: This session starts in less than 2 hours. Cancelling now will be marked as a 'Late Cancellation'. Do you wish to proceed?"
+      );
+      if (confirmLate) {
+        await handleStatusChange(booking._id, 'Late Cancellation');
+      }
+    } else {
+      const confirmNormal = window.confirm(
+        "Are you sure you want to cancel this session?"
+      );
+      if (confirmNormal) {
+        await handleStatusChange(booking._id, 'Cancelled');
+      }
+    }
+  };
+
   // Handle blocking/unblocking slots
   const handleSlotToggle = async (slotTime) => {
     if (!expertId) return;
@@ -329,6 +358,7 @@ const ExpertDashboard = () => {
       case 'Pending': return 'bg-yellow-50 text-yellow-700 border-yellow-100';
       case 'Completed': return 'bg-blue-50 text-blue-700 border-blue-100';
       case 'Cancelled': return 'bg-red-50 text-red-700 border-red-100';
+      case 'Late Cancellation': return 'bg-orange-50 text-orange-700 border-orange-100';
       default: return 'bg-gray-50 text-gray-700 border-gray-100';
     }
   };
@@ -529,19 +559,21 @@ const ExpertDashboard = () => {
                                 Locked
                               </button>
                             )}
-                            <button
-                              disabled={actionLoading === b._id}
-                              onClick={() => handleStatusChange(b._id, 'Cancelled')}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                              title="Cancel Session"
-                            >
-                              {actionLoading === b._id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
-                              Cancel
-                            </button>
+                            {!isSessionPast(b.bookingDate, b.slotTime) && (
+                              <button
+                                disabled={actionLoading === b._id}
+                                onClick={() => handleCancelClick(b)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                                title="Cancel Session"
+                              >
+                                {actionLoading === b._id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <XCircle className="w-3.5 h-3.5" />
+                                )}
+                                Cancel
+                              </button>
+                            )}
                           </div>
                         )}
                         {b.status !== 'Confirmed' && (

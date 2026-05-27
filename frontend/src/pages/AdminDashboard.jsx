@@ -16,6 +16,7 @@ import {
   adminDeleteBooking,
   adminCreateExpert,
   adminDeleteExpert,
+  adminResetPenalties,
   fetchExperts
 } from '../services/api';
 import { 
@@ -168,6 +169,30 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error(err);
       setErrorMsg('Failed to delete booking.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle reset penalties
+  const handleResetPenalties = async (userId) => {
+    if (!window.confirm('Are you sure you want to reset strikes and lift booking suspensions for this user?')) {
+      return;
+    }
+
+    try {
+      setActionLoading(userId);
+      setErrorMsg('');
+      setSuccessMsg('');
+      const { data } = await adminResetPenalties(userId);
+      if (data.success) {
+        setSuccessMsg('Strikes reset and booking suspension lifted successfully.');
+        // Update local users list
+        setUsers(users.map(u => u._id === userId ? { ...u, lateCancellationsCount: 0, suspendedUntil: null } : u));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to reset penalties.');
     } finally {
       setActionLoading(null);
     }
@@ -365,7 +390,10 @@ const AdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Email</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Role</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Phone</th>
+                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Strikes</th>
+                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Suspension</th>
                         <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Joined Date</th>
+                        <th className="px-6 py-3 text-right text-xs font-black uppercase tracking-wider text-gray-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100 font-medium text-sm">
@@ -385,8 +413,38 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-500">{u.phone || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`font-bold px-2 py-0.5 rounded border ${u.lateCancellationsCount > 0 ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                              {u.lateCancellationsCount || 0} / 3
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-xs">
+                            {u.suspendedUntil && new Date(u.suspendedUntil).getTime() > Date.now() ? (
+                              <span className="text-red-600 font-bold bg-red-50 border border-red-100 rounded-full px-2 py-0.5" title={`Until ${new Date(u.suspendedUntil).toLocaleString('en-IN')}`}>
+                                Suspended
+                              </span>
+                            ) : (
+                              <span className="text-green-600 font-bold bg-green-50 border border-green-100 rounded-full px-2 py-0.5">
+                                Active
+                              </span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-xs">
                             {new Date(u.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
+                            {((u.lateCancellationsCount && u.lateCancellationsCount > 0) || (u.suspendedUntil && new Date(u.suspendedUntil).getTime() > Date.now())) ? (
+                              <button
+                                onClick={() => handleResetPenalties(u._id)}
+                                disabled={actionLoading === u._id}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50 active:scale-95 inline-flex items-center gap-1"
+                              >
+                                {actionLoading === u._id && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Reset Penalties
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 italic">No Penalties</span>
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -56,6 +56,22 @@ const createBooking = async (req, res) => {
       }
     }
 
+    // Check if user is suspended
+    if (authUser && authUser.suspendedUntil && Date.now() < authUser.suspendedUntil.getTime()) {
+      const suspendedDateStr = new Date(authUser.suspendedUntil).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Kolkata'
+      });
+      return res.status(403).json({
+        success: false,
+        error: `Your booking privileges are temporarily suspended due to repeated late cancellations. Access will be restored on ${suspendedDateStr} IST.`
+      });
+    }
+
     // Block admin from booking expert sessions
     if (authUser && authUser.role === 'Admin') {
       return res.status(400).json({
@@ -96,7 +112,7 @@ const createBooking = async (req, res) => {
       expert, 
       bookingDate, 
       slotTime,
-      status: { $ne: 'Cancelled' }
+      status: { $nin: ['Cancelled', 'Late Cancellation'] }
     });
     
     // If a non-cancelled booking exists for this slot, return an error.
@@ -243,10 +259,10 @@ const updateBookingStatus = async (req, res) => {
     }
 
     /**
-     * Time-lock check for "Completed" status.
-     * We prevent marking a session as completed if the scheduled time hasn't passed yet.
+     * Time-lock checks for status transitions
      */
-    const normalizedStatus = String(status || '').trim();
+    let normalizedStatus = String(status || '').trim();
+    
     if (normalizedStatus === 'Completed') {
       const nowMs = Date.now();
       // Construct a Date object for the session time in IST
@@ -270,15 +286,69 @@ const updateBookingStatus = async (req, res) => {
       }
     }
 
+    // Cancellation policy checks for non-Admins
+    if ((normalizedStatus === 'Cancelled' || normalizedStatus === 'Late Cancellation') && !isAdmin) {
+      const nowMs = Date.now();
+      const sessionTime = new Date(`${booking.bookingDate}T${booking.slotTime}:00+05:30`);
+      const sessionMs = sessionTime.getTime();
+
+      if (Number.isNaN(sessionMs)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid booking date or slot time. Cannot verify cancellation policy.'
+        });
+      }
+
+      // Past Check: prevent Clients and Experts from cancelling past sessions
+      if (nowMs >= sessionMs) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot cancel a session that has already passed.'
+        });
+      }
+
+      // 2-Hour Window Check
+      const twoHoursInMs = 2 * 60 * 60 * 1000;
+      const isWithinTwoHours = (sessionMs - nowMs) <= twoHoursInMs;
+
+      if (isWithinTwoHours) {
+        if (normalizedStatus === 'Cancelled') {
+          return res.status(400).json({
+            success: false,
+            error: 'Cancellations within 2 hours of the scheduled time must be processed as late cancellations. Please confirm to cancel late.'
+          });
+        }
+      } else {
+        // Outside 2 hours: automatically downgrade Late Cancellation requests to standard Cancelled status
+        if (normalizedStatus === 'Late Cancellation') {
+          normalizedStatus = 'Cancelled';
+        }
+      }
+    }
+
+    // If the status is changing to 'Late Cancellation', increment strikes for the cancelling user
+    if (normalizedStatus === 'Late Cancellation') {
+      const User = require('../models/User');
+      const cancellingUser = await User.findById(req.user._id);
+      if (cancellingUser) {
+        cancellingUser.lateCancellationsCount = (cancellingUser.lateCancellationsCount || 0) + 1;
+        if (cancellingUser.lateCancellationsCount >= 3) {
+          cancellingUser.suspendedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days suspension
+          cancellingUser.lateCancellationsCount = 0; // reset strike count
+        }
+        await cancellingUser.save();
+      }
+    }
+
     // Update and save the booking document
     booking.status = normalizedStatus;
     await booking.save();
 
     /**
      * Real-time release notification.
-     * If a booking is cancelled, we notify other users so the slot becomes available immediately.
+     * If a booking is cancelled or late-cancelled, we notify other users so the slot becomes available immediately.
      */
-    if (normalizedStatus === 'Cancelled') {
+    if (normalizedStatus === 'Cancelled' || normalizedStatus === 'Late Cancellation') {
       const io = req.app.get('io');
       if (io) {
         io.to(booking.expert.toString()).emit('slot_released', { 
@@ -310,10 +380,10 @@ const getBookedSlots = async (req, res) => {
      * Fetch all bookings for the given expert and date.
      * Exclude cancelled bookings so those slots appear as available on the frontend.
      */
-    const bookings = await Booking.find({ 
+     const bookings = await Booking.find({ 
       expert: expertId, 
       bookingDate: date,
-      status: { $ne: 'Cancelled' }
+      status: { $nin: ['Cancelled', 'Late Cancellation'] }
     });
 
     // Fetch availability blocks

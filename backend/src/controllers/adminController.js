@@ -65,10 +65,10 @@ const getAllBookings = async (req, res) => {
 const updateBookingStatusByAdmin = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['Confirmed', 'Pending', 'Completed', 'Cancelled'].includes(status)) {
+    if (!['Confirmed', 'Pending', 'Completed', 'Cancelled', 'Late Cancellation'].includes(status)) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide a valid status: Confirmed, Pending, Completed, or Cancelled'
+        error: 'Please provide a valid status: Confirmed, Pending, Completed, Cancelled, or Late Cancellation'
       });
     }
 
@@ -86,13 +86,18 @@ const updateBookingStatusByAdmin = async (req, res) => {
     // Note: Admin updates bypass the model's pre-save time checks for 'Completed' status
     await booking.save();
 
-    // If cancelled, broadcast socket event so the slot is released immediately in real-time for clients
-    if (status === 'Cancelled' && oldStatus !== 'Cancelled') {
+    // If cancelled or late cancelled, broadcast socket event so the slot is released immediately in real-time
+    const isNewCancelled = ['Cancelled', 'Late Cancellation'].includes(status);
+    const isOldCancelled = ['Cancelled', 'Late Cancellation'].includes(oldStatus);
+    
+    if (isNewCancelled && !isOldCancelled) {
       const io = req.app.get('io');
       if (io) {
         const dateStr = booking.bookingDate;
         io.to(booking.expert.toString()).emit('slot_released', {
           expertId: booking.expert.toString(),
+          bookingDate: dateStr,
+          slotTime: booking.slotTime,
           date: dateStr,
           slot: booking.slotTime
         });
@@ -281,8 +286,39 @@ const deleteExpertByAdmin = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      success: false,
       error: error.message || 'Server error deleting expert'
+    });
+  }
+};
+
+/**
+ * @desc    Reset a user's strikes and lift booking suspensions
+ * @route   POST /admin/users/:id/reset-penalties
+ * @access  Private (Admin Only)
+ */
+const resetUserPenalties = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User account not found'
+      });
+    }
+
+    user.lateCancellationsCount = 0;
+    user.suspendedUntil = null;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Penalties reset and booking suspension lifted successfully.',
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Server error resetting user penalties'
     });
   }
 };
@@ -293,5 +329,6 @@ module.exports = {
   updateBookingStatusByAdmin,
   deleteBookingByAdmin,
   createExpertByAdmin,
-  deleteExpertByAdmin
+  deleteExpertByAdmin,
+  resetUserPenalties
 };

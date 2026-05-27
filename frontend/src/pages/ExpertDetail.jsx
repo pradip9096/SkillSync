@@ -70,7 +70,8 @@ const ExpertDetail = () => {
 
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
   const isAdmin = !!(user && user.role === 'Admin');
-  const isBookingDisabled = isOwnProfile || isAdmin;
+  const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > Date.now());
+  const isBookingDisabled = isOwnProfile || isAdmin || isSuspended;
 
   // Keyboard handler: Escape closes lightbox, arrows navigate
   useEffect(() => {
@@ -363,6 +364,33 @@ const ExpertDetail = () => {
                     >
                       Expert Dashboard
                     </button>
+                    .
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSuspended && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-2xl shadow-sm animate-fade-in">
+              <div className="flex gap-3">
+                <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-black text-amber-800">Booking Privileges Suspended</h3>
+                  <p className="text-amber-700 font-semibold mt-1">
+                    Your account is temporarily suspended from booking sessions due to repeated late cancellations. 
+                    Booking access will be restored on{' '}
+                    <span className="font-bold text-amber-900">
+                      {new Date(user.suspendedUntil).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'Asia/Kolkata'
+                      })}{' '}
+                      IST
+                    </span>
                     .
                   </p>
                 </div>

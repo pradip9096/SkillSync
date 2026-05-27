@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Late Cancellation Lock & Strike-Suspension System:**
+  - Added a new `"Late Cancellation"` status to the `Booking` schema's enum in [Booking.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/Booking.js).
+  - Added `active` boolean field on Booking model, synced using a pre-save Mongoose hook, to allow unique indexing on `{ expert, bookingDate, slotTime }` only when a booking is active (`active: true`).
+  - Added `lateCancellationsCount` (Number, default 0) and `suspendedUntil` (Date) to the [User.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/models/User.js) schema.
+  - Implemented automatic database partial index recreation utility [recreate_booking_index.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/seeds/recreate_booking_index.js) to migrate existing documents and enforce concurrency safety.
+  - Implemented `/api/v1/admin/users/:id/reset-penalties` endpoint in [adminController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/adminController.js) and [adminRoutes.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/routes/adminRoutes.js) to reset a user's strike counts and lift cooldown suspensions.
+  - Created automated test suites: [test_late_cancellation.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/test_late_cancellation.js) (6 integration tests verifying cancellation windows, status updates, and past booking blocks) and [test_penalty_system.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/test_penalty_system.js) (6 integration tests validating user strikes, automatic suspensions, cooldown limits, and Admin resets).
+  - Created [direnv-start-script-guide.md](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/docs/knowledge-base/direnv-start-script-guide.md) documenting `direnv` environment loading and the security limits of shell navigation hooks.
+  - Configured root [.envrc](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/.envrc) directory configuration to dynamically load backend environments using `direnv`.
+
+### Changed
+- **Cancellation Logic and Dashboard Interfaces for Penalty Tracking:**
+  - Refactored `updateBookingStatus` in [bookingController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/bookingController.js) to enforce a 2-hour IST window check relative to slot start time, block cancellation of past bookings (Admins bypass), apply late cancellation status and user strike counts, and trigger 7-day cooldown suspensions.
+  - Secured `createBooking` in [bookingController.js](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/backend/src/controllers/bookingController.js) to block new booking creations if the Client is currently suspended.
+  - Refactored [MyBookings.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/MyBookings.jsx) to check the 2-hour late cancellation window (IST), warn users on cancellation prompts, show orange status badges for `"Late Cancellation"`, and display suspension alert banners.
+  - Refactored [ExpertDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDashboard.jsx) to support the `"Late Cancellation"` status, show orange status badges, and hide past sessions/cancellations.
+  - Hardened [ExpertDetail.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/ExpertDetail.jsx) to disable slot selections and display warning alerts if the Client is suspended.
+  - Refactored [AdminDashboard.jsx](file:///home/pradip/Software_Developement/Real-Time-Expert-Session-Booking-System/frontend/src/pages/AdminDashboard.jsx) to show user strikes (`Strikes`) and suspension dates (`Suspended Until`) in the users manager table, and added interactive `"Reset Penalties"` buttons.
+
+### Added
 - **Availability Schema Migration (Decoupled Slot Blocking):**
   - Created a dedicated `Availability` collection in MongoDB (`Availability.js`) with a compound unique index on `{ expert, bookingDate, slotTime }` to store expert availability blocks separately from client bookings.
   - Implemented an automated seed/migration utility `migrateBlockedSlots.js` to transfer existing placeholders (`notes: 'Blocked by Expert'`) from `bookings` to `availabilities` atomically.

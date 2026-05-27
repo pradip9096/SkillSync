@@ -60,6 +60,35 @@ const MyBookings = () => {
     return sessionMs <= new Date().getTime();
   };
 
+  const isWithinTwoHours = (date, time) => {
+    if (!date || !time) return false;
+    const sessionDateTime = new Date(`${date}T${time}:00+05:30`);
+    const sessionMs = sessionDateTime.getTime();
+    if (Number.isNaN(sessionMs)) return false;
+    const nowMs = new Date().getTime();
+    const twoHoursInMs = 2 * 60 * 60 * 1000;
+    return sessionMs > nowMs && (sessionMs - nowMs) <= twoHoursInMs;
+  };
+
+  const handleCancelClick = async (booking) => {
+    const isWithinTwo = isWithinTwoHours(booking.bookingDate, booking.slotTime);
+    if (isWithinTwo) {
+      const confirmLate = window.confirm(
+        "Warning: This session starts in less than 2 hours. Cancelling now will be marked as a 'Late Cancellation'. Do you wish to proceed?"
+      );
+      if (confirmLate) {
+        await handleStatusUpdate(booking._id, 'Late Cancellation');
+      }
+    } else {
+      const confirmNormal = window.confirm(
+        "Are you sure you want to cancel this session?"
+      );
+      if (confirmNormal) {
+        await handleStatusUpdate(booking._id, 'Cancelled');
+      }
+    }
+  };
+
   /**
    * Helper: Returns tailwind color classes based on booking status.
    * 
@@ -73,6 +102,7 @@ const MyBookings = () => {
       case 'Pending': return 'bg-yellow-50 text-yellow-700 border-yellow-100';
       case 'Completed': return 'bg-blue-50 text-blue-700 border-blue-100';
       case 'Cancelled': return 'bg-red-50 text-red-700 border-red-100';
+      case 'Late Cancellation': return 'bg-orange-50 text-orange-700 border-orange-100';
       default: return 'bg-gray-50 text-gray-700 border-gray-100';
     }
   };
@@ -197,6 +227,34 @@ const MyBookings = () => {
           </div>
         </div>
 
+        {/* Suspension Banner */}
+        {user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > Date.now() && (
+          <div className="bg-amber-50 border-2 border-amber-100 rounded-3xl p-6 mb-8 flex items-start gap-4 animate-slide-up">
+            <div className="bg-amber-500 text-white p-2 rounded-xl shadow-sm">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-amber-800 font-black uppercase text-xs tracking-wider mb-1">Booking Privileges Suspended</h3>
+              <p className="text-amber-700 text-sm font-semibold">
+                Your booking privileges are temporarily suspended due to repeated late cancellations. 
+                Access will be automatically restored on{' '}
+                <span className="font-bold text-amber-900">
+                  {new Date(user.suspendedUntil).toLocaleString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Kolkata'
+                  })}{' '}
+                  IST
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Email Search Bar Section */}
         <form onSubmit={handleSearch} className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 mb-12 animate-slide-up">
           <div className="flex flex-col md:flex-row gap-4">
@@ -317,14 +375,16 @@ const MyBookings = () => {
                           UPCOMING SESSION
                         </div>
                       )}
-                      <button
-                        onClick={() => handleStatusUpdate(booking._id, 'Cancelled')}
-                        disabled={actionLoading === booking._id}
-                        className="flex-grow flex items-center justify-center gap-3 bg-white text-red-600 hover:bg-red-50 border-2 border-red-100 font-black py-4 px-8 rounded-2xl transition-all disabled:opacity-50 active:scale-95"
-                      >
-                        {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
-                        CANCEL SESSION
-                      </button>
+                      {!isSessionPast(booking.bookingDate, booking.slotTime) && (
+                        <button
+                          onClick={() => handleCancelClick(booking)}
+                          disabled={actionLoading === booking._id}
+                          className="flex-grow flex items-center justify-center gap-3 bg-white text-red-600 hover:bg-red-50 border-2 border-red-100 font-black py-4 px-8 rounded-2xl transition-all disabled:opacity-50 active:scale-95"
+                        >
+                          {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                          CANCEL SESSION
+                        </button>
+                      )}
                     </div>
                   )}
 

@@ -165,9 +165,10 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Real-Time Booking & Scheduling Engine](#feature-real-time-booking--scheduling-engine) | `Generic Blueprint` | — | 2026-05-26 |
 | [Dynamic Availability Management (Slot Toggling)](#feature-dynamic-availability-management-slot-toggling) | `Generic Blueprint` | — | 2026-05-26 |
 | [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Generic Blueprint` | — | 2026-05-26 |
-| [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `In Progress` | SkillSync | 2026-05-26 |
+| [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `Complete` | SkillSync | 2026-05-27 |
 | [Systemic Database Consistency Architecture](#feature-systemic-database-consistency-architecture) | `Complete` | SkillSync | 2026-05-26 |
 | [Availability Schema Migration](#feature-availability-schema-migration) | `Complete` | SkillSync | 2026-05-26 |
+| [Late Cancellation & Penalty Cooldown](#feature-late-cancellation--penalty-cooldown) | `Complete` | SkillSync | 2026-05-27 |
 
 ---
 
@@ -1797,12 +1798,13 @@ None identified.
 | Date | Author | Summary |
 |---|---|---|
 | 2026-05-26 | Agent | Initial spec created for Media Uploads (Profile & Gallery). |
+| 2026-05-27 | Agent | Mark status as Complete following verification of frontend and backend integration. |
 
 ### Status
-`In Progress`
+`Complete`
 
 ### Last Updated
-2026-05-26
+2026-05-27
 
 ---
 
@@ -2011,3 +2013,104 @@ None identified.
 
 ### Last Updated
 2026-05-26
+
+---
+
+## Feature: Late Cancellation & Penalty Cooldown
+
+### Overview
+
+Protects expert schedules by preventing late cancellations within a 2-hour window of the slot time, and enforces marketplace compliance through an automated 3-strike penalty system. If a Client or Expert accumulates 3 late cancellations, their booking/scheduling privileges are suspended for 7 days (cooldown). Admins have bypass privileges and the ability to manually reset user penalties.
+
+### Functional Requirements
+
+- [MUST HAVE] Enforce a 2-hour cancellation time-lock. Cancellations made less than 2 hours before the scheduled slot time (in IST) must be recorded with a `"Late Cancellation"` status instead of a standard cancellation.
+  Rationale: Protects experts from lost opportunity costs caused by last-minute cancellations.
+- [MUST HAVE] Release the slot immediately upon both standard and late cancellations so other clients can book it, while keeping the booking document as a status audit log.
+  Rationale: Maximizes calendar utilization for the expert while maintaining accurate platform data logs.
+- [MUST HAVE] Prohibit any user (Client or Expert) from cancelling past sessions. System Admins must remain exempt from this constraint.
+  Rationale: Prevents rewriting historical booking records while leaving administrative override paths.
+- [MUST HAVE] Automatic Strike Tracking. Increment the `lateCancellationsCount` counter on the user profile of the party responsible for a late cancellation.
+  Rationale: Formulates the basis for automated account suspensions based on recurrent late cancellations.
+- [MUST HAVE] Automated Cooldown Suspension. Upon reaching 3 late cancellations, set `suspendedUntil` to 7 days from the current cancellation timestamp and disable slot booking capabilities for Clients, or slot toggling for Experts.
+  Rationale: Mitigates platform spam and schedule disruption through automated marketplace penalties.
+- [MUST HAVE] Admin Penalty Reset API. Implement a protected endpoint allowing administrators to reset a user's strike counter to `0` and clear their `suspendedUntil` cooldown limit.
+  Rationale: Empowers admins to resolve disputes, review extenuating circumstances, and restore accounts.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Perform all date-time offset checks (2-hour lock and past check) strictly using Indian Standard Time (IST, UTC+5:30) calculations to prevent timezone drift.
+  Rationale: SkillSync is optimized for the Indian marketplace; standardizing timezone boundaries prevents local clock errors.
+- [MUST HAVE] Database concurrency safe status transitions. Ensure double-bookings are avoided by setting an `active` status boolean on Bookings, maintaining a partial unique index on `{ expert: 1, bookingDate: 1, slotTime: 1 }` filtered on `{ active: true }`.
+  Rationale: Guarantees that late cancellations (which are inactive) release slots instantly and safely without risking duplicate active bookings on index recreation.
+
+### User Interaction Flow
+
+```
+[User] -> Clicks "Cancel" on Dashboard -> [System checks current time vs slot time (IST)]
+  |-- > 2 hours remaining --> Booking marked "Cancelled", slot released, no penalties.
+  |-- < 2 hours remaining --> Dialog shows late warning. User confirms.
+        |--> Booking marked "Late Cancellation", slot released.
+        |--> Responsible user's late count + 1.
+        |--> If count reaches 3, user suspended for 7 days (warning banner shown on login/detail).
+```
+
+### API Specifications
+
+* `PATCH /api/v1/bookings/:id/status`
+  Input: { status: "Cancelled" }
+  Validation: booking exists, user owns/hosts booking, check 2-hour window relative to slot start time (IST), check if slot is in the past.
+  Output: { success: true, booking: Object }
+  Auth: Private (Client owner, host Expert, or Admin bypass)
+
+* `POST /api/v1/admin/users/:id/reset-penalties`
+  Input: None
+  Validation: user exists, sender is administrator.
+  Output: { success: true, message: String }
+  Auth: Private (Admin Only)
+
+### Edge Cases
+
+- **Cancellation of Past Slots**: Prevented globally in the backend and frontend except for Admins, avoiding retrospective status mutations.
+- **Admin Bypasses**: Admins can cancel any booking at any time (including past slots or within the 2-hour window) without incurring penalties or status overrides to `"Late Cancellation"`.
+- **Concurrent Bookings during Index Creation**: Partial filter index on `{ active: true }` ensures that only bookings with a status of `"Pending"` or `"Confirmed"` occupy slots, keeping `"Cancelled"`, `"Late Cancellation"`, and `"Completed"` slots available.
+
+### Best Practices
+
+* Use explicit milliseconds math using UTC offsets (`+05:30`) to parse slot times and determine windows instead of depending on raw locale clocks.
+
+### Acceptance Criteria
+
+* **AC 12.1:** A cancellation within 2 hours of slot start changes the booking status to `"Late Cancellation"` and increments the user's strike counter.
+* **AC 12.2:** Reaching 3 strikes sets `suspendedUntil` to exactly 7 days from the cancellation time, displaying alert banners and blocking booking actions.
+* **AC 12.3:** Admin is able to call the reset API to clear strikes and lift the suspension immediately.
+* **AC 12.4:** Past sessions cannot be cancelled by Clients or Experts.
+
+### Non-Goals
+
+- This feature does NOT process credit refunds or payment penalties.
+
+### Dependencies
+
+- Feature: User Authentication & RBAC (requires role validation to determine cancellation permissions and track user penalty strikes).
+
+### Testing Strategy
+
+- Unit/Integration: Test suite `test_late_cancellation.js` and `test_penalty_system.js` verifying cancellation restrictions, suspensions, and reset capabilities.
+- Manual: Cancel booking within 2 hours on client page, observe strikes in Admin page, trigger suspension and verify slots selection is disabled, click Reset in Admin.
+
+### Known Bugs / Stability Risks
+
+None identified.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-27 | Agent | Spec created and status marked Complete for Late Cancellation & Penalty Cooldown. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-27

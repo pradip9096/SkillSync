@@ -161,6 +161,7 @@ export const adminUpdateBookingStatus = (id, status) => API.patch(`/admin/bookin
 export const adminDeleteBooking = (id) => API.delete(`/admin/bookings/${id}`);
 export const adminCreateExpert = (expertData) => API.post('/admin/experts', expertData);
 export const adminDeleteExpert = (id) => API.delete(`/admin/experts/${id}`);
+export const adminResetPenalties = (id) => API.post(`/admin/users/${id}/reset-penalties`);
 
 // --- Expert Dashboard APIs ---
 export const fetchExpertDashboardBookings = () => API.get('/expert-dashboard/bookings');

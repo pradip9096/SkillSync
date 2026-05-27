@@ -16,7 +16,8 @@ const {
   updateBookingStatusByAdmin,
   deleteBookingByAdmin,
   createExpertByAdmin,
-  deleteExpertByAdmin
+  deleteExpertByAdmin,
+  resetUserPenalties
 } = require('../controllers/adminController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -26,6 +27,7 @@ router.use(restrictTo('Admin'));
 
 // User accounts management
 router.get('/users', getAllUsers);
+router.post('/users/:id/reset-penalties', resetUserPenalties);
 
 // Bookings management
 router.get('/bookings', getAllBookings);
