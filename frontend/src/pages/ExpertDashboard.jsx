@@ -218,6 +218,7 @@ const ExpertDashboard = () => {
   // Fetch analytics data when tab switches to analytics
   useEffect(() => {
     if (activeTab === 'analytics') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadAnalytics();
     }
   }, [activeTab, loadAnalytics]);

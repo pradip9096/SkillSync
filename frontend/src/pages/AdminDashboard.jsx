@@ -72,6 +72,11 @@ const AdminDashboard = () => {
   
   // Search state for bookings
   const [bookingSearch, setBookingSearch] = useState('');
+  
+  // Search states for users and experts lists
+  const [userSearch, setUserSearch] = useState('');
+  const [expertSearch, setExpertSearch] = useState('');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   // Modal State for adding expert
   const [showAddModal, setShowAddModal] = useState(false);
@@ -297,20 +302,63 @@ const AdminDashboard = () => {
     }
   };
 
+  // Keep suspension badges current without calling impure time APIs during render.
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setUserSearch('');
+    setBookingSearch('');
+    setExpertSearch('');
+  };
+
   // Filter bookings list based on search bar (by client/expert name and email)
   const filteredBookings = bookings.filter(b => {
     const searchVal = bookingSearch.toLowerCase().trim();
     if (!searchVal) return true;
     
-    const clientEmail = b.userEmail?.toLowerCase() || '';
-    const clientName = b.userName?.toLowerCase() || '';
+    const clientEmail = (b.userEmail || b.user?.email || '').toLowerCase();
+    const clientName = (b.userName || b.user?.name || '').toLowerCase();
+    const clientPhone = (b.userPhone || b.user?.phone || '').toLowerCase();
     const expertName = b.expert?.name?.toLowerCase() || '';
     const expertEmail = b.expert?.user?.email?.toLowerCase() || '';
     
     return clientEmail.includes(searchVal) || 
            clientName.includes(searchVal) || 
+           clientPhone.includes(searchVal) ||
            expertName.includes(searchVal) || 
            expertEmail.includes(searchVal);
+  });
+
+  // Filter users list based on search bar (by name, email, or role)
+  const filteredUsers = users.filter(u => {
+    const searchVal = userSearch.toLowerCase().trim();
+    if (!searchVal) return true;
+    
+    const name = u.name?.toLowerCase() || '';
+    const email = u.email?.toLowerCase() || '';
+    const role = u.role?.toLowerCase() || '';
+    const phone = u.phone?.toLowerCase() || '';
+    
+    return name.includes(searchVal) || 
+           email.includes(searchVal) || 
+           role.includes(searchVal) || 
+           phone.includes(searchVal);
+  });
+
+  // Filter experts list based on search bar (by name or category)
+  const filteredExperts = experts.filter(e => {
+    const searchVal = expertSearch.toLowerCase().trim();
+    if (!searchVal) return true;
+    
+    const name = e.name?.toLowerCase() || '';
+    const category = e.category?.toLowerCase() || '';
+    
+    return name.includes(searchVal) || 
+           category.includes(searchVal);
   });
 
   return (
@@ -355,7 +403,7 @@ const AdminDashboard = () => {
         {/* Tab Headers */}
         <div className="flex border-b border-gray-200 mb-8 overflow-x-auto gap-4">
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => handleTabChange('users')}
             className={`flex items-center gap-2 pb-4 px-2 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'users' 
                 ? 'border-indigo-600 text-indigo-600 font-extrabold' 
@@ -367,7 +415,7 @@ const AdminDashboard = () => {
           </button>
           
           <button
-            onClick={() => setActiveTab('bookings')}
+            onClick={() => handleTabChange('bookings')}
             className={`flex items-center gap-2 pb-4 px-2 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'bookings' 
                 ? 'border-indigo-600 text-indigo-600 font-extrabold' 
@@ -379,7 +427,7 @@ const AdminDashboard = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('experts')}
+            onClick={() => handleTabChange('experts')}
             className={`flex items-center gap-2 pb-4 px-2 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'experts' 
                 ? 'border-indigo-600 text-indigo-600 font-extrabold' 
@@ -403,89 +451,105 @@ const AdminDashboard = () => {
             <>
               {/* USERS TAB */}
               {activeTab === 'users' && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Phone</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Reputation</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Strikes</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Suspension</th>
-                        <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Joined Date</th>
-                        <th className="px-6 py-3 text-right text-xs font-black uppercase tracking-wider text-gray-400">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-100 font-medium text-sm">
-                      {users.map(u => (
-                        <tr key={u._id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">{u.name || 'Not Provided'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-600">{u.email}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                              u.role === 'Admin' 
-                                ? 'bg-red-50 text-red-700 border-red-100' 
-                                : u.role === 'Expert' 
-                                  ? 'bg-purple-50 text-purple-700 border-purple-100' 
-                                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                            }`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-500">{u.phone || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {u.role === 'Client' && u.numReviews > 0 ? (
-                              <span className="font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded" title={`${u.rating.toFixed(1)} based on ${u.numReviews} sessions`}>
-                                ★ {u.rating.toFixed(1)} ({u.numReviews})
-                              </span>
-                            ) : u.role === 'Client' ? (
-                              <span className="text-gray-300 italic text-xs">New Client</span>
-                            ) : (
-                              <span className="text-gray-300 italic text-xs">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`font-bold px-2 py-0.5 rounded border ${u.lateCancellationsCount > 0 ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
-                              {u.lateCancellationsCount || 0} / 3
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-xs">
-                            {u.suspendedUntil && new Date(u.suspendedUntil).getTime() > Date.now() ? (
-                              <span className="text-red-600 font-bold bg-red-50 border border-red-100 rounded-full px-2 py-0.5" title={`Until ${new Date(u.suspendedUntil).toLocaleString('en-IN')}`}>
-                                Suspended
-                              </span>
-                            ) : (
-                              <span className="text-green-600 font-bold bg-green-50 border border-green-100 rounded-full px-2 py-0.5">
-                                Active
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-xs">
-                            {new Date(u.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
-                            {((u.lateCancellationsCount && u.lateCancellationsCount > 0) || (u.suspendedUntil && new Date(u.suspendedUntil).getTime() > Date.now())) ? (
-                              <button
-                                onClick={() => handleResetPenalties(u._id)}
-                                disabled={actionLoading === u._id}
-                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50 active:scale-95 inline-flex items-center gap-1"
-                              >
-                                {actionLoading === u._id && <Loader2 className="w-3 h-3 animate-spin" />}
-                                Reset Penalties
-                              </button>
-                            ) : (
-                              <span className="text-gray-400 italic">No Penalties</span>
-                            )}
-                          </td>
+                <div>
+                  {/* Search bar */}
+                  <div className="mb-6 relative rounded-2xl max-w-md">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search users by name, email, role, or phone..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
+                    />
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Role</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Phone</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Reputation</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Strikes</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Suspension</th>
+                          <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-gray-400">Joined Date</th>
+                          <th className="px-6 py-3 text-right text-xs font-black uppercase tracking-wider text-gray-400">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {users.length === 0 && (
-                    <p className="text-center text-gray-400 py-10">No users found.</p>
-                  )}
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100 font-medium text-sm">
+                        {filteredUsers.map(u => (
+                          <tr key={u._id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">{u.name || 'Not Provided'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-600">{u.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                u.role === 'Admin' 
+                                  ? 'bg-red-50 text-red-700 border-red-100' 
+                                  : u.role === 'Expert' 
+                                    ? 'bg-purple-50 text-purple-700 border-purple-100' 
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">{u.phone || 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {u.role === 'Client' && u.numReviews > 0 ? (
+                                <span className="font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded" title={`${u.rating.toFixed(1)} based on ${u.numReviews} sessions`}>
+                                  ★ {u.rating.toFixed(1)} ({u.numReviews})
+                                </span>
+                              ) : u.role === 'Client' ? (
+                                <span className="text-gray-300 italic text-xs">New Client</span>
+                              ) : (
+                                <span className="text-gray-300 italic text-xs">N/A</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`font-bold px-2 py-0.5 rounded border ${u.lateCancellationsCount > 0 ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                {u.lateCancellationsCount || 0} / 3
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-xs">
+                              {u.suspendedUntil && new Date(u.suspendedUntil).getTime() > currentTime ? (
+                                <span className="text-red-600 font-bold bg-red-50 border border-red-100 rounded-full px-2 py-0.5" title={`Until ${new Date(u.suspendedUntil).toLocaleString('en-IN')}`}>
+                                  Suspended
+                                </span>
+                              ) : (
+                                <span className="text-green-600 font-bold bg-green-50 border border-green-100 rounded-full px-2 py-0.5">
+                                  Active
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-xs">
+                              {new Date(u.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
+                              {((u.lateCancellationsCount && u.lateCancellationsCount > 0) || (u.suspendedUntil && new Date(u.suspendedUntil).getTime() > currentTime)) ? (
+                                <button
+                                  onClick={() => handleResetPenalties(u._id)}
+                                  disabled={actionLoading === u._id}
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50 active:scale-95 inline-flex items-center gap-1"
+                                >
+                                  {actionLoading === u._id && <Loader2 className="w-3 h-3 animate-spin" />}
+                                  Reset Penalties
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 italic">No Penalties</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {filteredUsers.length === 0 && (
+                      <p className="text-center text-gray-400 py-10">No users found matching search criteria.</p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -521,9 +585,9 @@ const AdminDashboard = () => {
                         {filteredBookings.map(b => (
                           <tr key={b._id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="font-bold text-gray-900">{b.userName}</div>
-                              <div className="text-xs text-gray-500">{b.userEmail}</div>
-                              <div className="text-xs text-gray-400">{b.userPhone}</div>
+                              <div className="font-bold text-gray-900">{b.userName || b.user?.name || 'Unknown Client'}</div>
+                              <div className="text-xs text-gray-500">{b.userEmail || b.user?.email || 'No email available'}</div>
+                              <div className="text-xs text-gray-400">{b.userPhone || b.user?.phone || 'No phone available'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="font-bold text-indigo-700">{b.expert?.name || 'Deleted Expert'}</div>
@@ -579,16 +643,24 @@ const AdminDashboard = () => {
               {/* EXPERTS TAB */}
               {activeTab === 'experts' && (
                 <div>
-                  {/* Create New Expert Header Action */}
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                      <span className="w-1.5 h-6 bg-indigo-600 rounded-full" />
-                      Active Experts
-                    </h3>
+                  {/* Search bar & Action Header */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex-1 max-w-md relative rounded-2xl">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search experts by name or category..."
+                        value={expertSearch}
+                        onChange={(e) => setExpertSearch(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl bg-gray-50 placeholder-gray-400 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all text-sm"
+                      />
+                    </div>
                     
                     <button
                       onClick={() => setShowAddModal(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer"
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer self-start md:self-auto"
                     >
                       <Plus className="w-4 h-4" />
                       Add New Expert
@@ -608,7 +680,7 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 font-medium text-sm">
-                        {experts.map(e => (
+                        {filteredExperts.map(e => (
                           <tr key={e._id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">{e.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-gray-600">{e.category}</td>
@@ -637,8 +709,8 @@ const AdminDashboard = () => {
                         ))}
                       </tbody>
                     </table>
-                    {experts.length === 0 && (
-                      <p className="text-center text-gray-400 py-10">No experts registered.</p>
+                    {filteredExperts.length === 0 && (
+                      <p className="text-center text-gray-400 py-10">No experts found matching search criteria.</p>
                     )}
                   </div>
                 </div>

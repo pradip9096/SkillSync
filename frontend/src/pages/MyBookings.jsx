@@ -42,7 +42,12 @@ const MyBookings = () => {
   const [activeRatingId, setActiveRatingId] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [commentValue, setCommentValue] = useState('');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   /**
    * Atomic Check Helper: Determines if a session has passed based on IST time.
@@ -228,7 +233,7 @@ const MyBookings = () => {
         </div>
 
         {/* Suspension Banner */}
-        {user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > Date.now() && (
+        {user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > currentTime && (
           <div className="bg-amber-50 border-2 border-amber-100 rounded-3xl p-6 mb-8 flex items-start gap-4 animate-slide-up">
             <div className="bg-amber-500 text-white p-2 rounded-xl shadow-sm">
               <AlertCircle className="w-6 h-6" />

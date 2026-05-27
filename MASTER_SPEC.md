@@ -171,6 +171,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Late Cancellation & Penalty Cooldown](#feature-late-cancellation--penalty-cooldown) | `Complete` | SkillSync | 2026-05-27 |
 | [Two-Sided P2P Feedback System](#feature-two-sided-p2p-feedback-system) | `Complete` | SkillSync | 2026-05-27 |
 | [Expert Business Analytics Dashboard](#feature-expert-business-analytics-dashboard) | `Complete` | SkillSync | 2026-05-27 |
+| [Admin Dashboard Search & Filtering](#feature-admin-dashboard-search--filtering) | `Complete` | SkillSync | 2026-05-27 |
 
 ---
 
@@ -1797,6 +1798,120 @@ None identified.
 |---|---|---|
 | 2026-05-26 | Agent | Initial spec created for Media Uploads (Profile & Gallery). |
 | 2026-05-27 | Agent | Mark status as Complete following verification of frontend and backend integration. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-27
+
+---
+
+## Feature: Admin Dashboard Search & Filtering
+
+### Overview
+
+Adds client-side search controls to the Admin Dashboard management tables so administrators can quickly locate users, bookings, and experts without scanning full lists manually.
+
+### Functional Requirements
+
+- [MUST HAVE] The Admin Dashboard users tab must filter visible rows by user name, email, role, or phone number using a case-insensitive search value.
+  Rationale: Admins need fast lookup across operational user identifiers when handling support, penalties, and account review.
+
+- [MUST HAVE] The Admin Dashboard bookings tab must filter visible rows by client email, client name, client phone, expert name, or expert email using a case-insensitive search value.
+  Rationale: Booking disputes and status corrections often start from either participant identity, not the booking id.
+
+- [MUST HAVE] The Admin Dashboard experts tab must filter visible rows by expert name or category using a case-insensitive search value.
+  Rationale: Admins need to find provider records quickly when managing expert profiles.
+
+- [SHOULD HAVE] Switching between Admin Dashboard tabs should clear tab-specific search inputs.
+  Rationale: Prevents stale filters from making newly opened tabs appear empty or incomplete.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Filtering must run entirely in local React state against the already-fetched tab data and must not introduce new API calls.
+  Rationale: Search is a dashboard convenience layer and should not increase backend load or alter authorization behavior.
+
+- [MUST HAVE] Empty or whitespace-only search strings must render the full list for the active tab.
+  Rationale: Admins need an obvious way to return to the unfiltered table state.
+
+### User Interaction Flow
+
+```
+[Admin] -> Opens Admin Dashboard tab -> [System fetches table data]
+  |-- Success --> Admin types search text -> matching rows remain visible
+  |-- No matches --> table area shows a no-results message for the active tab
+  |-- Tab switch --> search input clears and the new tab loads unfiltered data
+```
+
+### API Specifications
+
+No new endpoints. This feature uses existing Admin Dashboard data fetches only.
+
+* `GET /api/admin/users`
+  Input: Authenticated request.
+  Validation: Caller must be an Admin.
+  Output: Existing users response.
+  Auth: Private (Admin only)
+
+* `GET /api/admin/bookings`
+  Input: Authenticated request.
+  Validation: Caller must be an Admin.
+  Output: Existing bookings response.
+  Auth: Private (Admin only)
+
+* `GET /api/experts`
+  Input: Existing expert list query.
+  Validation: Existing public expert-list rules.
+  Output: Existing experts response.
+  Auth: Existing route behavior
+
+### Edge Cases
+
+- When search text has uppercase letters or surrounding whitespace, the feature must still match lower-case stored values after trimming.
+- When a searched optional field is missing, the feature must treat it as an empty string instead of crashing.
+- When a booking has a populated client `user` reference but missing denormalized `userEmail`, the feature must still match and display the populated client email.
+- When no rows match, the feature must show a tab-specific empty-state message instead of a blank table.
+
+### Best Practices
+
+* Keep search behavior local to `AdminDashboard.jsx` until the datasets require server-side pagination or database-backed search.
+* Keep filters declarative and derived from source arrays so clearing search restores the current fetched data without refetching.
+
+### Acceptance Criteria
+
+* **AC 17.1:** In the users tab, searching by any visible user's name, email, role, or phone narrows the table to matching rows.
+* **AC 17.2:** In the bookings tab, searching by client email from either `booking.userEmail` or populated `booking.user.email` narrows the booking table to matching rows.
+* **AC 17.3:** In the experts tab, searching by expert name or category narrows the table to matching rows.
+* **AC 17.4:** Switching tabs clears the previous search input and does not leave the next tab in a stale filtered state.
+* **AC 17.5:** A no-match search displays an explicit no-results message for the active tab.
+
+### Non-Goals
+
+- This feature does NOT add backend search, pagination, saved filters, or export functionality.
+- This feature does NOT change Admin Dashboard authorization or data visibility rules.
+
+### Dependencies
+
+- Feature: User Authentication & RBAC — Admin-only dashboard access must already be enforced.
+- Service: Existing Admin Dashboard API clients — provide the users, bookings, and experts arrays filtered locally by the UI.
+
+### Testing Strategy
+
+- Unit: Add component-level tests for filter predicates if a frontend test runner is introduced.
+- Integration: Run the existing Admin Dashboard data flows and verify no additional search API calls are required.
+- Manual: Open the Admin Dashboard, search each tab by the supported fields, verify no-match empty states, and verify tab switching clears inputs.
+
+### Known Bugs / Stability Risks
+
+- [MUST HAVE - Resolved 2026-05-27] Admin Booking Manager did not reliably find bookings by client email when the booking response depended on the populated `user` reference rather than the denormalized `userEmail` field. Resolved by populating the booking client user in the admin bookings API and adding frontend fallback search/display paths.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-27 | Agent | Initial spec created and marked complete for local Admin Dashboard search across users, bookings, and experts. |
+| 2026-05-27 | Agent | Fixed Booking Manager client email search to support populated client user fallback fields. |
 
 ### Status
 `Complete`

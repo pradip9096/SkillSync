@@ -71,8 +71,14 @@ const ExpertDetail = () => {
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
   const isAdmin = !!(user && user.role === 'Admin');
   const isExpert = !!(user && user.role === 'Expert');
-  const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > Date.now());
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > currentTime);
   const isBookingDisabled = isOwnProfile || isAdmin || isExpert || isSuspended;
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   // Keyboard handler: Escape closes lightbox, arrows navigate
   useEffect(() => {
