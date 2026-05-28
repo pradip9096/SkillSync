@@ -10,7 +10,15 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+
+- Added Automated Email & SMS Reminders using Agenda.js and persistent MongoDB jobs, with immediate confirmation alerts and scheduled 24-hour and 2-hour pre-session reminder triggers.
+- Added email delivery service with Nodemailer, including support for Ethereal Mail preview URLs and console log fallbacks.
+- Added SMS delivery service with Twilio SDK and development console logging fallbacks.
+- Added integration test suite `test_reminders.js` covering creation, cancellation, and manual execution flows.
+- Added Forgot Password and Reset Password self-service capabilities for Clients and Experts, with token generation, hashing, 10-minute expiry time-locks, and Ethereal/SMTP email reset notifications.
+- Added frontend ForgotPassword and ResetPassword pages with glassmorphic cards, validation rules, navigation links on the Login view, and automatic dashboard redirection upon successful credential updates.
+- Added integration test suite `test_forgot_password.js` covering token requests, token validations, expiry constraints, resets, and post-reset credentials verification.
 
 ## [1.0.1] - 2026-05-27
 

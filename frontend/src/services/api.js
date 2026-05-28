@@ -165,6 +165,8 @@ export const updateUserProfile = (profileData) => API.put('/auth/profile', profi
 export const uploadProfileImage = (formData) => API.put('/auth/profile/image', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
+export const forgotPassword = (email) => API.post('/auth/forgot-password', { email });
+export const resetPassword = (token, password) => API.put(`/auth/reset-password/${token}`, { password });
 
 // --- Admin Dashboard APIs ---
 export const adminFetchUsers = () => API.get('/admin/users');

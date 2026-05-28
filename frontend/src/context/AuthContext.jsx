@@ -184,6 +184,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Action: Log in dynamically with a pre-existing token and user payload.
+   * Purpose: Used during auto-login after successful password reset.
+   */
+  const loginWithToken = (receivedToken, receivedUser) => {
+    localStorage.setItem('token', receivedToken);
+    localStorage.setItem('user', JSON.stringify(receivedUser));
+    setToken(receivedToken);
+    setUser(receivedUser);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${receivedToken}`;
+  };
+
+  /**
    * Action: Dynamically updates the logged-in user's profile details in state and storage.
    * Purpose: Syncs name and phone number locally after the first booking triggers an auto-save.
    * @param {string} name - User's name.
@@ -206,6 +218,7 @@ export const AuthProvider = ({ children }) => {
         register,
         login,
         logout,
+        loginWithToken,
         updateUserProfile
       }}
     >

@@ -8,6 +8,8 @@
 const Booking = require('../models/Booking');
 const Expert = require('../models/Expert');
 const Availability = require('../models/Availability');
+const agenda = require('../config/agenda');
+const { scheduleSessionReminders, cancelScheduledReminders } = require('../services/reminderScheduler');
 
 /**
  * Purpose: Create a new booking after checking for existing conflicts.
@@ -148,6 +150,14 @@ const createBooking = async (req, res) => {
       slotTime,
       notes
     });
+
+    // Schedule confirmations and pre-session reminders via Agenda
+    try {
+      await agenda.now('send-booking-confirmation', { bookingId: booking._id });
+      await scheduleSessionReminders(booking);
+    } catch (schedErr) {
+      console.error('[Scheduler Error] Failed to schedule reminders during booking creation:', schedErr.message);
+    }
 
     /**
      * Real-time notification via Socket.io.
@@ -349,6 +359,29 @@ const updateBookingStatus = async (req, res) => {
      * If a booking is cancelled or late-cancelled, we notify other users so the slot becomes available immediately.
      */
     if (normalizedStatus === 'Cancelled' || normalizedStatus === 'Late Cancellation') {
+      // Cancel pending scheduled reminders
+      try {
+        await cancelScheduledReminders(booking);
+        
+        // Dispatch instant cancellation alert
+        const expertProfile = await Expert.findById(booking.expert).populate('user');
+        if (expertProfile && expertProfile.user) {
+          await agenda.now('send-booking-cancellation', {
+            clientEmail: booking.userEmail,
+            clientName: booking.userName,
+            clientPhone: booking.userPhone,
+            expertName: expertProfile.name,
+            expertEmail: expertProfile.user.email,
+            bookingDate: booking.bookingDate,
+            slotTime: booking.slotTime,
+            status: normalizedStatus,
+            cancelledBy: req.user ? (req.user.role === 'Admin' ? 'Administrator' : req.user.role === 'Expert' ? 'Expert' : 'Client') : 'System'
+          });
+        }
+      } catch (schedErr) {
+        console.error('[Scheduler Error] Failed to handle cancellation reminders/alerts:', schedErr.message);
+      }
+
       const io = req.app.get('io');
       if (io) {
         io.to(booking.expert.toString()).emit('slot_released', { 

@@ -72,6 +72,15 @@ const userSchema = new mongoose.Schema({
   numReviews: {
     type: Number,
     default: 0
+  },
+  // Temporary tokens used for forgot password operations
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpire: {
+    type: Date,
+    default: null
   }
 }, {
   // Automatically manage createdAt and updatedAt fields

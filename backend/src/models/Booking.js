@@ -77,6 +77,15 @@ const bookingSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  // Store job IDs from Agenda to track and manage pending scheduled tasks
+  agenda24hJobId: {
+    type: String,
+    default: null
+  },
+  agenda2hJobId: {
+    type: String,
+    default: null
   }
 }, {
   // Automatically manage createdAt and updatedAt fields

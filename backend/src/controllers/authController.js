@@ -345,10 +345,137 @@ const uploadProfileImage = async (req, res) => {
   }
 };
 
+const crypto = require('crypto');
+const emailService = require('../services/emailService');
+
+/**
+ * @desc    Request password reset link
+ * @route   POST /auth/forgot-password
+ * @access  Public
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Please provide an email address' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'There is no user registered with that email address' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash token and set to resetPasswordToken field
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Set expire (10 minutes)
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset url
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    const messageHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #2196F3;">Password Reset Request</h2>
+        <p>Hi ${user.name || 'User'},</p>
+        <p>You are receiving this email because you (or someone else) requested a password reset for your account on SkillSync.</p>
+        <p>Please click the button below or copy and paste the link into your browser to reset your password. This link is valid for 10 minutes:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+        </div>
+        <p style="word-break: break-all; color: #777;"><a href="${resetUrl}">${resetUrl}</a></p>
+        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+        <p style="font-size: 12px; color: #777;">If you did not request this reset, please ignore this email and your password will remain unchanged.</p>
+      </div>
+    `;
+
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'SkillSync Password Reset Request',
+        html: messageHtml,
+        text: `SkillSync Password Reset: You requested a password reset. Reset your password by clicking here: ${resetUrl}`
+      });
+
+      res.status(200).json({ success: true, message: 'Password reset link sent to your email' });
+    } catch (err) {
+      console.error('Failed to send reset email:', err.message);
+      user.resetPasswordToken = null;
+      user.resetPasswordExpire = null;
+      await user.save({ validateBeforeSave: false });
+      return res.status(500).json({ success: false, error: 'Email could not be sent. Please try again later.' });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+/**
+ * @desc    Reset password
+ * @route   PUT /auth/reset-password/:token
+ * @access  Public
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Please provide a valid password of at least 6 characters' });
+    }
+
+    // Hash token sent in URL
+    const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired password reset token' });
+    }
+
+    // Set new password (will be hashed in userSchema.pre('save') hook)
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
+    await user.save();
+
+    // Log the user in immediately by sending a new token
+    res.status(200).json({
+      success: true,
+      token: generateToken(user._id),
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        rating: user.rating,
+        numReviews: user.numReviews,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
   updateUserProfile,
-  uploadProfileImage
+  uploadProfileImage,
+  forgotPassword,
+  resetPassword
 };

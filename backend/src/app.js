@@ -126,6 +126,13 @@ const startServer = async () => {
   try {
     // Attempt to connect to the database before starting the server
     await connectDB();
+
+    // Start Agenda scheduler
+    const agenda = require('./config/agenda');
+    require('./services/reminderScheduler'); // Registers job definitions
+    await agenda.start();
+    console.log('Agenda scheduler started.');
+
     server.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
