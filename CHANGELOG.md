@@ -48,11 +48,6 @@ Changelog policy, workflow, and SOP are maintained in
 - Added Real-Time Messaging and Notification feature allowing private, booking-bounded chats between Clients and Experts.
 - Added global unread badge indicators powered by React Context API and real-time Socket.io events.
 - Added system notifications for booking creations, status updates, cancellations, strikes, and new messages.
-
-### Changed
-
-- Changed chat thread grouping in the sidebar to display unique participants instead of individual bookings.
-
 - Added Automated Email & SMS Reminders using Agenda.js and persistent MongoDB jobs, with immediate confirmation alerts and scheduled 24-hour and 2-hour pre-session reminder triggers.
 - Added email delivery service with Nodemailer, including support for Ethereal Mail preview URLs and console log fallbacks.
 - Added SMS delivery service with Twilio SDK and development console logging fallbacks.
@@ -60,6 +55,10 @@ Changelog policy, workflow, and SOP are maintained in
 - Added Forgot Password and Reset Password self-service capabilities for Clients and Experts, with token generation, hashing, 10-minute expiry time-locks, and Ethereal/SMTP email reset notifications.
 - Added frontend ForgotPassword and ResetPassword pages with glassmorphic cards, validation rules, navigation links on the Login view, and automatic dashboard redirection upon successful credential updates.
 - Added integration test suite `test_forgot_password.js` covering token requests, token validations, expiry constraints, resets, and post-reset credentials verification.
+
+### Changed
+
+- Changed chat thread grouping in the sidebar to display unique participants instead of individual bookings.
 
 ### Security
 
