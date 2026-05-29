@@ -65,10 +65,11 @@ exports.sendMessage = async (req, res) => {
     // Real-time broadcast
     const io = req.app.get('io');
     if (io) {
+      const messagePayload = message.toJSON();
       // Emit to a specific booking room for the active chat UI
-      io.to(`booking_${bookingId}`).emit('new_message', message);
+      io.to(`booking_${bookingId}`).emit('new_message', messagePayload);
       // Emit to the receiver's global room for unread badge increment
-      io.to(`user_${receiverId}`).emit('new_message', message);
+      io.to(`user_${receiverId}`).emit('new_message', messagePayload);
     }
 
     try {
@@ -79,7 +80,7 @@ exports.sendMessage = async (req, res) => {
         title: 'New Message',
         message: 'You have a new message regarding a session.'
       });
-      if (io) io.to(`user_${receiverId}`).emit('new_notification', notif);
+      if (io) io.to(`user_${receiverId}`).emit('new_notification', notif.toJSON());
     } catch (err) {
       console.error('Error creating message notification:', err);
     }
