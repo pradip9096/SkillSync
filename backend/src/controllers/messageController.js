@@ -24,7 +24,22 @@ exports.getMessagesByBooking = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to view these messages' });
     }
 
-    const query = { bookingId };
+    // Unify message history by querying messages across all bookings for this client-expert pair
+    const clientUserId = booking.user;
+    const expertId = booking.expert._id;
+
+    let query = {};
+    if (clientUserId) {
+      const peerBookings = await Booking.find({
+        user: clientUserId,
+        expert: expertId
+      });
+      const peerBookingIds = peerBookings.map(b => b._id);
+      query = { bookingId: { $in: peerBookingIds } };
+    } else {
+      query = { bookingId };
+    }
+
     if (before) {
       query._id = { $lt: before };
     }
@@ -133,8 +148,20 @@ exports.markMessagesAsRead = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to modify messages for this booking' });
     }
 
+    const clientUserId = booking.user;
+    const expertId = booking.expert._id;
+
+    let peerBookingIds = [bookingId];
+    if (clientUserId) {
+      const peerBookings = await Booking.find({
+        user: clientUserId,
+        expert: expertId
+      });
+      peerBookingIds = peerBookings.map(b => b._id);
+    }
+
     await Message.updateMany(
-      { bookingId, receiver: req.user._id, read: false },
+      { bookingId: { $in: peerBookingIds }, receiver: req.user._id, read: false },
       { $set: { read: true } }
     );
 
@@ -184,8 +211,7 @@ exports.getUniqueConversations = async (req, res) => {
         .sort({ createdAt: -1 });
     }
 
-    // 2. Format the conversations array and optimize Message fetch
-    const formatted = [];
+    // 2. Format and group by participant to eliminate duplicates
     const bookingIds = bookings.map(b => b._id);
     
     const lastMessagesAgg = await Message.aggregate([
@@ -194,6 +220,8 @@ exports.getUniqueConversations = async (req, res) => {
       { $group: { _id: '$bookingId', lastMessage: { $first: '$$ROOT' } } }
     ]);
     const lastMessageMap = new Map(lastMessagesAgg.map(item => [item._id.toString(), item.lastMessage]));
+
+    const conversationsMap = new Map();
 
     for (const booking of bookings) {
       let otherUser = null;
@@ -206,19 +234,35 @@ exports.getUniqueConversations = async (req, res) => {
       if (!otherUser) continue;
 
       const lastMessage = lastMessageMap.get(booking._id.toString()) || null;
+      const activityDate = lastMessage ? new Date(lastMessage.createdAt) : new Date(booking.createdAt);
 
-      formatted.push({
-        _id: booking._id,
-        otherUser: {
-          _id: otherUser._id,
-          name: otherUser.name || booking.userName, // Fallback for clients
-          email: otherUser.email
-        },
-        lastMessage: lastMessage
-      });
+      const otherUserIdStr = otherUser._id.toString();
+      const existing = conversationsMap.get(otherUserIdStr);
+
+      // Keep only the conversation session with the most recent activity
+      if (!existing || activityDate > existing.activityDate) {
+        conversationsMap.set(otherUserIdStr, {
+          _id: booking._id,
+          otherUser: {
+            _id: otherUser._id,
+            name: otherUser.name || booking.userName, // Fallback for clients
+            email: otherUser.email
+          },
+          lastMessage: lastMessage,
+          activityDate: activityDate
+        });
+      }
     }
 
-    res.status(200).json(formatted);
+    // Convert map values to array, sort by activityDate descending, and remove activityDate property
+    const sortedConversations = Array.from(conversationsMap.values())
+      .sort((a, b) => b.activityDate - a.activityDate)
+      .map(item => {
+        const { activityDate, ...rest } = item;
+        return rest;
+      });
+
+    res.status(200).json(sortedConversations);
   } catch (error) {
     console.error('Error fetching conversations:', error);
     res.status(500).json({ message: 'Server Error' });

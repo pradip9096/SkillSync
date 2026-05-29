@@ -22,6 +22,13 @@ const Messaging = () => {
   const messagesContainerRef = useRef(null);
   const markAsReadTimeoutRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  
+  const activeChatRef = useRef(activeChat);
+  const prevOtherUserIdRef = useRef(null);
+
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -68,55 +75,101 @@ const Messaging = () => {
   // 1. Load historical messages and join room when clicking a chat
   useEffect(() => {
     if (activeChat) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadMessages(activeChat._id);
-      const joinRoom = () => socket.emit('join_booking_room', activeChat._id);
+      const otherUserId = activeChat.otherUser._id;
+      const bookingId = activeChat._id;
+
+      // Only reload messages if switching to a completely different user
+      if (prevOtherUserIdRef.current !== otherUserId) {
+        loadMessages(bookingId);
+        prevOtherUserIdRef.current = otherUserId;
+      }
+
+      // Join current booking room for typing events
+      const joinRoom = () => socket.emit('join_booking_room', bookingId);
       joinRoom();
       
       socket.on('connect', joinRoom);
       return () => {
         socket.off('connect', joinRoom);
-        socket.emit('leave_booking_room', activeChat._id);
+        socket.emit('leave_booking_room', bookingId);
         setIsTyping(false);
       };
+    } else {
+      prevOtherUserIdRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat]);
+  }, [activeChat?._id, activeChat?.otherUser?._id]);
 
   // 2. Global socket listener to handle incoming messages in real-time
   useEffect(() => {
+    if (!user) return;
+
     const handleNewMessage = (msg) => {
-      // Append to open chat window if it belongs there
-      if (activeChat && msg.bookingId === activeChat._id) {
+      const currentActiveChat = activeChatRef.current;
+      
+      const isChatWithCurrentRecipient = currentActiveChat && (
+        (msg.sender === currentActiveChat.otherUser._id && msg.receiver === user._id) ||
+        (msg.sender === user._id && msg.receiver === currentActiveChat.otherUser._id)
+      );
+
+      if (isChatWithCurrentRecipient) {
         setMessages(prev => {
           if (prev.some(m => m._id === msg._id)) return prev;
           return [...prev, msg];
         });
+
+        // Update activeChat's active channel bookingId dynamically if it changed
+        if (msg.bookingId !== currentActiveChat._id) {
+          setActiveChat(prev => {
+            if (prev && prev.otherUser._id === currentActiveChat.otherUser._id) {
+              return { ...prev, _id: msg.bookingId };
+            }
+            return prev;
+          });
+        }
+
         if (msg.receiver === user._id) {
            if (markAsReadTimeoutRef.current) clearTimeout(markAsReadTimeoutRef.current);
            markAsReadTimeoutRef.current = setTimeout(() => {
-             markChatAsReadGlobally(activeChat._id).catch(console.error);
+             markChatAsReadGlobally(msg.bookingId).catch(console.error);
            }, 2000);
         }
       }
 
-      // Always update the left sidebar with the latest message snippet
-      setConversations(prev => prev.map(conv => {
-        if (conv._id === msg.bookingId) {
-          return { ...conv, lastMessage: msg };
-        }
-        return conv;
-      }));
+      // Always update the left sidebar with the latest message snippet and sort by recency
+      setConversations(prev => {
+        const isFromOrToParticipant = (conv) => 
+          conv.otherUser._id === msg.sender || conv.otherUser._id === msg.receiver;
+
+        const updated = prev.map(conv => {
+          if (isFromOrToParticipant(conv)) {
+            return { 
+              ...conv, 
+              _id: msg.bookingId,
+              lastMessage: msg 
+            };
+          }
+          return conv;
+        });
+
+        return updated.sort((a, b) => {
+          const dateA = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
+          const dateB = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
+          return dateB - dateA;
+        });
+      });
     };
 
     const handleUserTyping = (userId) => {
-      if (activeChat && activeChat.otherUser._id === userId) {
+      const currentActiveChat = activeChatRef.current;
+      if (currentActiveChat && currentActiveChat.otherUser._id === userId) {
         setIsTyping(true);
       }
     };
 
     const handleUserStopTyping = (userId) => {
-      if (activeChat && activeChat.otherUser._id === userId) {
+      const currentActiveChat = activeChatRef.current;
+      if (currentActiveChat && currentActiveChat.otherUser._id === userId) {
         setIsTyping(false);
       }
     };
@@ -124,19 +177,18 @@ const Messaging = () => {
     socket.on('new_message', handleNewMessage);
     socket.on('typing', handleUserTyping);
     socket.on('stop_typing', handleUserStopTyping);
+
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('typing', handleUserTyping);
       socket.off('stop_typing', handleUserStopTyping);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat, user]);
+  }, [user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-
 
   const handleScroll = (e) => {
     if (e.target.scrollTop === 0 && hasMore && !loadingMore && activeChat) {
@@ -160,7 +212,6 @@ const Messaging = () => {
     if (!newMessage.trim() || !activeChat) return;
 
     try {
-      // The other user is stored in activeChat.otherUser._id
       const receiverId = activeChat.otherUser._id;
       
       const payload = {
@@ -170,20 +221,26 @@ const Messaging = () => {
       };
       
       const res = await sendMessage(payload);
-      // Manually append the message to the UI instantly so the sender doesn't have to wait for the socket echo
       if (res && res.data) {
         setMessages(prev => {
           if (prev.some(m => m._id === res.data._id)) return prev;
           return [...prev, res.data];
         });
         
-        // Optimistically update the left sidebar too
-        setConversations(prev => prev.map(conv => {
-          if (conv._id === activeChat._id) {
-            return { ...conv, lastMessage: res.data };
-          }
-          return conv;
-        }));
+        // Optimistically update the left sidebar too and sort by recency
+        setConversations(prev => {
+          const updated = prev.map(conv => {
+            if (conv._id === activeChat._id) {
+              return { ...conv, lastMessage: res.data };
+            }
+            return conv;
+          });
+          return updated.sort((a, b) => {
+            const dateA = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
+            const dateB = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
+            return dateB - dateA;
+          });
+        });
       }
       setNewMessage('');
       setError(null);
@@ -198,9 +255,9 @@ const Messaging = () => {
   let lastDateString = null;
 
   return (
-    <div className="w-full max-w-[98%] xl:max-w-[1500px] mx-auto px-4 py-4 md:py-6 flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100vh-120px)] overflow-hidden">
+    <div className="w-full max-w-[98%] xl:max-w-[1500px] mx-auto px-2 py-2 sm:px-4 sm:py-4 md:py-6 flex flex-col sm:flex-row gap-2 sm:gap-4 md:gap-6 h-[calc(100vh-120px)] overflow-hidden">
       {/* Conversations List */}
-      <div className={`w-full md:w-[320px] lg:w-[360px] flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${showSidebarOnMobile ? 'flex' : 'hidden md:flex'}`}>
+      <div className={`w-full sm:w-[280px] md:w-[320px] lg:w-[360px] flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${showSidebarOnMobile ? 'flex' : 'hidden sm:flex'}`}>
         <h2 className="p-4 border-b border-gray-100 font-bold text-lg text-gray-800 flex-shrink-0">Your Conversations</h2>
         <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
           {(!conversations || conversations.length === 0) ? (
@@ -233,7 +290,7 @@ const Messaging = () => {
       </div>
 
       {/* Chat Area */}
-      <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 flex-col overflow-hidden relative ${!showSidebarOnMobile ? 'flex' : 'hidden md:flex'}`}>
+      <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 flex-col overflow-hidden relative ${!showSidebarOnMobile ? 'flex' : 'hidden sm:flex'}`}>
         {error && (
           <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 px-4 py-2 text-sm text-center flex justify-between items-center z-10">
             <span>{error}</span>
@@ -246,7 +303,7 @@ const Messaging = () => {
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
               <button 
                 onClick={() => setShowSidebarOnMobile(true)}
-                className="md:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-gray-200"
+                className="sm:hidden p-2 -ml-2 rounded-xl text-gray-500 hover:bg-gray-200"
                 aria-label="Back to conversations"
               >
                 &larr;
