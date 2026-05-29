@@ -13,6 +13,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
+const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
@@ -46,8 +47,23 @@ const io = new Server(server, {
   }
 });
 
-// Make the Socket.io instance accessible in controllers via the app object
+// Make io accessible to our routers/controllers
 app.set('io', io);
+
+// Socket.io JWT Authentication Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    return next(new Error('Authentication error: Token missing'));
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.id;
+    next();
+  } catch (err) {
+    return next(new Error('Authentication error: Invalid token'));
+  }
+});
 
 /**
  * Socket.io Event Handlers
@@ -66,6 +82,28 @@ io.on('connection', (socket) => {
   socket.on('join_expert_room', (expertId) => {
     socket.join(expertId);
     console.log(`User joined room for expert: ${expertId}`);
+  });
+
+  /**
+   * join_booking_room event
+   * Allows clients and experts to join a private chat room for a specific booking.
+   * 
+   * @param {string} bookingId - The ID of the booking room to join
+   */
+  socket.on('join_booking_room', (bookingId) => {
+    socket.join(`booking_${bookingId}`);
+    console.log(`User joined chat room for booking: ${bookingId}`);
+  });
+
+  /**
+   * join_user_room event
+   * Allows users to join a global personal room for real-time notifications.
+   */
+  socket.on('join_user_room', (userId) => {
+    if (socket.userId === userId) {
+      socket.join(`user_${userId}`);
+      console.log(`User joined global room: ${userId}`);
+    }
   });
 
   // Handle client disconnection
@@ -98,6 +136,8 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const expertDashboardRoutes = require('./routes/expertDashboardRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Defining the base paths for the respective routes
 app.use('/experts', expertRoutes);
@@ -105,6 +145,8 @@ app.use('/bookings', bookingRoutes);
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/expert-dashboard', expertDashboardRoutes);
+app.use('/messages', messageRoutes);
+app.use('/notifications', notificationRoutes);
 
 /** 
  * @type {number|string} 

@@ -20,6 +20,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Expert Business Analytics Dashboard:** A premium, glassmorphic analytics dashboard tab for experts to monitor total earnings, completed sessions, calendar utilization percentages, and interactive monthly/weekly/hourly booking density charts.
 - **Automated Email & SMS Reminders:** Persistent scheduler using Agenda.js to dispatch immediate booking confirmations, cancellations, and pre-session reminders (at 24 hours and 2 hours in IST) via Nodemailer and Twilio with robust development console logging fallbacks.
 - **Password Recovery & Auto-Login:** Secure Forgot Password flow utilizing random crypto token generation, SHA-256 database-level token hashing, 10-minute expiry locks, Nodemailer link dispatch, and instant JWT auto-login upon successful resets.
+- **Real-Time Messaging & Notifications:** Private, booking-bounded chat messaging between Clients and Experts with instant WebSocket notifications, global unread badges, and clean unique-conversation grouping.
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack

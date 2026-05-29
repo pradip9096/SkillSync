@@ -11,6 +11,7 @@
 
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { connectSocket, disconnectSocket } from '../services/socket';
 
 /**
  * Decode a JWT token and check whether it is expired.
@@ -61,6 +62,7 @@ export const AuthProvider = ({ children }) => {
         const parsedUser = JSON.parse(storedUser);
         setToken(storedToken);
         setUser(parsedUser);
+        connectSocket(storedToken);
 
         // Attach token to axios default headers
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
@@ -119,6 +121,7 @@ export const AuthProvider = ({ children }) => {
       // Set state
       setToken(receivedToken);
       setUser(receivedUser);
+      connectSocket(receivedToken);
 
       // Attach auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${receivedToken}`;
@@ -152,6 +155,7 @@ export const AuthProvider = ({ children }) => {
       // Set state
       setToken(receivedToken);
       setUser(receivedUser);
+      connectSocket(receivedToken);
 
       // Attach auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${receivedToken}`;
@@ -178,6 +182,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setError(null);
+    disconnectSocket();
 
     // Remove auth header
     delete axios.defaults.headers.common['Authorization'];
@@ -192,6 +197,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(receivedUser));
     setToken(receivedToken);
     setUser(receivedUser);
+    connectSocket(receivedToken);
     axios.defaults.headers.common['Authorization'] = `Bearer ${receivedToken}`;
   };
 

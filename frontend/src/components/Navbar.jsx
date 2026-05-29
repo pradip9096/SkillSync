@@ -9,8 +9,9 @@
  */
 
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, LayoutGrid, LogOut } from 'lucide-react';
+import { Calendar, LayoutGrid, LogOut, MessageSquare, Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 /**
  * Navbar Component.
@@ -26,6 +27,11 @@ const Navbar = () => {
   
   // Access global authentication context
   const { user, logout } = useAuth();
+
+  // Access notification context (safely fallback if not ready)
+  const notificationContext = useNotification();
+  const unreadMessages = notificationContext?.unreadMessages || 0;
+  const unreadNotifications = notificationContext?.unreadNotifications || 0;
 
   return (
     <nav className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50 transition-all duration-300">
@@ -86,6 +92,41 @@ const Navbar = () => {
               >
                 Profile
               </Link>
+            )}
+
+            {/* Messaging and Notifications (Client & Expert) */}
+            {user && (user.role === 'Client' || user.role === 'Expert') && (
+              <>
+                <Link 
+                  to="/messaging" 
+                  className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200 ${
+                    location.pathname === '/messaging' 
+                      ? 'text-blue-600 bg-blue-50 shadow-sm' 
+                      : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  )}
+                  <span className="text-[10px] font-bold">Messaging</span>
+                </Link>
+                
+                <Link 
+                  to="/notifications" 
+                  className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200 ${
+                    location.pathname === '/notifications' 
+                      ? 'text-blue-600 bg-blue-50 shadow-sm' 
+                      : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute top-1 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  )}
+                  <span className="text-[10px] font-bold">Notifications</span>
+                </Link>
+              </>
             )}
 
             {/* Admin Panel Link */}

@@ -21,8 +21,11 @@ import AdminDashboard from './pages/AdminDashboard';
 import ExpertDashboard from './pages/ExpertDashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Messaging from './pages/Messaging';
+import Notifications from './pages/Notifications';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 /**
  * Main App Component.
@@ -36,10 +39,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        {/* Main container with a light gray background and minimum screen height */}
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-          {/* Persistent Navigation Bar */}
-          <Navbar />
+        <NotificationProvider>
+          {/* Main container with a light gray background and minimum screen height */}
+          <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Persistent Navigation Bar */}
+            <Navbar />
           
           {/* Route Definitions */}
           <Routes>
@@ -72,6 +76,20 @@ function App() {
               </ProtectedRoute>
             } />
 
+            {/* Messaging page (protected, Client/Expert) */}
+            <Route path="/messaging" element={
+              <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                <Messaging />
+              </ProtectedRoute>
+            } />
+
+            {/* Notifications page (protected, Client/Expert) */}
+            <Route path="/notifications" element={
+              <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                <Notifications />
+              </ProtectedRoute>
+            } />
+
             {/* Admin dashboard page (protected, Admin only) */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['Admin']}>
@@ -86,7 +104,8 @@ function App() {
               </ProtectedRoute>
             } />
           </Routes>
-        </div>
+          </div>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

@@ -151,6 +151,23 @@ const createBooking = async (req, res) => {
       notes
     });
 
+    try {
+      const Notification = require('../models/Notification');
+      const expertProfileForNotif = await Expert.findById(expert);
+      if (expertProfileForNotif && expertProfileForNotif.user) {
+        const notif = await Notification.create({
+          user: expertProfileForNotif.user,
+          type: 'BOOKING_UPDATE',
+          title: 'New Booking Request',
+          message: `${userName} booked a session with you on ${bookingDate} at ${slotTime}.`
+        });
+        const io = req.app.get('io');
+        if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif);
+      }
+    } catch (err) {
+      console.error('Error creating new booking notification:', err);
+    }
+
     // Schedule confirmations and pre-session reminders via Agenda
     try {
       await agenda.now('send-booking-confirmation', { bookingId: booking._id });
@@ -353,6 +370,44 @@ const updateBookingStatus = async (req, res) => {
     // Update and save the booking document
     booking.status = normalizedStatus;
     await booking.save();
+
+    try {
+      const Notification = require('../models/Notification');
+      const io = req.app.get('io');
+      
+      let message = `Your session for ${booking.bookingDate} at ${booking.slotTime} was updated to ${normalizedStatus}.`;
+      let type = 'BOOKING_UPDATE';
+      
+      if (normalizedStatus === 'Late Cancellation') {
+        type = 'STRIKE';
+        message = `Your session was cancelled late, resulting in a penalty strike.`;
+      }
+
+      // Notify Client if they exist
+      if (booking.user) {
+        const notif = await Notification.create({
+          user: booking.user,
+          type,
+          title: `Booking ${normalizedStatus}`,
+          message
+        });
+        if (io) io.to(`user_${booking.user.toString()}`).emit('new_notification', notif);
+      }
+      
+      // Notify Expert
+      const expertProfile = await Expert.findById(booking.expert);
+      if (expertProfile && expertProfile.user) {
+        const notif = await Notification.create({
+          user: expertProfile.user,
+          type,
+          title: `Session ${normalizedStatus}`,
+          message
+        });
+        if (io) io.to(`user_${expertProfile.user.toString()}`).emit('new_notification', notif);
+      }
+    } catch (err) {
+      console.error('Error creating notification:', err);
+    }
 
     /**
      * Real-time release notification.

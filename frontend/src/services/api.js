@@ -189,4 +189,17 @@ export const uploadGalleryImage = (formData) => API.post('/expert-dashboard/gall
 export const deleteGalleryImage = (filename) => API.delete(`/expert-dashboard/gallery/${filename}`);
 export const fetchExpertDashboardAnalytics = () => API.get('/expert-dashboard/analytics');
 
+// --- Messaging APIs ---
+export const fetchConversations = () => API.get('/messages/conversations');
+export const fetchMessages = (bookingId) => API.get(`/messages/booking/${bookingId}`);
+export const sendMessage = (messageData) => API.post('/messages', messageData);
+export const markMessagesAsRead = (bookingId) => API.patch(`/messages/booking/${bookingId}/read`);
+export const fetchUnreadMessageCount = () => API.get('/messages/unread-count');
+
+// --- Notification APIs ---
+export const fetchNotifications = () => API.get('/notifications');
+export const markNotificationAsRead = (id) => API.patch(`/notifications/${id}/read`);
+export const markAllNotificationsAsRead = () => API.patch('/notifications/read-all');
+export const fetchUnreadNotificationCount = () => API.get('/notifications/unread-count');
+
 export default API;
