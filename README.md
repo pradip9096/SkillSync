@@ -21,6 +21,9 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Automated Email & SMS Reminders:** Persistent scheduler using Agenda.js to dispatch immediate booking confirmations, cancellations, and pre-session reminders (at 24 hours and 2 hours in IST) via Nodemailer and Twilio with robust development console logging fallbacks.
 - **Password Recovery & Auto-Login:** Secure Forgot Password flow utilizing random crypto token generation, SHA-256 database-level token hashing, 10-minute expiry locks, Nodemailer link dispatch, and instant JWT auto-login upon successful resets.
 - **Real-Time Messaging & Notifications:** Private, booking-bounded chat messaging between Clients and Experts with instant WebSocket notifications, global unread badges, and clean unique-conversation grouping.
+- **API Security Hardening & Robust Validation:** Full protection including ReDoS regex sanitization, 100-character input capping on search, IP rate limiting on core authentication and booking routes, parameter checking middleware to prevent MongoDB CastError server crashes, and server-side JWT verification checks.
+- **Query Pagination Controls:** Enforced pagination limits (using limit/skip) on heavy queries including admin dashboard lists, user notifications (capped to 50 items), and client history tables.
+- **Custom UX Dialog Modals:** Tailored glassmorphic React dialog boxes replacing standard browser `alert()` and `confirm()` prompts, ensuring a consistent user experience during slot bookings and cancellations.
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
 
 ## 🛠️ Tech Stack
@@ -58,20 +61,27 @@ This is a two-package JavaScript application:
   - `src/controllers/bookingController.js` - Client session booking, completion, and cancellation handlers.
   - `src/controllers/expertController.js` - Public directory filters and reviews aggregation query handlers.
   - `src/controllers/reviewController.js` - Client review and rating submission handlers.
+  - `src/controllers/messageController.js` - Messaging chat request handlers.
+  - `src/controllers/notificationController.js` - Notification retrieval and state change handlers.
   - `src/middleware/authMiddleware.js` - JWT verification and role authentication checks.
   - `src/middleware/uploadMiddleware.js` - Multer configuration for expert portfolio uploads.
+  - `src/middleware/validationMiddleware.js` - Parameter MongoDB ObjectId validation middleware.
   - `src/models/User.js` - Mongoose User schema with password hashing.
   - `src/models/Expert.js` - Mongoose Expert schema for listing bios and hourly rates.
   - `src/models/Booking.js` - Mongoose Booking schema managing transaction states.
   - `src/models/Availability.js` - Mongoose Availability schema for expert calendar blocks.
   - `src/models/ClientReview.js` - Mongoose ClientReview schema for expert reviews of clients.
   - `src/models/Review.js` - Mongoose Review schema storing client ratings.
+  - `src/models/Message.js` - Mongoose Message schema for private chat logs.
+  - `src/models/Notification.js` - Mongoose Notification schema for user system alerts.
   - `src/routes/authRoutes.js` - Auth and profile route mounts.
   - `src/routes/adminRoutes.js` - Admin dashboard route endpoints.
   - `src/routes/expertDashboardRoutes.js` - Expert dashboard route endpoints.
   - `src/routes/bookingRoutes.js` - Booking creation and update route endpoints.
   - `src/routes/expertRoutes.js` - Public expert directory query route endpoints.
   - `src/routes/reviewRoutes.js` - Review submission route endpoints.
+  - `src/routes/messageRoutes.js` - Private messaging chat routes.
+  - `src/routes/notificationRoutes.js` - System-wide alerts and notification routes.
   - `src/seeds/userSeeder.js` - Admin, client, and expert account seeder utility.
   - `src/seeds/expertSeeder.js` - Active expert portrait asset seeder utility.
   - `src/seeds/migrateBlockedSlots.js` - Decoupled availability slot migration script.
@@ -88,6 +98,7 @@ This is a two-package JavaScript application:
   - `src/components/ProtectedRoute.jsx` - Routing guard wrapper based on authentication/role roles.
   - `src/components/ExpertCard.jsx` - Reusable expert summary card component.
   - `src/components/Navbar.jsx` - Global site navigation header.
+  - `src/components/GlobalErrorBoundary.jsx` - React Error Boundary fallback screen.
   - `src/pages/Home.jsx` - Brand introduction landing page.
   - `src/pages/Login.jsx` & `Register.jsx` - Conditional credentials registration and login.
   - `src/pages/Profile.jsx` - User account settings update screen.
