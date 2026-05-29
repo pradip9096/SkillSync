@@ -84,6 +84,7 @@ This is a two-package JavaScript application:
   - `src/services/api.js` - Axios API services configuration and helpers.
   - `src/services/socket.js` - Real-time Socket.io stateful client connections.
   - `src/context/AuthContext.jsx` - Global authentication context state.
+  - `src/context/NotificationContext.jsx` - Global unread message and notification context state.
   - `src/components/ProtectedRoute.jsx` - Routing guard wrapper based on authentication/role roles.
   - `src/components/ExpertCard.jsx` - Reusable expert summary card component.
   - `src/components/Navbar.jsx` - Global site navigation header.
@@ -95,6 +96,7 @@ This is a two-package JavaScript application:
   - `src/pages/ExpertListing.jsx` - Category-filterable and searchable expert directory grid.
   - `src/pages/ExpertDetail.jsx` - Detailed expert profile with slot selector.
   - `src/pages/MyBookings.jsx` - Protected client-only session list view.
+  - `src/pages/Messaging.jsx` - Real-time private messaging interface.
 
 
 ## ⚙️ Getting Started
