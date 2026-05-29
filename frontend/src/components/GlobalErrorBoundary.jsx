@@ -40,7 +40,7 @@ class GlobalErrorBoundary extends React.Component {
               <RefreshCw className="w-5 h-5" />
               Reload Page
             </button>
-            {process.env.NODE_ENV === 'development' && (
+            {import.meta.env?.DEV && (
               <div className="mt-8 text-left w-full bg-gray-50 p-4 rounded-lg border border-gray-200 text-xs text-red-600 overflow-auto max-h-48">
                 <p className="font-mono">{this.state.error?.toString()}</p>
               </div>

@@ -41,9 +41,34 @@ const Messaging = () => {
     loadConversations();
   }, [user]);
 
+  const loadMessages = async (bookingId, append = false) => {
+    if (append) setLoadingMore(true);
+    try {
+      const before = append && messages.length > 0 ? messages[0]._id : null;
+      const res = await fetchMessages(bookingId, before);
+      
+      if (res.data.length < 50) setHasMore(false);
+      else setHasMore(true);
+
+      if (append) {
+        setMessages(prev => [...res.data, ...prev]);
+      } else {
+        setMessages(res.data);
+        await markChatAsReadGlobally(bookingId);
+      }
+      setError(null);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+      setError('Failed to load messages.');
+    } finally {
+      if (append) setLoadingMore(false);
+    }
+  };
+
   // 1. Load historical messages and join room when clicking a chat
   useEffect(() => {
     if (activeChat) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadMessages(activeChat._id);
       const joinRoom = () => socket.emit('join_booking_room', activeChat._id);
       joinRoom();
@@ -55,6 +80,7 @@ const Messaging = () => {
         setIsTyping(false);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat]);
 
   // 2. Global socket listener to handle incoming messages in real-time
@@ -103,35 +129,14 @@ const Messaging = () => {
       socket.off('typing', handleUserTyping);
       socket.off('stop_typing', handleUserStopTyping);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const loadMessages = async (bookingId, append = false) => {
-    if (append) setLoadingMore(true);
-    try {
-      const before = append && messages.length > 0 ? messages[0]._id : null;
-      const res = await fetchMessages(bookingId, before);
-      
-      if (res.data.length < 50) setHasMore(false);
-      else setHasMore(true);
 
-      if (append) {
-        setMessages(prev => [...res.data, ...prev]);
-      } else {
-        setMessages(res.data);
-        await markChatAsReadGlobally(bookingId);
-      }
-      setError(null);
-    } catch (err) {
-      console.error('Error loading messages:', err);
-      setError('Failed to load messages.');
-    } finally {
-      if (append) setLoadingMore(false);
-    }
-  };
 
   const handleScroll = (e) => {
     if (e.target.scrollTop === 0 && hasMore && !loadingMore && activeChat) {
@@ -193,11 +198,11 @@ const Messaging = () => {
   let lastDateString = null;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-6 h-[80vh]">
+    <div className="w-full max-w-[98%] xl:max-w-[1500px] mx-auto px-4 py-4 md:py-6 flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100vh-120px)] overflow-hidden">
       {/* Conversations List */}
-      <div className={`w-full md:w-1/3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-y-auto ${showSidebarOnMobile ? 'block' : 'hidden md:block'}`}>
-        <h2 className="p-4 border-b border-gray-100 font-bold text-lg text-gray-800">Your Conversations</h2>
-        <div className="p-2 flex flex-col gap-2">
+      <div className={`w-full md:w-[320px] lg:w-[360px] flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${showSidebarOnMobile ? 'flex' : 'hidden md:flex'}`}>
+        <h2 className="p-4 border-b border-gray-100 font-bold text-lg text-gray-800 flex-shrink-0">Your Conversations</h2>
+        <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
           {(!conversations || conversations.length === 0) ? (
             <p className="text-gray-500 text-sm p-4 text-center">No active sessions to discuss.</p>
           ) : (

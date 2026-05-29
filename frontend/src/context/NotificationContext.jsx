@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { fetchUnreadMessageCount, fetchUnreadNotificationCount, markNotificationAsRead, markAllNotificationsAsRead, markMessagesAsRead } from '../services/api';
@@ -57,6 +58,7 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCounts();
 
     if (user) {
@@ -79,6 +81,7 @@ export const NotificationProvider = ({ children }) => {
         socket.off('new_notification', handleNewNotif);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   return (

@@ -8,10 +8,6 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const { markNotifAsReadGlobally, markAllNotifsAsReadGlobally } = useNotification();
 
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
   const loadNotifications = async () => {
     try {
       const res = await fetchNotifications();
@@ -22,6 +18,11 @@ const Notifications = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadNotifications();
+  }, []);
 
   const handleMarkAllRead = async () => {
     try {
