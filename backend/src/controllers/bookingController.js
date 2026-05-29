@@ -163,7 +163,7 @@ const createBooking = async (req, res) => {
           message: `${userName} booked a session with you on ${bookingDate} at ${formatTime12H(slotTime)}.`
         });
         const io = req.app.get('io');
-        if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif);
+        if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif.toJSON());
       }
     } catch (err) {
       console.error('Error creating new booking notification:', err);
@@ -392,7 +392,7 @@ const updateBookingStatus = async (req, res) => {
           title: `Booking ${normalizedStatus}`,
           message
         });
-        if (io) io.to(`user_${booking.user.toString()}`).emit('new_notification', notif);
+        if (io) io.to(`user_${booking.user.toString()}`).emit('new_notification', notif.toJSON());
       }
       
       // Notify Expert
@@ -404,7 +404,7 @@ const updateBookingStatus = async (req, res) => {
           title: `Session ${normalizedStatus}`,
           message
         });
-        if (io) io.to(`user_${expertProfile.user.toString()}`).emit('new_notification', notif);
+        if (io) io.to(`user_${expertProfile.user.toString()}`).emit('new_notification', notif.toJSON());
       }
     } catch (err) {
       console.error('Error creating notification:', err);
