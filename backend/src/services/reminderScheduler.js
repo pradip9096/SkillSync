@@ -15,17 +15,7 @@ const parseISTSessionTime = (bookingDate, slotTime) => {
   return Number.isNaN(session.getTime()) ? null : session;
 };
 
-/**
- * Helper to format slots into clean 12-hour AM/PM format.
- */
-const format12Hour = (timeStr) => {
-  if (!timeStr) return '';
-  const [hourStr, minStr] = timeStr.split(':');
-  const hour = parseInt(hourStr, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${minStr} ${ampm}`;
-};
+const { formatTime12H } = require('../utils/timeFormatters');
 
 // ==========================================
 // Define Job Handlers
@@ -49,7 +39,7 @@ agenda.define('send-booking-confirmation', async (job) => {
   const clientPhone = booking.userPhone;
   const expertName = booking.expert.name;
   const expertEmail = booking.expert.user.email;
-  const formattedTime = format12Hour(booking.slotTime);
+  const formattedTime = formatTime12H(booking.slotTime);
 
   // Email to Client
   const clientMailHtml = `
@@ -116,7 +106,7 @@ agenda.define('send-booking-confirmation', async (job) => {
 
 agenda.define('send-booking-cancellation', async (job) => {
   const { clientEmail, clientName, clientPhone, expertName, expertEmail, bookingDate, slotTime, status, cancelledBy } = job.attrs.data;
-  const formattedTime = format12Hour(slotTime);
+  const formattedTime = formatTime12H(slotTime);
   const cancelTypeStr = status === 'Late Cancellation' ? 'Late Cancellation (within 2-hour window)' : 'Cancelled';
 
   // Email to Client
@@ -177,7 +167,7 @@ agenda.define('send-session-reminder', async (job) => {
   const clientPhone = booking.userPhone;
   const expertName = booking.expert.name;
   const expertEmail = booking.expert.user.email;
-  const formattedTime = format12Hour(booking.slotTime);
+  const formattedTime = formatTime12H(booking.slotTime);
   const timeDesc = type === '24h' ? '24 hours' : '2 hours';
 
   // Email template

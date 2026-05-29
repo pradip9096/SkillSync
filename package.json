@@ -1,0 +1,29 @@
+{
+  "name": "real-time-expert-session-booking-system",
+  "version": "1.0.0",
+  "description": "SkillSync is a robust, real-time web application where users can seamlessly discover experts by category, view live availability, and confidently book sessions without encountering double-booking conflicts.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pradip9096/SkillSync.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pradip9096/SkillSync/issues"
+  },
+  "homepage": "https://github.com/pradip9096/SkillSync#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5"
+  }
+}

@@ -149,9 +149,8 @@ const MyBookings = () => {
     try {
       setActionLoading(bookingId);
       await updateBookingStatus(bookingId, newStatus);
-      // Refresh the list to show updated status
-      const { data } = await fetchBookingsByEmail(email);
-      setBookings(data.data);
+      // Optimistically update the UI to instantly reflect the new status
+      setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to update booking status.');
     } finally {
@@ -228,7 +227,7 @@ const MyBookings = () => {
           <p className="text-xl text-gray-600 font-medium max-w-xl mx-auto">Manage your upcoming and past sessions with our industry experts.</p>
           {/* Visual indicator of current IST time for reference */}
           <div className="inline-block px-4 py-1.5 bg-gray-100 rounded-full text-[10px] font-black text-gray-400 uppercase tracking-widest border border-gray-200 mt-4">
-            Current IST Time: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+            Current IST Time: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })}
           </div>
         </div>
 
@@ -250,6 +249,7 @@ const MyBookings = () => {
                     year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit',
+                    hour12: true,
                     timeZone: 'Asia/Kolkata'
                   })}{' '}
                   IST
@@ -299,9 +299,9 @@ const MyBookings = () => {
             <AlertCircle className="w-8 h-8 text-red-500" />
             <p className="font-bold text-lg">{error}</p>
           </div>
-        ) : hasSearched && bookings.length > 0 ? (
+        ) : hasSearched && (bookings || []).length > 0 ? (
           <div className="space-y-8">
-            {bookings.map((booking, index) => (
+            {(bookings || []).map((booking, index) => (
               <div 
                 key={booking._id} 
                 className="group bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden hover:border-blue-200 transition-all duration-300 animate-slide-up"

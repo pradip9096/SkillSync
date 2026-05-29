@@ -75,7 +75,7 @@ const ExpertListing = () => {
   }, [search, category]);
 
   // Filter out the expert's own profile card if logged in
-  const displayedExperts = experts.filter(
+  const displayedExperts = (experts || []).filter(
     (exp) => !user || (exp.user !== user._id && exp.user?._id !== user._id)
   );
 
@@ -140,10 +140,10 @@ const ExpertListing = () => {
             <AlertCircle className="w-8 h-8 text-red-500" />
             <p className="font-semibold text-lg">{error}</p>
           </div>
-        ) : displayedExperts.length > 0 ? (
+        ) : (displayedExperts || []).length > 0 ? (
           // Grid of Expert Cards
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {displayedExperts.map((expert, index) => (
+            {(displayedExperts || []).map((expert, index) => (
               <ExpertCard key={expert._id} expert={expert} index={index} />
             ))}
           </div>

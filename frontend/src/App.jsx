@@ -24,6 +24,7 @@ import ResetPassword from './pages/ResetPassword';
 import Messaging from './pages/Messaging';
 import Notifications from './pages/Notifications';
 import ProtectedRoute from './components/ProtectedRoute';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
@@ -40,71 +41,73 @@ function App() {
     <Router>
       <AuthProvider>
         <NotificationProvider>
-          {/* Main container with a light gray background and minimum screen height */}
-          <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Persistent Navigation Bar */}
-            <Navbar />
-          
-          {/* Route Definitions */}
-          <Routes>
-            {/* Landing page */}
-            <Route path="/" element={<Home />} />
-
-            {/* Public authentication routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-            {/* List of experts */}
-            <Route path="/experts" element={<ExpertListing />} />
+          <GlobalErrorBoundary>
+            {/* Main container with a light gray background and minimum screen height */}
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+              {/* Persistent Navigation Bar */}
+              <Navbar />
             
-            {/* Detailed view for a specific expert */}
-            <Route path="/expert/:id" element={<ExpertDetail />} />
-            
-            {/* User's booking history page (protected, Clients only) */}
-            <Route path="/my-bookings" element={
-              <ProtectedRoute allowedRoles={['Client']}>
-                <MyBookings />
-              </ProtectedRoute>
-            } />
+            {/* Route Definitions */}
+            <Routes>
+              {/* Landing page */}
+              <Route path="/" element={<Home />} />
 
-            {/* User's profile page (protected) */}
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
+              {/* Public authentication routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-            {/* Messaging page (protected, Client/Expert) */}
-            <Route path="/messaging" element={
-              <ProtectedRoute allowedRoles={['Client', 'Expert']}>
-                <Messaging />
-              </ProtectedRoute>
-            } />
+              {/* List of experts */}
+              <Route path="/experts" element={<ExpertListing />} />
+              
+              {/* Detailed view for a specific expert */}
+              <Route path="/expert/:id" element={<ExpertDetail />} />
+              
+              {/* User's booking history page (protected, Clients only) */}
+              <Route path="/my-bookings" element={
+                <ProtectedRoute allowedRoles={['Client']}>
+                  <MyBookings />
+                </ProtectedRoute>
+              } />
 
-            {/* Notifications page (protected, Client/Expert) */}
-            <Route path="/notifications" element={
-              <ProtectedRoute allowedRoles={['Client', 'Expert']}>
-                <Notifications />
-              </ProtectedRoute>
-            } />
+              {/* User's profile page (protected) */}
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } />
 
-            {/* Admin dashboard page (protected, Admin only) */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['Admin']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+              {/* Messaging page (protected, Client/Expert) */}
+              <Route path="/messaging" element={
+                <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                  <Messaging />
+                </ProtectedRoute>
+              } />
 
-            {/* Expert dashboard page (protected, Expert only) */}
-            <Route path="/expert-dashboard" element={
-              <ProtectedRoute allowedRoles={['Expert']}>
-                <ExpertDashboard />
-              </ProtectedRoute>
-            } />
-          </Routes>
-          </div>
+              {/* Notifications page (protected, Client/Expert) */}
+              <Route path="/notifications" element={
+                <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                  <Notifications />
+                </ProtectedRoute>
+              } />
+
+              {/* Admin dashboard page (protected, Admin only) */}
+              <Route path="/admin" element={
+                <ProtectedRoute allowedRoles={['Admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+
+              {/* Expert dashboard page (protected, Expert only) */}
+              <Route path="/expert-dashboard" element={
+                <ProtectedRoute allowedRoles={['Expert']}>
+                  <ExpertDashboard />
+                </ProtectedRoute>
+              } />
+            </Routes>
+            </div>
+          </GlobalErrorBoundary>
         </NotificationProvider>
       </AuthProvider>
     </Router>

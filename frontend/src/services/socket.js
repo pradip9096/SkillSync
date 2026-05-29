@@ -23,7 +23,27 @@ import { io } from 'socket.io-client';
 const socket = io('http://localhost:5000', {
   transports: ['polling', 'websocket'],
   upgrade: true,
-  autoConnect: false
+  autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5
+});
+
+socket.on('connect_error', (err) => {
+  if (err.message.includes('WebSocket is closed') || err.message.includes('xhr poll error')) {
+    // Suppress expected dev/hot-reload noise
+    return;
+  }
+  console.warn('Socket connect error:', err.message);
+});
+
+socket.on('disconnect', (reason) => {
+  if (reason === 'transport close' || reason === 'io server disconnect') {
+    // Normal server restart or explicit drop
+    return;
+  }
 });
 
 export const connectSocket = (token) => {

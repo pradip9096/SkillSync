@@ -516,7 +516,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-xs">
                               {u.suspendedUntil && new Date(u.suspendedUntil).getTime() > currentTime ? (
-                                <span className="text-red-600 font-bold bg-red-50 border border-red-100 rounded-full px-2 py-0.5" title={`Until ${new Date(u.suspendedUntil).toLocaleString('en-IN')}`}>
+                                <span className="text-red-600 font-bold bg-red-50 border border-red-100 rounded-full px-2 py-0.5" title={`Until ${new Date(u.suspendedUntil).toLocaleString('en-IN', { hour12: true })}`}>
                                   Suspended
                                 </span>
                               ) : (

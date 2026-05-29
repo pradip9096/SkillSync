@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { fetchNotifications, markAllNotificationsAsRead, markNotificationAsRead } from '../services/api';
+import { fetchNotifications } from '../services/api';
 import { Bell, CheckCircle2, Info } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { markNotifAsReadGlobally, markAllNotifsAsReadGlobally } = useNotification();
 
   useEffect(() => {
     loadNotifications();
@@ -23,8 +25,8 @@ const Notifications = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllNotificationsAsRead();
-      setNotifications(notifications.map(n => ({ ...n, read: true })));
+      await markAllNotifsAsReadGlobally();
+      setNotifications((notifications || []).map(n => ({ ...n, read: true })));
     } catch (err) {
       console.error('Error marking all as read:', err);
     }
@@ -32,14 +34,14 @@ const Notifications = () => {
 
   const handleMarkRead = async (id) => {
     try {
-      await markNotificationAsRead(id);
-      setNotifications(notifications.map(n => n._id === id ? { ...n, read: true } : n));
+      await markNotifAsReadGlobally(id);
+      setNotifications((notifications || []).map(n => n._id === id ? { ...n, read: true } : n));
     } catch (err) {
       console.error('Error marking as read:', err);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
 
   if (loading) return <div className="p-8 text-center">Loading notifications...</div>;
 
@@ -69,7 +71,7 @@ const Notifications = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col gap-[1px] bg-gray-100">
-        {notifications.length === 0 ? (
+        {(!notifications || notifications.length === 0) ? (
           <div className="p-12 text-center bg-white">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bell className="w-8 h-8 text-gray-300" />
@@ -78,7 +80,7 @@ const Notifications = () => {
             <p className="text-gray-500 mt-1 text-sm">You're all caught up!</p>
           </div>
         ) : (
-          notifications.map(notif => (
+          (notifications || []).map(notif => (
             <div 
               key={notif._id} 
               onClick={() => !notif.read && handleMarkRead(notif._id)}
@@ -93,7 +95,7 @@ const Notifications = () => {
                 <h4 className={`text-sm font-bold ${!notif.read ? 'text-gray-900' : 'text-gray-600'}`}>{notif.title}</h4>
                 <p className={`text-sm mt-1 ${!notif.read ? 'text-gray-600' : 'text-gray-500'}`}>{notif.message}</p>
                 <span className="text-[10px] text-gray-400 font-medium block mt-2">
-                  {new Date(notif.createdAt).toLocaleString()}
+                  {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                 </span>
               </div>
             </div>

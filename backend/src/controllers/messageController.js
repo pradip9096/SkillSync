@@ -129,55 +129,71 @@ exports.getUnreadCount = async (req, res) => {
 exports.getUniqueConversations = async (req, res) => {
   try {
     const userId = req.user._id;
+    let bookings = [];
 
-    const conversations = await Message.aggregate([
-      {
-        $match: {
-          $or: [{ sender: userId }, { receiver: userId }]
-        }
-      },
-      {
-        $sort: { createdAt: -1 }
-      },
-      {
-        $group: {
-          _id: {
-            $cond: [
-              { $eq: ["$sender", userId] },
-              "$receiver",
-              "$sender"
-            ]
-          },
-          lastMessage: { $first: "$$ROOT" },
-          bookingId: { $first: "$bookingId" }
-        }
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "otherUser"
-        }
-      },
-      {
-        $unwind: "$otherUser"
-      },
-      {
-        $project: {
-          "otherUser.password": 0
-        }
+    // 1. Fetch bookings based on user role
+    if (req.user.role === 'Expert') {
+      const Expert = require('../models/Expert');
+      const expertProfile = await Expert.findOne({ user: userId });
+      if (expertProfile) {
+        bookings = await Booking.find({ expert: expertProfile._id })
+          .populate('user', 'name email _id')
+          .sort({ createdAt: -1 });
       }
-    ]);
+    } else {
+      bookings = await Booking.find({ user: userId })
+        .populate({
+          path: 'expert',
+          populate: { path: 'user', select: 'name email _id' }
+        })
+        .sort({ createdAt: -1 });
+    }
 
-    // Format to match existing frontend expectations
-    const formatted = conversations.map(conv => ({
-      _id: conv.bookingId,
-      otherUser: conv.otherUser,
-      lastMessage: conv.lastMessage
-    }));
+    // 2. Format the conversations array
+    const formatted = [];
+    
+    // Use a Map to keep only one chat per unique user? Or one chat per booking?
+    // The previous implementation grouped by otherUser. Let's group by otherUser to keep it simple,
+    // or group by bookingId. The UI expects conv._id to be bookingId, and activeChat is a specific booking.
+    // Let's create a conversation item for each distinct booking.
 
-    res.status(200).json(formatted);
+    for (const booking of bookings) {
+      // Determine the "other user"
+      let otherUser = null;
+      if (req.user.role === 'Expert') {
+        otherUser = booking.user;
+      } else {
+        otherUser = booking.expert ? booking.expert.user : null;
+      }
+
+      if (!otherUser) continue;
+
+      // Fetch the last message for this booking
+      const lastMessage = await Message.findOne({ bookingId: booking._id })
+        .sort({ createdAt: -1 });
+
+      formatted.push({
+        _id: booking._id,
+        otherUser: {
+          _id: otherUser._id,
+          name: otherUser.name || booking.userName, // Fallback for clients
+          email: otherUser.email
+        },
+        lastMessage: lastMessage || null
+      });
+    }
+
+    // Optionally deduplicate by otherUser if we only want 1 chat thread per person.
+    // The previous logic grouped by otherUser, but the chat was still tied to a specific bookingId.
+    // If we group by otherUser, we should use the most recent booking.
+    const uniqueMap = new Map();
+    for (const conv of formatted) {
+      if (!uniqueMap.has(conv.otherUser._id.toString())) {
+        uniqueMap.set(conv.otherUser._id.toString(), conv);
+      }
+    }
+
+    res.status(200).json(Array.from(uniqueMap.values()));
   } catch (error) {
     console.error('Error fetching conversations:', error);
     res.status(500).json({ message: 'Server Error' });

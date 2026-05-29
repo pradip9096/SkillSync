@@ -9,6 +9,7 @@ const Booking = require('../models/Booking');
 const Expert = require('../models/Expert');
 const Availability = require('../models/Availability');
 const agenda = require('../config/agenda');
+const { formatTime12H } = require('../utils/timeFormatters');
 const { scheduleSessionReminders, cancelScheduledReminders } = require('../services/reminderScheduler');
 
 /**
@@ -159,7 +160,7 @@ const createBooking = async (req, res) => {
           user: expertProfileForNotif.user,
           type: 'BOOKING_UPDATE',
           title: 'New Booking Request',
-          message: `${userName} booked a session with you on ${bookingDate} at ${slotTime}.`
+          message: `${userName} booked a session with you on ${bookingDate} at ${formatTime12H(slotTime)}.`
         });
         const io = req.app.get('io');
         if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif);
@@ -375,7 +376,7 @@ const updateBookingStatus = async (req, res) => {
       const Notification = require('../models/Notification');
       const io = req.app.get('io');
       
-      let message = `Your session for ${booking.bookingDate} at ${booking.slotTime} was updated to ${normalizedStatus}.`;
+      let message = `Your session for ${booking.bookingDate} at ${formatTime12H(booking.slotTime)} was updated to ${normalizedStatus}.`;
       let type = 'BOOKING_UPDATE';
       
       if (normalizedStatus === 'Late Cancellation') {

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { fetchUnreadMessageCount, fetchUnreadNotificationCount } from '../services/api';
+import { fetchUnreadMessageCount, fetchUnreadNotificationCount, markNotificationAsRead, markAllNotificationsAsRead, markMessagesAsRead } from '../services/api';
 import socket from '../services/socket';
 
 const NotificationContext = createContext();
@@ -26,14 +26,46 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  const markNotifAsReadGlobally = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setUnreadNotifications(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Failed to mark notification as read globally:', err);
+      throw err;
+    }
+  };
+
+  const markAllNotifsAsReadGlobally = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setUnreadNotifications(0);
+    } catch (err) {
+      console.error('Failed to mark all notifications as read globally:', err);
+      throw err;
+    }
+  };
+
+  const markChatAsReadGlobally = async (bookingId) => {
+    try {
+      await markMessagesAsRead(bookingId);
+      await fetchCounts();
+    } catch (err) {
+      console.error('Failed to mark chat as read globally:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchCounts();
 
     if (user) {
-      socket.emit('join_user_room', user.id);
+      const joinUserRoom = () => socket.emit('join_user_room', user._id);
+      joinUserRoom();
+      socket.on('connect', joinUserRoom);
       
       const handleNewMessage = (msg) => {
-        if (msg.receiver === user.id) setUnreadMessages(prev => prev + 1);
+        if (msg.receiver === user._id) setUnreadMessages(prev => prev + 1);
       };
       
       const handleNewNotif = () => setUnreadNotifications(prev => prev + 1);
@@ -42,6 +74,7 @@ export const NotificationProvider = ({ children }) => {
       socket.on('new_notification', handleNewNotif);
 
       return () => {
+        socket.off('connect', joinUserRoom);
         socket.off('new_message', handleNewMessage);
         socket.off('new_notification', handleNewNotif);
       };
@@ -49,7 +82,14 @@ export const NotificationProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <NotificationContext.Provider value={{ unreadMessages, unreadNotifications, fetchCounts }}>
+    <NotificationContext.Provider value={{ 
+      unreadMessages, 
+      unreadNotifications, 
+      fetchCounts,
+      markNotifAsReadGlobally,
+      markAllNotifsAsReadGlobally,
+      markChatAsReadGlobally
+    }}>
       {children}
     </NotificationContext.Provider>
   );

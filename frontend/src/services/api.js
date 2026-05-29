@@ -38,6 +38,18 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+
+    // Gracefully handle server restarts (502/503) or complete network disconnections
+    if (status === 502 || status === 503 || !error.response) {
+      console.warn('Network instability detected. The server may be restarting.');
+      // Return a structured synthetic error so downstream components don't crash on `error.response.data`
+      return Promise.reject({
+        isNetworkError: true,
+        message: 'Experiencing network instability, please wait.',
+        response: { data: { error: 'Network unavailable. Please try again in a moment.' } }
+      });
+    }
+
     // 401 ONLY: token is missing, expired, or points to a deleted user.
     // Do NOT intercept 403 — that means the user exists but lacks permission for
     // that specific route (e.g. Expert accessing Admin endpoints). Logging them out

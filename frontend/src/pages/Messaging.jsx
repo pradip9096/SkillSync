@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchConversations, fetchMessages, sendMessage, markMessagesAsRead } from '../services/api';
+import { fetchConversations, fetchMessages, sendMessage } from '../services/api';
 import socket from '../services/socket';
 import { Send, User, MessageSquare } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 
 const Messaging = () => {
   const { user } = useAuth();
+  const { markChatAsReadGlobally } = useNotification();
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -29,26 +31,48 @@ const Messaging = () => {
     loadConversations();
   }, [user]);
 
+  // 1. Load historical messages and join room when clicking a chat
   useEffect(() => {
     if (activeChat) {
       loadMessages(activeChat._id);
-      socket.emit('join_booking_room', activeChat._id);
-
-      const handleNewMessage = (msg) => {
-        if (msg.bookingId === activeChat._id) {
-          setMessages(prev => [...prev, msg]);
-          if (msg.receiver === user.id) {
-             markMessagesAsRead(activeChat._id);
-          }
-        }
-      };
-
-      socket.on('new_message', handleNewMessage);
+      const joinRoom = () => socket.emit('join_booking_room', activeChat._id);
+      joinRoom();
+      
+      socket.on('connect', joinRoom);
       return () => {
-        socket.off('new_message', handleNewMessage);
+        socket.off('connect', joinRoom);
       };
     }
   }, [activeChat]);
+
+  // 2. Global socket listener to handle incoming messages in real-time
+  useEffect(() => {
+    const handleNewMessage = (msg) => {
+      // Append to open chat window if it belongs there
+      if (activeChat && msg.bookingId === activeChat._id) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
+        if (msg.receiver === user._id) {
+           markChatAsReadGlobally(activeChat._id);
+        }
+      }
+
+      // Always update the left sidebar with the latest message snippet
+      setConversations(prev => prev.map(conv => {
+        if (conv._id === msg.bookingId) {
+          return { ...conv, lastMessage: msg };
+        }
+        return conv;
+      }));
+    };
+
+    socket.on('new_message', handleNewMessage);
+    return () => {
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [activeChat, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,14 +82,14 @@ const Messaging = () => {
     try {
       const res = await fetchMessages(bookingId);
       setMessages(res.data);
-      await markMessagesAsRead(bookingId);
+      await markChatAsReadGlobally(bookingId);
     } catch (err) {
       console.error('Error loading messages:', err);
     }
   };
 
   const handleSend = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!newMessage.trim() || !activeChat) return;
 
     try {
@@ -79,8 +103,21 @@ const Messaging = () => {
       };
       
       const res = await sendMessage(payload);
-      // Let the socket handle appending to the list to avoid duplicates
-      // Or manually append if socket echoes back.
+      // Manually append the message to the UI instantly so the sender doesn't have to wait for the socket echo
+      if (res && res.data) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === res.data._id)) return prev;
+          return [...prev, res.data];
+        });
+        
+        // Optimistically update the left sidebar too
+        setConversations(prev => prev.map(conv => {
+          if (conv._id === activeChat._id) {
+            return { ...conv, lastMessage: res.data };
+          }
+          return conv;
+        }));
+      }
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
@@ -95,10 +132,10 @@ const Messaging = () => {
       <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-y-auto">
         <h2 className="p-4 border-b border-gray-100 font-bold text-lg text-gray-800">Your Conversations</h2>
         <div className="p-2 flex flex-col gap-2">
-          {conversations.length === 0 ? (
+          {(!conversations || conversations.length === 0) ? (
             <p className="text-gray-500 text-sm p-4 text-center">No active sessions to discuss.</p>
           ) : (
-            conversations.map(conv => {
+            (conversations || []).map(conv => {
               const otherName = conv.otherUser.name;
               return (
                 <button
@@ -133,19 +170,19 @@ const Messaging = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.length === 0 ? (
+              {(!messages || messages.length === 0) ? (
                 <div className="h-full flex items-center justify-center text-gray-400 text-sm">
                   No messages yet. Say hello!
                 </div>
               ) : (
-                messages.map(msg => {
-                  const isMe = msg.sender === user.id;
+                (messages || []).map(msg => {
+                  const isMe = msg.sender === user?._id;
                   return (
                     <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] p-3 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
                         <p className="text-sm">{msg.content}</p>
                         <span className={`text-[10px] mt-1 block ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </div>
@@ -161,6 +198,12 @@ const Messaging = () => {
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
                 placeholder="Type your message..."
                 className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
               />

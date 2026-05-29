@@ -228,8 +228,9 @@ const ExpertDashboard = () => {
     if (!expertId) return;
 
     // Join room
-    socket.emit('join_expert_room', expertId);
-    console.log(`Joined Socket.io room: ${expertId}`);
+    const joinExpertRoom = () => socket.emit('join_expert_room', expertId);
+    joinExpertRoom();
+    socket.on('connect', joinExpertRoom);
 
     // Listeners to trigger refresh
     const handleSlotUpdate = () => {
@@ -241,6 +242,7 @@ const ExpertDashboard = () => {
     socket.on('slot_released', handleSlotUpdate);
 
     return () => {
+      socket.off('connect', joinExpertRoom);
       socket.off('slot_booked', handleSlotUpdate);
       socket.off('slot_released', handleSlotUpdate);
     };
@@ -255,8 +257,8 @@ const ExpertDashboard = () => {
       const { data } = await updateBookingStatus(bookingId, newStatus);
       if (data.success) {
         setSuccessMsg(`Session status updated to '${newStatus}' successfully.`);
-        // Reload bookings list
-        await loadBookings();
+        // Optimistically update the local bookings state
+        setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
       }
     } catch (err) {
       console.error(err);

@@ -168,26 +168,31 @@ const ExpertDetail = () => {
     getExpertData();
 
     // Socket: Join expert-specific room for real-time updates
-    socket.emit('join_expert_room', id);
+    const joinExpertRoom = () => socket.emit('join_expert_room', id);
+    joinExpertRoom();
+    socket.on('connect', joinExpertRoom);
 
     // Listener for when a slot is booked by someone else
-    socket.on('slot_booked', (data) => {
+    const handleSlotBooked = (data) => {
       if (data.bookingDate === selectedDate) {
         setBookedSlots((prev) => [...prev, { slotTime: data.slotTime }]);
       }
-    });
+    };
+    socket.on('slot_booked', handleSlotBooked);
 
     // Listener for when a booking is cancelled, releasing the slot
-    socket.on('slot_released', (data) => {
+    const handleSlotReleased = (data) => {
       if (data.bookingDate === selectedDate) {
         setBookedSlots((prev) => prev.filter(s => (typeof s === 'string' ? s : s.slotTime) !== data.slotTime));
       }
-    });
+    };
+    socket.on('slot_released', handleSlotReleased);
 
     // Cleanup: remove listeners when component unmounts
     return () => {
-      socket.off('slot_booked');
-      socket.off('slot_released');
+      socket.off('connect', joinExpertRoom);
+      socket.off('slot_booked', handleSlotBooked);
+      socket.off('slot_released', handleSlotReleased);
     };
   }, [id, selectedDate]);
 
@@ -394,6 +399,7 @@ const ExpertDetail = () => {
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
+                        hour12: true,
                         timeZone: 'Asia/Kolkata'
                       })}{' '}
                       IST
