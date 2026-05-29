@@ -10,6 +10,8 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-29
+
 ### Added
 
 - Added cursor-based message pagination support on both backend and frontend to optimize bandwidth and UI performance for long chat histories.
@@ -166,7 +168,8 @@ Changelog policy, workflow, and SOP are maintained in
 - Enforced database-level active booking uniqueness so cancelled and late-cancelled sessions
   release slots without allowing duplicate active bookings.
 
-[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/pradip9096/SkillSync/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/pradip9096/SkillSync/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/pradip9096/SkillSync/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/pradip9096/SkillSync/compare/v1.0.0...v1.0.1
