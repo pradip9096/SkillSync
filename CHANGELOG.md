@@ -10,6 +10,14 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed messaging UI delays by implementing optimistic UI updates instead of waiting for socket echoes.
+- Fixed `MyBookings` and `ExpertDashboard` status update sluggishness by replacing full network refetches with optimistic UI state mutations.
+- Fixed missing incoming messages when not actively viewing a chat by elevating socket listeners to the global component scope in `Messaging.jsx`.
+- Fixed destructive global event listener wipeouts by explicitly passing named function references during `socket.off()` cleanups in `ExpertDetail.jsx`.
+- Fixed silent real-time failures following background network reconnections by automatically re-joining `user`, `booking`, and `expert` rooms upon Socket.io `connect` events.
+
 ## [1.1.0] - 2026-05-29
 
 ### Added
