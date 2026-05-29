@@ -161,19 +161,19 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Simplified Phone Input UX](#feature-simplified-phone-input-ux) | `Complete` | SkillSync | 2026-05-26 |
 | [12-Hour Format Conversion](#feature-12-hour-format-conversion) | `Complete` | SkillSync | 2026-05-26 |
 | [Post-Session Rating & Review System](#feature-post-session-rating--review-system) | `Complete` | SkillSync | 2026-05-26 |
-| [User Authentication & RBAC](#feature-user-authentication--rbac) | `Generic Blueprint` | — | 2026-05-26 |
-| [Real-Time Booking & Scheduling Engine](#feature-real-time-booking--scheduling-engine) | `Generic Blueprint` | — | 2026-05-26 |
-| [Dynamic Availability Management (Slot Toggling)](#feature-dynamic-availability-management-slot-toggling) | `Generic Blueprint` | — | 2026-05-26 |
-| [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Generic Blueprint` | — | 2026-05-26 |
+| [User Authentication & RBAC](#feature-user-authentication--rbac) | `Complete` | SkillSync | 2026-05-29 |
+| [Real-Time Booking & Scheduling Engine](#feature-real-time-booking--scheduling-engine) | `Complete` | SkillSync | 2026-05-29 |
+| [Dynamic Availability Management (Slot Toggling)](#feature-dynamic-availability-management-slot-toggling) | `Complete` | SkillSync | 2026-05-29 |
+| [Internationalization & Localization Engine](#feature-internationalization--localization-engine) | `Complete` | SkillSync | 2026-05-29 |
 | [Media & Gallery Upload System](#feature-media--gallery-upload-system) | `Complete` | SkillSync | 2026-05-27 |
 | [Systemic Database Consistency Architecture](#feature-systemic-database-consistency-architecture) | `Complete` | SkillSync | 2026-05-26 |
 | [Availability Schema Migration](#feature-availability-schema-migration) | `Complete` | SkillSync | 2026-05-26 |
 | [Late Cancellation & Penalty Cooldown](#feature-late-cancellation--penalty-cooldown) | `Complete` | SkillSync | 2026-05-27 |
 | [Two-Sided P2P Feedback System](#feature-two-sided-p2p-feedback-system) | `Complete` | SkillSync | 2026-05-27 |
 | [Expert Business Analytics Dashboard](#feature-expert-business-analytics-dashboard) | `Complete` | SkillSync | 2026-05-27 |
-| [Admin Dashboard Search & Filtering](#feature-admin-dashboard-search--filtering) | `Complete` | SkillSync | 2026-05-27 |
+| [Admin Dashboard Search & Filtering](#feature-admin-dashboard-search--filtering) | `Complete` | SkillSync | 2026-05-29 |
 | [Automated Email & SMS Reminders](#feature-automated-email--sms-reminders) | `Complete` | SkillSync | 2026-05-28 |
-| [Password Recovery & Auto-Login](#feature-password-recovery--auto-login) | `Complete` | SkillSync | 2026-05-28 |
+| [Password Recovery & Auto-Login](#feature-password-recovery--auto-login) | `Complete` | SkillSync | 2026-05-29 |
 | [Chat Messaging and Notifications](#feature-chat-messaging-and-notifications) | `Complete` | SkillSync | 2026-05-29 |
 
 ---
@@ -1188,7 +1188,7 @@ Client redirects to Login page])
   Output: `{ token, user }`
   Auth: Public
 
-* `GET /auth/me`
+* `GET /auth/profile`
   Output: `{ user }` (no password field)
   Auth: Bearer JWT required
 
@@ -1209,8 +1209,8 @@ Client redirects to Login page])
 
 * **AC A.1:** `POST /auth/register` with valid payload must return `201` with a JWT
   and user object (password field must be absent from response).
-* **AC A.2:** `GET /auth/me` without Authorization header must return `401 Unauthorized`.
-* **AC A.3:** `GET /auth/me` with a Client-role token accessing an Admin-only route must
+* **AC A.2:** `GET /auth/profile` without Authorization header must return `401 Unauthorized`.
+* **AC A.3:** `GET /auth/profile` with a Client-role token accessing an Admin-only route must
   return `403 Forbidden`.
 * **AC A.4:** Passwords stored in MongoDB must match bcrypt format (never plain text).
 * **AC A.5:** Client-side app must query the profile endpoint (`GET /auth/profile`) on initialization if a token is present, and update local storage and user context state with the fresh response.
@@ -1231,26 +1231,29 @@ Client redirects to Login page])
 
 - Unit: Test bcrypt hash + compare; test JWT sign + verify with correct and incorrect secrets.
 - Integration: `POST /auth/register` → assert 201 + JWT present; `POST /auth/login` with
-  wrong password → assert 401; `GET /auth/me` with valid token → assert 200 + user object.
+  wrong password → assert 401; `GET /auth/profile` with valid token → assert 200 + user object.
 - Manual: Register a new user, copy the JWT, use it in Postman/curl to access a
   protected endpoint, verify 200. Then use an expired/invalid token and verify 401.
 
 ### Known Bugs / Stability Risks
 
-None identified.
+- [MUST HAVE - Resolved 2026-05-29] "Hardcoded Fallback JWT Secrets": The application used a fallback string when JWT_SECRET was missing. Resolved by removing all fallback secrets and adding a synchronous startup validation crash when JWT_SECRET is unset.
+- [MUST HAVE - Resolved 2026-05-29] "Brute-Force vulnerability on authentication endpoints": Endpoints had no rate limiting, leaving them open to automated attacks. Resolved by applying express-rate-limit middleware on registration, login, forgot-password, reset-password, and booking endpoints.
+- [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId casting crashes": Passing non-hexadecimal 24-character strings as parameters caused internal mongoose cast errors. Resolved by introducing validationMiddleware checking MongoDB ObjectId format on all parameterized requests.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Logged security hardening checks (JWT secret verification, rate limiting, and parameter verification). |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 | 2026-05-26 | Agent | Added startup profile sync requirement to prevent stale client-side role and user state. |
 
 ### Status
-`Generic Blueprint`
+`Complete`
 
 ### Last Updated
-2026-05-26
+2026-05-29
 
 ---
 
@@ -1397,20 +1400,23 @@ Disabled — within 500ms])
 
 ### Known Bugs / Stability Risks
 
-None identified.
+- [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId casting crashes on booking API": Endpoints accepted invalid MongoDB ObjectIds which caused unhandled Mongoose CastError exceptions. Resolved by introducing parameter ObjectId validation on booking status, rate, and availability checks.
+- [MUST HAVE - Resolved 2026-05-29] "Brute-Force booking creation": Client booking endpoint was vulnerable to automated reservation spam. Resolved by adding an API rate limiter restricting booking creation requests.
+- [MUST HAVE - Resolved 2026-05-29] "Query performance degradation on large histories": Fetching bookings lacked pagination, causing resource exhaustion when histories grew. Resolved by implementing pagination on GET /bookings with skip and limit controls.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Documented ObjectId validation, rate limiting, and query pagination fixes. |
 | 2026-05-26 | Agent | Secured bookings retrieval, status patch, and rating endpoints with JWT ownership validations. Blocked Admin from booking creators. |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 
 ### Status
-`Generic Blueprint`
+`Complete`
 
 ### Last Updated
-2026-05-26
+2026-05-29
 
 ---
 
@@ -1507,7 +1513,7 @@ No API call made])
 
 ### Acceptance Criteria
 
-* **AC C.1:** `POST /dashboard/block-slot` for a slot dated yesterday must return
+* **AC C.1:** `POST /expert-dashboard/block-slot` for a slot dated yesterday must return
   `400 Bad Request`.
 * **AC C.2:** Expert Dashboard for today's date must disable and label as "Passed" all
   slots before the current timezone clock hour.
@@ -1528,26 +1534,27 @@ No API call made])
 ### Testing Strategy
 
 - Unit: `isSlotInPast()` edge cases: exact current minute boundary; yesterday; tomorrow.
-- Integration: `POST /block-slot` for yesterday → 400; for tomorrow → 200;
+- Integration: `POST /expert-dashboard/block-slot` for yesterday → 400; for tomorrow → 200;
   `GET /booked-slots` → blocked slot appears in list.
 - Manual: Open Expert Dashboard, navigate to today, confirm slots before current hour
   are greyed out and non-clickable.
 
 ### Known Bugs / Stability Risks
 
-None identified.
+- [MUST HAVE - Resolved 2026-05-29] "Missing ObjectId validation on Slot Toggling": Parameterized availability updates could crash if MongoDB ObjectId formats were malformed. Resolved by mounting parameter checks in validationMiddleware.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Logged ObjectId validation checks. |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 
 ### Status
-`Generic Blueprint`
+`Complete`
 
 ### Last Updated
-2026-05-26
+2026-05-29
 
 ---
 
@@ -1681,13 +1688,14 @@ None identified.
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 
 ### Status
-`Generic Blueprint`
+`Complete`
 
 ### Last Updated
-2026-05-26
+2026-05-29
 
 ---
 
@@ -1909,12 +1917,15 @@ No new endpoints. This feature uses existing Admin Dashboard data fetches only.
 
 ### Known Bugs / Stability Risks
 
+- [MUST HAVE - Resolved 2026-05-29] "Regular Expression Denial of Service (ReDoS) Vulnerability": Untrusted user input was passed directly into RegExp constructors in expert name search queries. Resolved by escaping special regex characters and capping the query length to 100 characters.
+- [MUST HAVE - Resolved 2026-05-29] "Query performance degradation on large dashboard tables": Fetching admin listings lacked pagination, causing heavy memory pressure. Resolved by implementing pagination with page/limit constraints on admin endpoints.
 - [MUST HAVE - Resolved 2026-05-27] Admin Booking Manager did not reliably find bookings by client email when the booking response depended on the populated `user` reference rather than the denormalized `userEmail` field. Resolved by populating the booking client user in the admin bookings API and adding frontend fallback search/display paths.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Documented ReDoS protection and administrative pagination query parameter logic. |
 | 2026-05-27 | Agent | Initial spec created and marked complete for local Admin Dashboard search across users, bookings, and experts. |
 | 2026-05-27 | Agent | Fixed Booking Manager client email search to support populated client user fallback fields. |
 
@@ -1922,7 +1933,7 @@ No new endpoints. This feature uses existing Admin Dashboard data fetches only.
 `Complete`
 
 ### Last Updated
-2026-05-27
+2026-05-29
 
 ---
 
@@ -2599,18 +2610,20 @@ Adds a secure, self-service "Forgot Password" capability allowing Clients and Ex
 - **Manual**: Trigger link request on login page, click ethereal email preview reset link, update credentials and check auto-login.
 
 ### Known Bugs / Stability Risks
-- None identified.
+- [MUST HAVE - Resolved 2026-05-29] "Hardcoded Fallback JWT Secrets in Reset-Password token generation": Reset-password routes relied on hardcoded fallbacks if JWT_SECRET was missing. Resolved by removing all fallback keys and validation at start.
+- [MUST HAVE - Resolved 2026-05-29] "Brute-Force vulnerability on password recovery": No rate limiting was enforced on forgot/reset-password endpoints. Resolved by applying rate limiter restriction on auth recovery endpoints.
 
 ### Spec Change Log
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Logged password reset security hardening (removed fallbacks, added rate limits). |
 | 2026-05-28 | Agent | Created detailed specification for Password Recovery & Auto-Login. |
 
 ### Status
 `Complete`
 
 ### Last Updated
-2026-05-28
+2026-05-29
 
 ---
 
@@ -2666,11 +2679,13 @@ Provides real-time chat messaging and notification capabilities for Clients and 
 - Manual: Log in as client, verify icons; log out, verify hidden.
 
 ### Known Bugs / Stability Risks
-None identified.
+- [MUST HAVE - Resolved 2026-05-29] "Missing ObjectId validation on Chat endpoints": Parameters such as bookingId were not validated as ObjectIds, causing mongoose CastErrors on lookup. Resolved by validating all path parameters using validationMiddleware.
+- [MUST HAVE - Resolved 2026-05-29] "Resource exhaustion via notifications query": Retrieving user notifications fetched the entire collection, risking high load. Resolved by capping query notification outputs to a maximum of 50 items.
 
 ### Spec Change Log
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Logged backend API stability fixes including parameter validations and notification query caps. |
 | 2026-05-29 | Agent | Initial spec for UI implementation. |
 
 ### Status
@@ -2746,10 +2761,13 @@ Clients and Experts
 - [MUST HAVE - Resolved 2026-05-29] "Mis-scoped Socket Listeners": Incoming messages ignored when not looking at a chat due to conditionally mounted listeners. Fixed by elevating listener to global component scope.
 - [MUST HAVE - Resolved 2026-05-29] "Destructive Event Listener Cleanup": Using `socket.off('event')` destroyed global listeners. Fixed by passing exact named function references to `socket.off`.
 - [MUST HAVE - Resolved 2026-05-29] "Silent Reconnections": Socket.io reconnects did not rejoin backend rooms. Fixed by adding `socket.on('connect', joinLogic)`.
+- [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId parameters": Missing checks on message routes led to CastErrors. Resolved by validationMiddleware checks.
+- [MUST HAVE - Resolved 2026-05-29] "Notification memory bloat": Uncapped notification fetch query. Resolved by capping returned items at 50.
 
 ### Spec Change Log
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-29 | Agent | Logged backend API stability fixes including parameter validations and notification query caps. |
 | 2026-05-29 | Agent | Initial spec for Messaging and Notification implementation. |
 | 2026-05-29 | Agent | Logged resolution of structural UI and WebSocket listener bugs. |
 
