@@ -10,6 +10,8 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-29
+
 ### Added
 
 - Added Real-Time Messaging and Notification feature allowing private, booking-bounded chats between Clients and Experts.
@@ -134,6 +136,7 @@ Changelog policy, workflow, and SOP are maintained in
 - Enforced database-level active booking uniqueness so cancelled and late-cancelled sessions
   release slots without allowing duplicate active bookings.
 
-[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/pradip9096/SkillSync/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/pradip9096/SkillSync/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/pradip9096/SkillSync/releases/tag/v1.0.0
