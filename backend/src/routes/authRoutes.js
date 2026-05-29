@@ -7,14 +7,21 @@
 
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { registerUser, loginUser, getUserProfile, updateUserProfile, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit each IP to 15 attempts per 15 minutes
+  message: { success: false, error: 'Too many authentication attempts from this IP. Please try again after 15 minutes.' }
+});
+
 // Route mapping for credentials-based authentication
-router.post('/register', registerUser);
-router.post('/login', loginUser);
-router.post('/forgot-password', forgotPassword);
-router.put('/reset-password/:token', resetPassword);
+router.post('/register', authRateLimiter, registerUser);
+router.post('/login', authRateLimiter, loginUser);
+router.post('/forgot-password', authRateLimiter, forgotPassword);
+router.put('/reset-password/:token', authRateLimiter, resetPassword);
 
 // User profile endpoints
 router.get('/profile', protect, getUserProfile);

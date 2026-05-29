@@ -29,7 +29,8 @@ const getExperts = async (req, res) => {
      * to find experts whose names contain the string.
      */
     if (search) {
-      query.name = { $regex: search, $options: 'i' };
+      const safeSearch = String(search).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.name = { $regex: safeSearch, $options: 'i' };
     }
 
     /**
@@ -40,26 +41,24 @@ const getExperts = async (req, res) => {
       query.category = category;
     }
 
-    /**
-     * Pagination logic:
-     * Calculate how many documents to 'skip' based on the current page and limit.
-     */
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(Math.max(1, parseInt(limit) || 10), 100);
+    const skip = (pageNum - 1) * limitNum;
     
     // Execute query with limit, skip, and sort (newest first)
     const experts = await Expert.find(query)
-      .limit(Number(limit))
+      .limit(limitNum)
       .skip(skip)
       .sort({ createdAt: -1 });
-
+ 
     // Get total count of documents matching the query for pagination info
     const total = await Expert.countDocuments(query);
-
+ 
     res.status(200).json({
       success: true,
       count: experts.length,
       total,
-      pages: Math.ceil(total / limit),
+      pages: Math.ceil(total / limitNum),
       data: experts
     });
   } catch (error) {

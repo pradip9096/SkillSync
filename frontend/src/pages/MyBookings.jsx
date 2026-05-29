@@ -43,6 +43,7 @@ const MyBookings = () => {
   const [ratingValue, setRatingValue] = useState(5);
   const [commentValue, setCommentValue] = useState('');
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, bookingId: null, isLate: false });
 
   useEffect(() => {
     const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -75,23 +76,13 @@ const MyBookings = () => {
     return sessionMs > nowMs && (sessionMs - nowMs) <= twoHoursInMs;
   };
 
-  const handleCancelClick = async (booking) => {
+  const handleCancelClick = (booking) => {
     const isWithinTwo = isWithinTwoHours(booking.bookingDate, booking.slotTime);
-    if (isWithinTwo) {
-      const confirmLate = window.confirm(
-        "Warning: This session starts in less than 2 hours. Cancelling now will be marked as a 'Late Cancellation'. Do you wish to proceed?"
-      );
-      if (confirmLate) {
-        await handleStatusUpdate(booking._id, 'Late Cancellation');
-      }
-    } else {
-      const confirmNormal = window.confirm(
-        "Are you sure you want to cancel this session?"
-      );
-      if (confirmNormal) {
-        await handleStatusUpdate(booking._id, 'Cancelled');
-      }
-    }
+    setConfirmModal({
+      isOpen: true,
+      bookingId: booking._id,
+      isLate: isWithinTwo
+    });
   };
 
   /**
@@ -490,6 +481,41 @@ const MyBookings = () => {
           </div>
         )}
       </div>
+
+      {/* Themed Confirmation Modal Overlay */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2">Cancel Session?</h3>
+            <p className="text-gray-500 mb-8 text-sm leading-relaxed">
+              {confirmModal.isLate 
+                ? "Warning: This session starts in less than 2 hours. Cancelling now will count as a 'Late Cancellation' and register a strike to your account."
+                : "Are you sure you want to cancel this session? This slot will be immediately released back to the general pool."}
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={async () => {
+                  const status = confirmModal.isLate ? 'Late Cancellation' : 'Cancelled';
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                  await handleStatusUpdate(confirmModal.bookingId, status);
+                }}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer"
+              >
+                Yes, Cancel
+              </button>
+              <button
+                onClick={() => setConfirmModal({ isOpen: false, bookingId: null, isLate: false })}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer"
+              >
+                No, Keep it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

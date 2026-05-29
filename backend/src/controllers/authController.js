@@ -18,7 +18,7 @@ const jwt = require('jsonwebtoken');
 const generateToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET || 'skillsync_fallback_jwt_secret_key_2026',
+    process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
 };
@@ -262,6 +262,9 @@ const updateUserProfile = async (req, res) => {
 
     // Update fields
     if (req.body.name !== undefined) {
+      if (req.body.name && req.body.name.length > 100) {
+        return res.status(400).json({ success: false, error: 'Name cannot exceed 100 characters' });
+      }
       user.name = req.body.name;
     }
 

@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { getExperts, getExpertById, rateExpert } = require('../controllers/expertController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateParams } = require('../middleware/validationMiddleware');
 
 /**
  * Route: GET /
@@ -22,13 +23,13 @@ router.get('/', getExperts);
  * Purpose: Retrieve detailed information for a single expert by ID.
  * Access: Public.
  */
-router.get('/:id', getExpertById);
+router.get('/:id', validateParams(['id']), getExpertById);
 
 /**
  * Route: POST /:id/rate
  * Purpose: Submit a rating for an expert and update their overall rating.
  * Access: Public.
  */
-router.post('/:id/rate', protect, rateExpert);
+router.post('/:id/rate', protect, validateParams(['id']), rateExpert);
 
 module.exports = router;

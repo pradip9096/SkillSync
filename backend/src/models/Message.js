@@ -22,6 +22,7 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 5000,
     },
     read: {
       type: Boolean,

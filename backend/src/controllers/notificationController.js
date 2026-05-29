@@ -5,7 +5,9 @@ const Notification = require('../models/Notification');
  */
 exports.getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const notifications = await Notification.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
     res.status(200).json(notifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);

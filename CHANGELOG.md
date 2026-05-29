@@ -10,6 +10,27 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+### Added
+
+- Added cursor-based message pagination support on both backend and frontend to optimize bandwidth and UI performance for long chat histories.
+- Added parameter-level database validator middleware to reject malformed MongoDB ObjectIds, preventing application exceptions from bubbling up as server errors.
+
+### Changed
+
+- Changed frontend dialog interactions in `MyBookings` and `ExpertDetail` by replacing native browser alerts and confirmations with custom, state-driven themed React modals.
+- Enabled pagination support for Admin lists (all users and bookings) and user booking history queries to improve database scale-breaking behavior.
+
+### Fixed
+
+- Sanitized search query parameters using input regex escapes to eliminate Regular Expression Denial of Service (ReDoS) vulnerability.
+- Enforced strict character length validation limits on user-supplied strings including name, profile descriptions, and image URLs.
+- Removed redundant inline token decoding logic in the booking controller, aligning authorization boundaries with standard route middleware.
+
+### Security
+
+- Secured WebSocket and endpoint JWT authentication by removing hardcoded fallback secrets and adding strict runtime environment assertions.
+- Implemented rate limiting boundaries for registration, login, forgot-password, reset-password, and booking creation endpoints.
+
 ## [1.1.1] - 2026-05-29
 
 ### Fixed

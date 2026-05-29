@@ -53,6 +53,7 @@ const ExpertDetail = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
 
   // Lightbox state
   const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed, number = open at that index
@@ -226,6 +227,7 @@ const ExpertDetail = () => {
 
     try {
       setIsSubmitting(true);
+      setBookingError(null);
       // Construct payload, strip any non-digits, and prepend +91 prefix
       let phoneClean = formData.userPhone.replace(/\D/g, '');
       if (phoneClean && !phoneClean.startsWith('+91')) {
@@ -248,7 +250,7 @@ const ExpertDetail = () => {
       // Redirect to history page after a brief delay
       setTimeout(() => navigate('/my-bookings'), 3000);
     } catch (err) {
-      alert(err.response?.data?.error || 'Booking failed');
+      setBookingError(err.response?.data?.error || 'Booking failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -507,6 +509,12 @@ const ExpertDetail = () => {
             </div>
           ) : (
             <form onSubmit={handleBooking} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
+              {bookingError && (
+                <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
+                  <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+                  <p className="font-bold text-sm">{bookingError}</p>
+                </div>
+              )}
               <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                 <User className="w-8 h-8 text-blue-600" /> Guest Information
               </h2>

@@ -20,6 +20,12 @@ const connectDB = require('./config/db');
 // Load environment variables from .env file
 dotenv.config();
 
+// Assert critical environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('CRITICAL ERROR: JWT_SECRET environment variable is not defined.');
+  process.exit(1);
+}
+
 /** 
  * @type {express.Application} 
  * Express application instance
@@ -87,12 +93,35 @@ io.on('connection', (socket) => {
   /**
    * join_booking_room event
    * Allows clients and experts to join a private chat room for a specific booking.
+   * Authorized users only (must be part of the booking).
    * 
    * @param {string} bookingId - The ID of the booking room to join
    */
-  socket.on('join_booking_room', (bookingId) => {
-    socket.join(`booking_${bookingId}`);
-    console.log(`User joined chat room for booking: ${bookingId}`);
+  socket.on('join_booking_room', async (bookingId) => {
+    try {
+      const Booking = require('./models/Booking');
+      const booking = await Booking.findById(bookingId).populate('expert');
+      if (!booking) return;
+
+      const isClient = booking.user && booking.user.toString() === socket.userId;
+      const isExpert = booking.expert && booking.expert.user && booking.expert.user.toString() === socket.userId;
+
+      if (isClient || isExpert) {
+        socket.join(`booking_${bookingId}`);
+        console.log(`User joined chat room for booking: ${bookingId}`);
+      }
+    } catch (error) {
+      console.error('Error joining booking room:', error);
+    }
+  });
+
+  /**
+   * leave_booking_room event
+   * Allows clients and experts to leave a private chat room.
+   */
+  socket.on('leave_booking_room', (bookingId) => {
+    socket.leave(`booking_${bookingId}`);
+    console.log(`User left chat room for booking: ${bookingId}`);
   });
 
   /**
@@ -104,6 +133,17 @@ io.on('connection', (socket) => {
       socket.join(`user_${userId}`);
       console.log(`User joined global room: ${userId}`);
     }
+  });
+
+  /**
+   * Typing indicators
+   */
+  socket.on('typing', (bookingId) => {
+    socket.to(`booking_${bookingId}`).emit('typing', socket.userId);
+  });
+
+  socket.on('stop_typing', (bookingId) => {
+    socket.to(`booking_${bookingId}`).emit('stop_typing', socket.userId);
   });
 
   // Handle client disconnection

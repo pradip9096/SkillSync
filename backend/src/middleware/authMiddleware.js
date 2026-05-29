@@ -26,7 +26,7 @@ const protect = async (req, res, next) => {
       // Decode/Verify token
       const decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || 'skillsync_fallback_jwt_secret_key_2026'
+        process.env.JWT_SECRET
       );
 
       // Fetch user from DB and attach to req.user (excluding password hash)

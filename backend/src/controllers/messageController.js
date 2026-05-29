@@ -1,5 +1,6 @@
 const Message = require('../models/Message');
 const Booking = require('../models/Booking');
+const mongoose = require('mongoose');
 
 /**
  * Fetch all messages for a specific booking.
@@ -8,6 +9,7 @@ const Booking = require('../models/Booking');
 exports.getMessagesByBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
+    const { before, limit = 50 } = req.query;
     
     // Fetch booking to verify participation
     const booking = await Booking.findById(bookingId).populate('expert');
@@ -22,7 +24,18 @@ exports.getMessagesByBooking = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to view these messages' });
     }
 
-    const messages = await Message.find({ bookingId }).sort({ createdAt: 1 });
+    const query = { bookingId };
+    if (before) {
+      query._id = { $lt: before };
+    }
+
+    const messages = await Message.find(query)
+      .sort({ _id: -1 })
+      .limit(parseInt(limit));
+
+    // Reverse to chronological order for the chat UI
+    messages.reverse();
+
     res.status(200).json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -40,6 +53,14 @@ exports.sendMessage = async (req, res) => {
 
     if (!bookingId || !receiverId || !content) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId) || !mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ message: 'Invalid ID format' });
+    }
+
+    if (content.length > 5000) {
+      return res.status(400).json({ message: 'Message content exceeds 5000 characters limit' });
     }
 
     // Verify participation
@@ -99,6 +120,19 @@ exports.markMessagesAsRead = async (req, res) => {
   try {
     const { bookingId } = req.params;
     
+    // Verify participation
+    const booking = await Booking.findById(bookingId).populate('expert');
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const isClient = booking.user && booking.user.toString() === req.user._id.toString();
+    const isExpert = booking.expert && booking.expert.user && booking.expert.user.toString() === req.user._id.toString();
+
+    if (!isClient && !isExpert) {
+      return res.status(403).json({ message: 'Not authorized to modify messages for this booking' });
+    }
+
     await Message.updateMany(
       { bookingId, receiver: req.user._id, read: false },
       { $set: { read: true } }
@@ -150,16 +184,18 @@ exports.getUniqueConversations = async (req, res) => {
         .sort({ createdAt: -1 });
     }
 
-    // 2. Format the conversations array
+    // 2. Format the conversations array and optimize Message fetch
     const formatted = [];
+    const bookingIds = bookings.map(b => b._id);
     
-    // Use a Map to keep only one chat per unique user? Or one chat per booking?
-    // The previous implementation grouped by otherUser. Let's group by otherUser to keep it simple,
-    // or group by bookingId. The UI expects conv._id to be bookingId, and activeChat is a specific booking.
-    // Let's create a conversation item for each distinct booking.
+    const lastMessagesAgg = await Message.aggregate([
+      { $match: { bookingId: { $in: bookingIds } } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: '$bookingId', lastMessage: { $first: '$$ROOT' } } }
+    ]);
+    const lastMessageMap = new Map(lastMessagesAgg.map(item => [item._id.toString(), item.lastMessage]));
 
     for (const booking of bookings) {
-      // Determine the "other user"
       let otherUser = null;
       if (req.user.role === 'Expert') {
         otherUser = booking.user;
@@ -169,9 +205,7 @@ exports.getUniqueConversations = async (req, res) => {
 
       if (!otherUser) continue;
 
-      // Fetch the last message for this booking
-      const lastMessage = await Message.findOne({ bookingId: booking._id })
-        .sort({ createdAt: -1 });
+      const lastMessage = lastMessageMap.get(booking._id.toString()) || null;
 
       formatted.push({
         _id: booking._id,
@@ -180,21 +214,11 @@ exports.getUniqueConversations = async (req, res) => {
           name: otherUser.name || booking.userName, // Fallback for clients
           email: otherUser.email
         },
-        lastMessage: lastMessage || null
+        lastMessage: lastMessage
       });
     }
 
-    // Optionally deduplicate by otherUser if we only want 1 chat thread per person.
-    // The previous logic grouped by otherUser, but the chat was still tied to a specific bookingId.
-    // If we group by otherUser, we should use the most recent booking.
-    const uniqueMap = new Map();
-    for (const conv of formatted) {
-      if (!uniqueMap.has(conv.otherUser._id.toString())) {
-        uniqueMap.set(conv.otherUser._id.toString(), conv);
-      }
-    }
-
-    res.status(200).json(Array.from(uniqueMap.values()));
+    res.status(200).json(formatted);
   } catch (error) {
     console.error('Error fetching conversations:', error);
     res.status(500).json({ message: 'Server Error' });

@@ -105,9 +105,21 @@ const updateExpertProfile = async (req, res) => {
       expert.hourlyRate = rate;
     }
     if (req.body.description !== undefined) {
+      if (req.body.description && req.body.description.length > 5000) {
+        return res.status(400).json({
+          success: false,
+          error: 'Description cannot exceed 5000 characters'
+        });
+      }
       expert.description = req.body.description;
     }
     if (req.body.profileImage !== undefined) {
+      if (req.body.profileImage && req.body.profileImage.length > 1000) {
+        return res.status(400).json({
+          success: false,
+          error: 'Profile image URL cannot exceed 1000 characters'
+        });
+      }
       expert.profileImage = req.body.profileImage;
     }
 

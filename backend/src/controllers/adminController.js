@@ -20,10 +20,24 @@ const Booking = require('../models/Booking');
  */
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    const users = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await User.countDocuments({});
+
     res.status(200).json({
       success: true,
       count: users.length,
+      total,
+      pages: Math.ceil(total / limitNum),
       data: users
     });
   } catch (error) {
@@ -41,6 +55,11 @@ const getAllUsers = async (req, res) => {
  */
 const getAllBookings = async (req, res) => {
   try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (pageNum - 1) * limitNum;
+
     const bookings = await Booking.find({})
       .populate('user', 'name email phone')
       .populate({
@@ -51,10 +70,17 @@ const getAllBookings = async (req, res) => {
           select: 'email'
         }
       })
-      .sort({ bookingDate: -1, slotTime: -1 });
+      .sort({ bookingDate: -1, slotTime: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await Booking.countDocuments({});
+
     res.status(200).json({
       success: true,
       count: bookings.length,
+      total,
+      pages: Math.ceil(total / limitNum),
       data: bookings
     });
   } catch (error) {

@@ -20,6 +20,7 @@ const {
   resetUserPenalties
 } = require('../controllers/adminController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
+const { validateParams } = require('../middleware/validationMiddleware');
 
 // Secure all routes inside this file to Admin role only
 router.use(protect);
@@ -27,15 +28,15 @@ router.use(restrictTo('Admin'));
 
 // User accounts management
 router.get('/users', getAllUsers);
-router.post('/users/:id/reset-penalties', resetUserPenalties);
+router.post('/users/:id/reset-penalties', validateParams(['id']), resetUserPenalties);
 
 // Bookings management
 router.get('/bookings', getAllBookings);
-router.patch('/bookings/:id/status', updateBookingStatusByAdmin);
-router.delete('/bookings/:id', deleteBookingByAdmin);
+router.patch('/bookings/:id/status', validateParams(['id']), updateBookingStatusByAdmin);
+router.delete('/bookings/:id', validateParams(['id']), deleteBookingByAdmin);
 
 // Experts management
 router.post('/experts', createExpertByAdmin);
-router.delete('/experts/:id', deleteExpertByAdmin);
+router.delete('/experts/:id', validateParams(['id']), deleteExpertByAdmin);
 
 module.exports = router;

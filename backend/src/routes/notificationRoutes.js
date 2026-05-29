@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getNotifications, markAsRead, markAllAsRead, getUnreadCount } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateParams } = require('../middleware/validationMiddleware');
 
 // All notification routes require authentication
 router.use(protect);
@@ -9,6 +10,6 @@ router.use(protect);
 router.get('/', getNotifications);
 router.get('/unread-count', getUnreadCount);
 router.patch('/read-all', markAllAsRead);
-router.patch('/:id/read', markAsRead);
+router.patch('/:id/read', validateParams(['id']), markAsRead);
 
 module.exports = router;

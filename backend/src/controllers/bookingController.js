@@ -22,25 +22,14 @@ const { scheduleSessionReminders, cancelScheduledReminders } = require('../servi
 const createBooking = async (req, res) => {
   try {
     const { expert, userName, userEmail, userPhone, bookingDate, slotTime, notes } = req.body;
+    const mongoose = require('mongoose');
+    if (!expert || !mongoose.Types.ObjectId.isValid(expert)) {
+      return res.status(400).json({ success: false, error: 'Invalid or missing expert identifier' });
+    }
 
-    // Check for authenticated user from req.user or parse JWT from header
+    // Check for authenticated user from req.user
     let userRef = null;
     let authUser = req.user;
-
-    if (!authUser && req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      try {
-        const token = req.headers.authorization.split(' ')[1];
-        const jwt = require('jsonwebtoken');
-        const User = require('../models/User');
-        const decoded = jwt.verify(
-          token,
-          process.env.JWT_SECRET || 'skillsync_fallback_jwt_secret_key_2026'
-        );
-        authUser = await User.findById(decoded.id).select('-password');
-      } catch (err) {
-        console.error('Manual auth parsing in createBooking failed:', err.message);
-      }
-    }
 
     if (authUser) {
       userRef = authUser._id;
@@ -220,7 +209,7 @@ const createBooking = async (req, res) => {
  */
 const getBookingsByEmail = async (req, res) => {
   try {
-    const { email } = req.query;
+    const { email, page = 1, limit = 20 } = req.query;
     
     // Email is required to filter bookings
     if (!email) {
@@ -235,15 +224,29 @@ const getBookingsByEmail = async (req, res) => {
       });
     }
 
-    // Find bookings and populate expert details for the frontend to display
-    const bookings = await Booking.find({ 
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    const query = { 
       userEmail: email,
       notes: { $ne: 'Blocked by Expert' }
-    }).populate('expert', 'name category');
+    };
+
+    // Find bookings and populate expert details for the frontend to display
+    const bookings = await Booking.find(query)
+      .populate('expert', 'name category')
+      .sort({ bookingDate: -1, slotTime: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await Booking.countDocuments(query);
 
     res.status(200).json({
       success: true,
       count: bookings.length,
+      total,
+      pages: Math.ceil(total / limitNum),
       data: bookings
     });
   } catch (error) {

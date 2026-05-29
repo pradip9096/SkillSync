@@ -203,7 +203,11 @@ export const fetchExpertDashboardAnalytics = () => API.get('/expert-dashboard/an
 
 // --- Messaging APIs ---
 export const fetchConversations = () => API.get('/messages/conversations');
-export const fetchMessages = (bookingId) => API.get(`/messages/booking/${bookingId}`);
+export const fetchMessages = (bookingId, before) => {
+  let url = `/messages/booking/${bookingId}`;
+  if (before) url += `?before=${before}`;
+  return API.get(url);
+};
 export const sendMessage = (messageData) => API.post('/messages', messageData);
 export const markMessagesAsRead = (bookingId) => API.patch(`/messages/booking/${bookingId}/read`);
 export const fetchUnreadMessageCount = () => API.get('/messages/unread-count');
