@@ -580,9 +580,16 @@ const ExpertDetail = () => {
           ) : (
             <form onSubmit={handleBooking} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
               {bookingError && (
-                <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
-                  <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
-                  <p className="font-bold text-sm">{bookingError}</p>
+                <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex flex-col gap-2 animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+                    <p className="font-bold text-sm">{bookingError}</p>
+                  </div>
+                  {(bookingError.toLowerCase().includes('payment') || bookingError.toLowerCase().includes('sdk') || bookingError.toLowerCase().includes('failed') || bookingError.toLowerCase().includes('cancelled')) && (
+                    <div className="mt-1 pl-9 border-t border-red-100/60 pt-2 text-xs text-red-600/80 font-medium">
+                      💡 <strong>Brave / Adblocker Tip:</strong> If the checkout modal does not open, hangs, or fails, please turn off Brave Shields (by clicking the orange lion icon in the address bar) or temporarily pause your adblocker. Privacy-oriented extensions block Razorpay's critical security and fraud detection dependencies (like <code>sardine.ai</code> and <code>lumberjack</code>), which blocks checkout completion.
+                    </div>
+                  )}
                 </div>
               )}
               <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
