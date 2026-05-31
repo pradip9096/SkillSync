@@ -182,8 +182,8 @@ export const forgotPassword = (email) => API.post('/auth/forgot-password', { ema
 export const resetPassword = (token, password) => API.put(`/auth/reset-password/${token}`, { password });
 
 // --- Admin Dashboard APIs ---
-export const adminFetchUsers = () => API.get('/admin/users');
-export const adminFetchBookings = () => API.get('/admin/bookings');
+export const adminFetchUsers = (page = 1, limit = 20) => API.get('/admin/users', { params: { page, limit } });
+export const adminFetchBookings = (page = 1, limit = 20) => API.get('/admin/bookings', { params: { page, limit } });
 export const adminUpdateBookingStatus = (id, status) => API.patch(`/admin/bookings/${id}/status`, { status });
 export const adminDeleteBooking = (id) => API.delete(`/admin/bookings/${id}`);
 export const adminCreateExpert = (expertData) => API.post('/admin/experts', expertData);
@@ -191,7 +191,7 @@ export const adminDeleteExpert = (id) => API.delete(`/admin/experts/${id}`);
 export const adminResetPenalties = (id) => API.post(`/admin/users/${id}/reset-penalties`);
 
 // --- Expert Dashboard APIs ---
-export const fetchExpertDashboardBookings = () => API.get('/expert-dashboard/bookings');
+export const fetchExpertDashboardBookings = (page = 1, limit = 20) => API.get('/expert-dashboard/bookings', { params: { page, limit } });
 export const fetchExpertDashboardProfile = () => API.get('/expert-dashboard/profile');
 export const updateExpertDashboardProfile = (profileData) => API.put('/expert-dashboard/profile', profileData);
 export const expertBlockSlot = (bookingDate, slotTime) => API.post('/expert-dashboard/block-slot', { bookingDate, slotTime });

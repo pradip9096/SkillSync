@@ -85,6 +85,8 @@ const ExpertDashboard = () => {
   const [expertId, setExpertId] = useState(null);
   const [expertProfile, setExpertProfile] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [bookingPage, setBookingPage] = useState(1);
+  const [bookingTotalPages, setBookingTotalPages] = useState(1);
   const [bookedSlotsList, setBookedSlotsList] = useState([]);
 
   // Availability calendar date selector
@@ -155,9 +157,10 @@ const ExpertDashboard = () => {
   // Fetch bookings (client appointments)
   const loadBookings = useCallback(async () => {
     try {
-      const { data } = await fetchExpertDashboardBookings();
+      const { data } = await fetchExpertDashboardBookings(bookingPage, 20);
       if (data && data.data) {
         setBookings(data.data);
+        setBookingTotalPages(data.pages || 1);
       }
     } catch (err) {
       console.error(err);
@@ -175,7 +178,7 @@ const ExpertDashboard = () => {
       setLoading(false);
     };
     init();
-  }, [loadProfile, loadBookings]);
+  }, [loadProfile, loadBookings, bookingPage]);
 
   // Fetch booked slots for the calendar availability grid
   const loadBookedSlots = useCallback(async () => {
@@ -709,6 +712,24 @@ const ExpertDashboard = () => {
                   <p className="text-gray-400 font-bold">No client sessions registered yet.</p>
                 </div>
               )}
+            </div>
+            
+            <div className="flex justify-between items-center mt-6">
+              <button
+                onClick={() => setBookingPage(p => Math.max(1, p - 1))}
+                disabled={bookingPage === 1}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-gray-600 font-medium">Page {bookingPage} of {bookingTotalPages}</span>
+              <button
+                onClick={() => setBookingPage(p => Math.min(bookingTotalPages, p + 1))}
+                disabled={bookingPage === bookingTotalPages || bookingTotalPages === 0}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Next
+              </button>
             </div>
           )}
 

@@ -61,7 +61,11 @@ const AdminDashboard = () => {
 
   // Backend state lists
   const [users, setUsers] = useState([]);
+  const [userPage, setUserPage] = useState(1);
+  const [userTotalPages, setUserTotalPages] = useState(1);
   const [bookings, setBookings] = useState([]);
+  const [bookingPage, setBookingPage] = useState(1);
+  const [bookingTotalPages, setBookingTotalPages] = useState(1);
   const [experts, setExperts] = useState([]);
 
   // UI state
@@ -103,12 +107,14 @@ const AdminDashboard = () => {
       setErrorMsg('');
       
       if (activeTab === 'users') {
-        const { data } = await adminFetchUsers();
+        const { data } = await adminFetchUsers(userPage, 20);
         const filteredUsers = (data.data || []).filter(u => u.role !== 'Admin');
         setUsers(filteredUsers);
+        setUserTotalPages(data.pages || 1);
       } else if (activeTab === 'bookings') {
-        const { data } = await adminFetchBookings();
+        const { data } = await adminFetchBookings(bookingPage, 20);
         setBookings(data.data);
+        setBookingTotalPages(data.pages || 1);
       } else if (activeTab === 'experts') {
         // We fetch users and filter by expert role or fetch experts list. 
         // Let's call adminFetchUsers first to populate, and get experts.
@@ -131,7 +137,7 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, fetchAllExpertsPublicly]);
+  }, [activeTab, userPage, bookingPage, fetchAllExpertsPublicly]);
 
   // Fetch initial data based on active tab
   useEffect(() => {
@@ -550,6 +556,23 @@ const AdminDashboard = () => {
                       <p className="text-center text-gray-400 py-10">No users found matching search criteria.</p>
                     )}
                   </div>
+                  <div className="flex justify-between items-center mt-6">
+                    <button
+                      onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                      disabled={userPage === 1}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-gray-600 font-medium">Page {userPage} of {userTotalPages}</span>
+                    <button
+                      onClick={() => setUserPage(p => Math.min(userTotalPages, p + 1))}
+                      disabled={userPage === userTotalPages || userTotalPages === 0}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -636,6 +659,23 @@ const AdminDashboard = () => {
                     {filteredBookings.length === 0 && (
                       <p className="text-center text-gray-400 py-10">No bookings matching criteria found.</p>
                     )}
+                  </div>
+                  <div className="flex justify-between items-center mt-6">
+                    <button
+                      onClick={() => setBookingPage(p => Math.max(1, p - 1))}
+                      disabled={bookingPage === 1}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-gray-600 font-medium">Page {bookingPage} of {bookingTotalPages}</span>
+                    <button
+                      onClick={() => setBookingPage(p => Math.min(bookingTotalPages, p + 1))}
+                      disabled={bookingPage === bookingTotalPages || bookingTotalPages === 0}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               )}

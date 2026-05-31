@@ -30,14 +30,25 @@ const getExpertBookings = async (req, res) => {
       });
     }
 
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (pageNum - 1) * limitNum;
+
     // Find all bookings associated with this expert
     const bookings = await Booking.find({ expert: expert._id })
       .populate('user', 'name email phone rating numReviews')
-      .sort({ bookingDate: -1, slotTime: -1 });
+      .sort({ bookingDate: -1, slotTime: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await Booking.countDocuments({ expert: expert._id });
 
     res.status(200).json({
       success: true,
       count: bookings.length,
+      total,
+      pages: Math.ceil(total / limitNum),
       data: bookings
     });
   } catch (error) {
