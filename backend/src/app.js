@@ -45,16 +45,22 @@ const app = express();
  */
 const server = http.createServer(app);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean);
+
 /**
  * Socket.io initialization
  * Handles real-time communication between the client and server.
- * CORS is configured to allow all origins for development purposes.
+ * CORS is configured to allow frontend origins.
  * 
  * @type {Server}
  */
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PATCH"],
     credentials: true
   }
@@ -167,7 +173,7 @@ app.use(mongoSanitize());
 
 // Middleware for CORS - strict origin
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -180,9 +186,6 @@ app.use(express.json({
     }
   }
 }));
-
-// Middleware: Enable Cross-Origin Resource Sharing (CORS) for all routes
-app.use(cors());
 
 /**
  * Basic Route
