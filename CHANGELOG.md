@@ -10,6 +10,21 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+### Added
+
+- Added automated Razorpay refund check and log dispatch to the background abandoned-booking cancellation job to gracefully handle dropped payment webhooks.
+
+### Changed
+
+- Changed Admin and Expert dashboard data fetching to use server-side pagination to prevent memory exhaustion bottlenecks on large datasets.
+- Changed guest booking form inputs to explicitly enforce database field `maxLength` properties on the client side.
+
+### Fixed
+
+- Fixed messaging UI crash caused by unhandled `.map()` operations by injecting fallback array chaining.
+- Fixed guest checkout double-booking risks by completely resetting the UI form state and inputs upon a successful booking redirection.
+- Fixed `cancel-abandoned-booking` Agenda scheduler failing silently on database errors by enforcing exception-throws and utilizing Agenda's native exponential backoff retries.
+
 ## [1.5.0] - 2026-05-31
 
 ### Added
