@@ -166,10 +166,19 @@ io.on('connection', (socket) => {
 });
 
 // Base middleware
-// Add security headers
-app.use(helmet());
-// Prevent NoSQL Injection
-app.use(mongoSanitize());
+// Add security headers (disable CORP so cross-origin frontend can read responses)
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+// Prevent NoSQL Injection (Custom wrapper for Express 5 compatibility)
+app.use((req, res, next) => {
+  ['body', 'params', 'headers', 'query'].forEach((key) => {
+    if (req[key]) {
+      mongoSanitize.sanitize(req[key]);
+    }
+  });
+  next();
+});
 
 // Middleware for CORS - strict origin
 app.use(cors({
