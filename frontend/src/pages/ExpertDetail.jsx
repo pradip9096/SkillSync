@@ -305,7 +305,9 @@ const ExpertDetail = () => {
         prefill: {
           name: booking.userName,
           email: booking.userEmail,
-          contact: booking.userPhone
+          // Razorpay v2 prefill.contact expects a bare 10-digit number (no +91 prefix).
+          // The modal handles the country selector itself. Strip the +91 if present.
+          contact: (booking.userPhone || '').replace(/^\+91/, '')
         },
         theme: {
           color: '#2563eb'
