@@ -303,9 +303,9 @@ const ExpertDetail = () => {
           }
         },
         prefill: {
-          name: formData.userName,
-          email: formData.userEmail,
-          contact: formData.userPhone
+          name: booking.userName,
+          email: booking.userEmail,
+          contact: booking.userPhone
         },
         theme: {
           color: '#2563eb'
