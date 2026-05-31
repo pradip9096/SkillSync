@@ -26,9 +26,10 @@
 * **In-Scope Features (Phase 1 MVP):** Home Page; India Specific Localization; Placeholder Images; Expert directory with pagination/search/filter; Expert profile views; Real-time slot availability broadcasting via Socket.io; Atomic booking engine (DB-level locking); Booking history tracking by email.
 * **In-Scope Features (Phase 2):** JWT Based Authentication; Role-Based Access Control (RBAC); Admin Panel; Secure User Profile Management; Expert Portal Dashboard; Prevent Expert Self-Booking; Enforce Session Completion Time-Lock; Endpoint Hardening & Ownership Verification; Availability Schema Migration (Decoupled Slot Blocking).
 * **In-Scope Features (Phase 3):** Post-session Rating & Review System; Booking Cancellation Protection time-locks (Late Cancellation and Strike/Cooldown Penalty System); Two-Sided peer-to-peer feedback loops (Experts rating Clients); Automated Email & SMS Reminders; Password Recovery & Auto-Login; Real-Time Messaging & Notifications.
-* **In-Scope Features (Phase 4 - System Resilience & Security Hardening):** Startup configuration checks (crashing if `JWT_SECRET` is unset); regex sanitization and input limits against ReDoS; parameter ObjectId verification middleware to prevent CastError server crashes; endpoint rate-limiting; page/limit query pagination; customized React modal prompts; and React error boundaries.
-* **In-Scope Features (Phase 5 - Future Development):** Offline Fallbacks (Email notifications for unread chat messages).
-* **Out-of-Scope Elements:** Payment processing and gateways; Integrated video/audio conferencing (booking handles scheduling only).
+* **In-Scope Features (Phase 4):** Startup configuration checks (crashing if `JWT_SECRET` is unset); regex sanitization and input limits against ReDoS; parameter ObjectId verification middleware to prevent CastError server crashes; endpoint rate-limiting; page/limit query pagination; customized React modal prompts; and React error boundaries.
+* **In-Scope Features (Phase 5 - Monetization & Payment Integration):** Integrated Razorpay payment gateway; client-side payment verification; transaction audit logging; idempotent booking confirmation; timing-safe webhook verification; fail-safe `payment.failed` automatic slot-release handling; and frontend checkout retry with 5-minute reservation countdown timer.
+* **In-Scope Features (Phase 6 - Future Development):** Offline Fallbacks (Email notifications for unread chat messages).
+* **Out-of-Scope Elements:** Integrated video/audio conferencing (booking handles scheduling only).
 
 ## 4. Functional Specifications & Prioritization
 | Feature | Description | Priority | Complexity |
@@ -54,6 +55,7 @@
 | **API Security Hardening** | Synchronous startup secret check, ReDoS query escaping, 100-character input limits, and endpoint rate limiting. | *Must Have (Completed)* | *Medium* |
 | **Parameter ObjectId Validation** | Validation middleware validating parameter ObjectId compatibility on path queries to prevent CastError crashes. | *Must Have (Completed)* | *Low* |
 | **Custom UX Dialog Modals** | Cohesive React modal dialog prompts replacing native browser alert and confirm interactions. | *Should Have (Completed)* | *Low* |
+| **Razorpay Payment Gateway** | Automated payment flow during booking creation, client-side signature verification, and fail-safe webhook event processing with automatic slot-release handlers. | *Must Have (Completed)* | *High* |
 
 ## 5. Agile User Stories & Acceptance Criteria
 

@@ -175,6 +175,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Automated Email & SMS Reminders](#feature-automated-email--sms-reminders) | `Complete` | SkillSync | 2026-05-28 |
 | [Password Recovery & Auto-Login](#feature-password-recovery--auto-login) | `Complete` | SkillSync | 2026-05-29 |
 | [Chat Messaging and Notifications](#feature-chat-messaging-and-notifications) | `Complete` | SkillSync | 2026-05-29 |
+| [Razorpay Payment Gateway](#feature-razorpay-payment-gateway) | `Complete` | SkillSync | 2026-05-31 |
 
 ---
 
@@ -2776,3 +2777,126 @@ Clients and Experts
 
 ### Last Updated
 2026-05-29
+
+---
+
+## Feature: Razorpay Payment Gateway
+
+### Overview
+Integrates the Razorpay payment gateway to process client payments for booking expert sessions. Bookings are initially created in a `Pending` state, and are only transitioned to `Confirmed` (enabling scheduling reminders and sending notifications) once payment is verified via cryptographic signature matching.
+
+### Functional Requirements
+
+- [MUST HAVE] The system must check slot availability and create a Booking in a `Pending` status before initiating the Razorpay checkout.
+  Rationale: Blocks the slot and prevents double-booking while the payment is in progress.
+- [MUST HAVE] The backend must generate a Razorpay order with the amount matching the expert's `hourlyRate` (converted to paise).
+  Rationale: Required by the Razorpay Checkout API to load the payment gateway.
+- [MUST HAVE] The backend must verify the payment signature using Razorpay's HMAC SHA256 signature verification method.
+  Rationale: Essential to secure the booking checkout flow and prevent fraud (bypass by manual API requests).
+- [MUST HAVE] The backend must transition the booking status to `Confirmed` and trigger reminders and confirmations only after successful signature verification.
+  Rationale: Ensures reminders/confirmations are only processed for paid bookings.
+- [MUST HAVE] The backend must log verified payments in a dedicated `PaymentLog` collections model indexing `razorpayPaymentId` as a unique key constraint.
+  Rationale: Prevents duplicate webhook event verification processing and enforces transaction idempotency.
+- [MUST HAVE] The payment gateway configuration must assert availability of `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` at server boot.
+  Rationale: Halts execution immediately to prevent silent failures in payment order creation or verification in production.
+- [MUST HAVE] The system must wrap booking creation and Razorpay order initialization in a multi-document Mongoose transaction session to ensure database atomicity on failure (avoiding orphaned `Pending` bookings).
+  Rationale: Prevents orphaned booking documents from permanently blocking expert calendars if Razorpay order creation fails.
+- [MUST HAVE] The system must automatically process payment refunds using Razorpay's refund API (`razorpay.payments.refund()`) during cancellations if the booking is `Confirmed` and the cancellation occurs more than 2 hours before the session start time (outside the late penalty window).
+  Rationale: Automates client refunds for eligible cancellations and creates a refund payment log record.
+- [SHOULD HAVE] The frontend must integrate the Razorpay Checkout SDK dynamically and display the payment modal when creating a booking.
+  Rationale: Delivers a clean, interactive user experience.
+- [SHOULD HAVE] An automated background cleanup job must cancel `Pending` bookings if the payment is not verified within 5 minutes, releasing the slot.
+  Rationale: Frees up abandoned/unpaid slots so other clients can book them.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Store Razorpay keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`) in environment variables (`backend/.env` and loaded at runtime) without hardcoding them.
+  Rationale: Adheres to security and configuration best practices.
+- [MUST HAVE] Perform the signature verification check on the backend before completing any booking or releasing reminders.
+  Rationale: Essential security boundary to prevent client-side payment forgery.
+- [MUST HAVE] Verification endpoints and webhooks must utilize constant-time cryptographic comparison `crypto.timingSafeEqual` for signature comparisons, enforcing identical buffer lengths before comparison.
+  Rationale: Protects signature checks against timing side-channel attacks and prevents Node process crashes from mismatched buffer sizes.
+
+### User Interaction Flow
+
+```
+[Client] -> Clicks "Book" on Slot -> [System creates Booking (Pending) & Razorpay Order]
+  |-- Success --> Opens Razorpay modal -> Client completes payment -> [System verifies signature & Confirms booking] -> Success screen
+  |-- Dismiss/Cancel Modal --> [System shows warning toast + keeps client on form to retry payment]
+  |-- Verification Failure --> Displays error toast + leaves booking Pending
+```
+
+### API Specifications
+
+* `POST /bookings` (Modified)
+  Input: `{ expert: ObjectId, bookingDate: String, slotTime: String, userName: String, userEmail: String, userPhone: String, notes: String }`
+  Validation: Standard slot check, self-booking check, active booking check, rate limiting check.
+  Output: `{ success: true, booking: Booking, razorpayOrderId: String, amount: Number, keyId: String }`
+  Auth: Private (Client role)
+
+* `POST /bookings/verify-payment` (New)
+  Input: `{ bookingId: ObjectId, razorpayPaymentId: String, razorpayOrderId: String, razorpaySignature: String }`
+  Validation: Cryptographic signature verification check.
+  Output: `{ success: true, data: Booking }`
+  Auth: Private (Client role)
+
+* `POST /bookings/webhook` (New Webhook Endpoint)
+  Input: `{ event: String, payload: Object }` (Headers: `x-razorpay-signature`)
+  Validation: Cryptographic webhook signature check.
+  Output: `{ success: true }`
+  Auth: External verification (HMAC signature check)
+
+### Edge Cases
+
+- When a client closes the payment modal, the booking remains in `Pending` state. The client can re-try checkout or the booking is eventually auto-deleted by the 5-minute cleanup job.
+- When two concurrent users try to book the same slot, MongoDB's compound index on active bookings will cause the second transaction to fail with a `400 Bad Request`.
+
+### Best Practices
+
+* Use Razorpay's native SDK library for signature verification (`crypto` HMAC module or library).
+* Standardize pricing units by converting expert `hourlyRate` directly to paise (amount * 100) using integer math.
+
+### Acceptance Criteria
+
+* **AC 21.1:** Creating a booking returns a `razorpayOrderId` and initializes the Booking document in `Pending` state.
+* **AC 21.2:** Post-payment signature verification transitions status from `Pending` to `Confirmed`, schedules confirmation emails/SMS reminders via Agenda, and triggers the `slot_booked` Socket.io event.
+* **AC 21.3:** Invalid signature payloads are rejected with `400 Bad Request` and do not transition the booking to `Confirmed`.
+* **AC 21.4:** Pending bookings left unpaid for more than 5 minutes are deleted or set to `Cancelled`, and the `slot_released` Socket.io event is emitted.
+* **AC 21.5:** Cancellations made outside the 2-hour penalty window process an automatic refund, generate a corresponding refunded `PaymentLog` record, and release the slot.
+
+### Non-Goals
+
+- This feature does NOT support multi-currency payments (all amounts are in INR).
+- It does NOT support manual dispute arbitration (handled via Razorpay dashboard).
+
+### Dependencies
+
+- Feature: [User Authentication & RBAC] — authorizes clients.
+- Feature: [Real-Time Booking & Scheduling Engine] — handles slots.
+- Service: `razorpay` — npm SDK client library.
+
+### Testing Strategy
+
+- Unit: Cryptographic signature helper test with mock inputs.
+- Integration: Run automated suites `test_phase_1.js` (for signature/webhook verification) and `test_phase_3.js` (for multi-document transactions and programmatic refunds).
+- Manual: Open the checkout modal, pay using Razorpay Test Mode credentials, verify redirect to `MyBookings` and status set to `Confirmed`.
+
+### Known Bugs / Stability Risks
+
+- [MUST HAVE - Resolved 2026-05-31] "Mismatched Buffer Crash in `crypto.timingSafeEqual`": Signature verification comparisons crashed the server if the payload and header signature buffer lengths differed. Resolved by implementing pre-emptive byte-length validation checks.
+- [MUST HAVE - Resolved 2026-05-31] "Double-Booking / Reminders Duplication Risk": Duplicate or replayed signature verification webhook requests could create duplicate database logs and queue multiple Agenda reminders. Resolved by enforcing unique database indices on the verified transaction records.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 3 execution: wrapped booking and order creation in MongoDB multi-document transactions, and automated programmatic refunds during cancellation. |
+| 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 1 payment hardening (strict env assertions, webhook verification middleware, PaymentLog model, and timing-safe equal checks). |
+| 2026-05-31 | Antigravity AI | Initial spec created for Razorpay Payment Gateway integration. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-05-31
+

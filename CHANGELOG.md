@@ -10,6 +10,52 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+### Added
+
+- Added automated cancellation and slot-release handling for `payment.failed` webhook events in the backend to free pending slots immediately upon payment failure.
+
+### Fixed
+
+- Fixed Agenda scheduler integration crashes by checking the database collection initialization status before trying to schedule/cancel reminders.
+- Fixed webhook signature validation crashes in local environment by adding a default `RAZORPAY_WEBHOOK_SECRET` configuration value.
+
+## [1.4.0] - 2026-05-31
+
+### Added
+
+- Added programmatic Razorpay refund API query integration inside the session cancellation path when a client cancels outside the 2-hour penalty window.
+- Added database transaction boundary logic wrapping booking creation and Razorpay order creation in a Mongoose session to ensure atomicity on failure.
+- Added integration verification test suite `test_phase_3.js` to assert transactional rollback safety and refund dispatches.
+
+## [1.3.0] - 2026-05-31
+
+### Added
+
+- Added Razorpay Payment Gateway integration for client bookings, including automated slot-release cleanup for unpaid sessions.
+- Added `PaymentLog` schema to record an immutable audit trail of verified transactions and guarantee idempotency.
+- Added timing-safe webhook signature verification middleware to protect the payment callback endpoint from side-channel attacks.
+- Added integration test suite `test_phase_1.js` verifying signature checks, audit logs, and double-booking prevention.
+- Added public webhook API route (`POST /bookings/webhook`) to handle asynchronous payment notifications from Razorpay.
+- Added reusable, idempotent booking confirmation helper to prevent racing signature calls and duplicate reminders.
+- Added frontend checkout retry action with dynamic script loading and a 5-minute reservation countdown timer.
+- Added integration test suite `test_phase_2.js` covering webhook routes, signature verification, and idempotency locks.
+
+### Changed
+
+- Expanded the layout of the messaging panel to improve usability and spacing.
+- Updated codebase documentation (README.md, ROADMAP.md, and MASTER_SPEC.md) to align with implemented system features.
+- Changed booking models to store `razorpayOrderId` and return expert `hourlyRate` for client checkout retry flows.
+
+### Fixed
+
+- Fixed duplicate rendering of real-time messages by refining WebSocket room listeners in the messaging panel.
+- Resolved UI layout congestion in the messaging sidebar and resolved React lint warnings.
+
+### Security
+
+- Secured payment processing by enforcing strict server-startup validation of Razorpay environment variables.
+- Removed default fallback credentials from code paths, requiring explicit environment setup in production.
+
 ## [1.2.0] - 2026-05-29
 
 ### Added
@@ -24,14 +70,15 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Fixed
 
-- Sanitized search query parameters using input regex escapes to eliminate Regular Expression Denial of Service (ReDoS) vulnerability.
 - Enforced strict character length validation limits on user-supplied strings including name, profile descriptions, and image URLs.
 - Removed redundant inline token decoding logic in the booking controller, aligning authorization boundaries with standard route middleware.
 
 ### Security
 
+- Sanitized search query parameters using input regex escapes to eliminate Regular Expression Denial of Service (ReDoS) vulnerability.
 - Secured WebSocket and endpoint JWT authentication by removing hardcoded fallback secrets and adding strict runtime environment assertions.
 - Implemented rate limiting boundaries for registration, login, forgot-password, reset-password, and booking creation endpoints.
+
 
 ## [1.1.1] - 2026-05-29
 
@@ -168,7 +215,9 @@ Changelog policy, workflow, and SOP are maintained in
 - Enforced database-level active booking uniqueness so cancelled and late-cancelled sessions
   release slots without allowing duplicate active bookings.
 
-[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/pradip9096/SkillSync/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/pradip9096/SkillSync/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pradip9096/SkillSync/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/pradip9096/SkillSync/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/pradip9096/SkillSync/compare/v1.0.1...v1.1.0

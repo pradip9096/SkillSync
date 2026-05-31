@@ -212,10 +212,10 @@ const createExpertByAdmin = async (req, res) => {
     }
 
     // Phone format validation
-    if (!/^\+91[0-9]{10}$/.test(phone)) {
+    if (!/^\+91[6-9][0-9]{9}$/.test(phone)) {
       return res.status(400).json({
         success: false,
-        error: 'Phone number must start with +91 followed by 10 digits'
+        error: 'Phone number must be a valid 10-digit Indian mobile number starting with +91 followed by 10 digits (6-9)'
       });
     }
 

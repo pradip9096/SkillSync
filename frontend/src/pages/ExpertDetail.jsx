@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchExpertById, fetchBookedSlots, createBooking } from '../services/api';
+import { fetchExpertById, fetchBookedSlots, createBooking, verifyPayment } from '../services/api';
 import socket from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle, X, ChevronRight } from 'lucide-react';
@@ -221,6 +221,23 @@ const ExpertDetail = () => {
    * Purpose: Validates selection, formats data, and sends the booking request to the server.
    * @param {React.FormEvent} e - Form submission event.
    */
+  /**
+   * Dynamically load the Razorpay Checkout script.
+   */
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleBooking = async (e) => {
     e.preventDefault();
     if (!selectedSlot) return;
@@ -228,12 +245,22 @@ const ExpertDetail = () => {
     try {
       setIsSubmitting(true);
       setBookingError(null);
+
+      // Load Razorpay Script first
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setBookingError('Failed to load payment gateway SDK. Please check your internet connection.');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Construct payload, strip any non-digits, and prepend +91 prefix
       let phoneClean = formData.userPhone.replace(/\D/g, '');
       if (phoneClean && !phoneClean.startsWith('+91')) {
         phoneClean = '+91' + phoneClean;
       }
-      await createBooking({
+
+      const { data: resData } = await createBooking({
         expert: id,
         bookingDate: selectedDate,
         slotTime: selectedSlot,
@@ -241,14 +268,57 @@ const ExpertDetail = () => {
         userPhone: phoneClean
       });
 
-      // Update global context user details if they were empty/modified
-      if (user) {
-        updateUserProfile(formData.userName, phoneClean);
-      }
+      const { data: booking, razorpayOrderId, amount, keyId } = resData;
 
-      setSuccess(true);
-      // Redirect to history page after a brief delay
-      setTimeout(() => navigate('/my-bookings'), 3000);
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: 'INR',
+        name: 'SkillSync',
+        description: `Booking session with ${expert.name}`,
+        order_id: razorpayOrderId,
+        handler: async function (response) {
+          try {
+            setIsSubmitting(true);
+            const { data: verifyData } = await verifyPayment({
+              bookingId: booking._id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature
+            });
+
+            if (verifyData.success) {
+              if (user) {
+                updateUserProfile(formData.userName, phoneClean);
+              }
+              setSuccess(true);
+              setTimeout(() => navigate('/my-bookings'), 3000);
+            } else {
+              setBookingError('Payment verification failed.');
+            }
+          } catch (err) {
+            setBookingError(err.response?.data?.error || 'Payment verification failed.');
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+        prefill: {
+          name: formData.userName,
+          email: formData.userEmail,
+          contact: phoneClean
+        },
+        theme: {
+          color: '#2563eb'
+        },
+        modal: {
+          ondismiss: function () {
+            setBookingError('Payment cancelled. Please complete payment to confirm your booking.');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (err) {
       setBookingError(err.response?.data?.error || 'Booking failed');
     } finally {
@@ -567,8 +637,8 @@ const ExpertDetail = () => {
                       required
                       type="tel" 
                       placeholder="9876543210"
-                      pattern="[0-9]{10}"
-                      title="Please enter a 10-digit mobile number"
+                      pattern="[6-9][0-9]{9}"
+                      title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
                       value={formData.userPhone}
                       disabled={isBookingDisabled}
                       onChange={(e) => {

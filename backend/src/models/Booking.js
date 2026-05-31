@@ -23,7 +23,8 @@ const bookingSchema = new mongoose.Schema({
   userName: {
     type: String,
     required: [true, 'Please add your name'],
-    trim: true
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
   // User's email with regex validation
   userEmail: {
@@ -39,8 +40,8 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add your phone number'],
     match: [
-      /^\+91[0-9]{10}$/,
-      'Please add a valid Indian phone number starting with +91'
+      /^\+91[6-9][0-9]{9}$/,
+      'Please add a valid Indian phone number starting with +91 followed by 10 digits (6-9)'
     ]
   },
   // Date of the booking in YYYY-MM-DD format
@@ -84,6 +85,10 @@ const bookingSchema = new mongoose.Schema({
     default: null
   },
   agenda2hJobId: {
+    type: String,
+    default: null
+  },
+  razorpayOrderId: {
     type: String,
     default: null
   }

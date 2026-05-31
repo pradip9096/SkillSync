@@ -106,8 +106,8 @@ const Profile = () => {
     let finalPhone = '';
     if (phone) {
       const cleanedPhone = phone.replace(/\D/g, '');
-      if (!/^[0-9]{10}$/.test(cleanedPhone)) {
-        setErrorMsg('Phone number must be a valid 10-digit mobile number.');
+      if (!/^[6-9][0-9]{9}$/.test(cleanedPhone)) {
+        setErrorMsg('Phone number must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
         return;
       }
       finalPhone = '+91' + cleanedPhone;

@@ -36,7 +36,8 @@ const userSchema = new mongoose.Schema({
   // User's display name (optional, gathered during booking)
   name: {
     type: String,
-    trim: true
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
   // Profile picture URL
   profileImage: {
@@ -47,8 +48,8 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String,
     match: [
-      /^\+91[0-9]{10}$/,
-      'Please add a valid Indian phone number starting with +91'
+      /^\+91[6-9][0-9]{9}$/,
+      'Please add a valid Indian phone number starting with +91 followed by 10 digits (6-9)'
     ]
   },
   // Number of late cancellations accumulated

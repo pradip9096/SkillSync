@@ -61,10 +61,10 @@ const registerUser = async (req, res) => {
       }
 
       // Phone format validation
-      if (!/^\+91[0-9]{10}$/.test(phone)) {
+      if (!/^\+91[6-9][0-9]{9}$/.test(phone)) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number must start with +91 followed by 10 digits'
+          error: 'Phone number must be a valid 10-digit Indian mobile number starting with +91 followed by 10 digits (6-9)'
         });
       }
 
@@ -270,10 +270,10 @@ const updateUserProfile = async (req, res) => {
 
     if (req.body.phone !== undefined) {
       const phone = req.body.phone;
-      if (phone && !/^\+91[0-9]{10}$/.test(phone)) {
+      if (phone && !/^\+91[6-9][0-9]{9}$/.test(phone)) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number must start with +91 followed by 10 digits'
+          error: 'Phone number must be a valid 10-digit Indian mobile number starting with +91 followed by 10 digits (6-9)'
         });
       }
       user.phone = phone;

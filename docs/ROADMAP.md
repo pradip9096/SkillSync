@@ -47,7 +47,7 @@ We utilize a two-tiered approach to ensure sustainable growth:
 
 ### Phase 4: Monetization & Expansion (Future Horizons)
 *Goal: Introduce revenue streams and broader communications.*
-- [ ] Payment Gateway Integration (e.g., Razorpay/Stripe)
+- [x] Payment Gateway Integration (e.g., Razorpay/Stripe)
 - [ ] Integrated WebRTC Video/Audio Conferencing
 - [ ] Dynamic/Surge Pricing Models for Experts
 - [ ] Offline Fallbacks (Email notifications for unread chat messages)

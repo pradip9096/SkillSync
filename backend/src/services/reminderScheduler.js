@@ -7,6 +7,14 @@ const smsService = require('./smsService');
 const sendEmail = (args) => emailService.sendEmail(args);
 const sendSMS = (args) => smsService.sendSMS(args);
 
+const safeSendSMS = async (args) => {
+  try {
+    await sendSMS(args);
+  } catch (err) {
+    console.error(`[Scheduler Non-Fatal] SMS delivery failed to ${args.to}:`, err.message);
+  }
+};
+
 /**
  * Helper to convert YYYY-MM-DD and HH:mm in IST (+05:30) to a JavaScript Date object.
  */
@@ -20,6 +28,24 @@ const { formatTime12H } = require('../utils/timeFormatters');
 // ==========================================
 // Define Job Handlers
 // ==========================================
+
+agenda.define('cancel-abandoned-booking', async (job) => {
+  const { bookingId } = job.attrs.data;
+  const booking = await Booking.findById(bookingId);
+
+  if (booking && booking.status === 'Pending') {
+    booking.status = 'Cancelled';
+    await booking.save();
+    console.log(`[Scheduler] Cancelled abandoned pending booking ${bookingId}`);
+
+    if (agenda.io) {
+      agenda.io.to(booking.expert.toString()).emit('slot_released', {
+        bookingDate: booking.bookingDate,
+        slotTime: booking.slotTime
+      });
+    }
+  }
+});
 
 agenda.define('send-booking-confirmation', async (job) => {
   const { bookingId } = job.attrs.data;
@@ -97,10 +123,10 @@ agenda.define('send-booking-confirmation', async (job) => {
   const clientSms = `SkillSync booking confirmed! Session with ${expertName} is scheduled on ${booking.bookingDate} at ${formattedTime} (IST).`;
   const expertSms = `New SkillSync booking! Session with ${clientName} is scheduled on ${booking.bookingDate} at ${formattedTime} (IST).`;
 
-  await sendSMS({ to: clientPhone, message: clientSms });
+  await safeSendSMS({ to: clientPhone, message: clientSms });
   // If the expert has a phone number registered on user object, we can send to it (we'll query if it exists)
   if (booking.expert.user.phone) {
-    await sendSMS({ to: booking.expert.user.phone, message: expertSms });
+    await safeSendSMS({ to: booking.expert.user.phone, message: expertSms });
   }
 });
 
@@ -145,7 +171,7 @@ agenda.define('send-booking-cancellation', async (job) => {
   });
 
   const clientSms = `SkillSync cancellation alert: Your session with ${expertName} on ${bookingDate} at ${formattedTime} IST has been cancelled (${cancelTypeStr}).`;
-  await sendSMS({ to: clientPhone, message: clientSms });
+  await safeSendSMS({ to: clientPhone, message: clientSms });
 });
 
 agenda.define('send-session-reminder', async (job) => {
@@ -205,9 +231,9 @@ agenda.define('send-session-reminder', async (job) => {
   const clientSms = `SkillSync Reminder: Your session with ${expertName} starts in ${timeDesc} (${formattedTime} IST).`;
   const expertSms = `SkillSync Reminder: Your session with ${clientName} starts in ${timeDesc} (${formattedTime} IST).`;
 
-  await sendSMS({ to: clientPhone, message: clientSms });
+  await safeSendSMS({ to: clientPhone, message: clientSms });
   if (booking.expert.user.phone) {
-    await sendSMS({ to: booking.expert.user.phone, message: expertSms });
+    await safeSendSMS({ to: booking.expert.user.phone, message: expertSms });
   }
 });
 
@@ -220,6 +246,11 @@ agenda.define('send-session-reminder', async (job) => {
  * Sets the resulting job IDs on the booking.
  */
 const scheduleSessionReminders = async (booking) => {
+  if (!agenda || !agenda._collection) {
+    console.warn('[Scheduler Warning] Agenda database collection is not ready. Skipping scheduling session reminders.');
+    return;
+  }
+
   const sessionTime = parseISTSessionTime(booking.bookingDate, booking.slotTime);
   if (!sessionTime) {
     console.error(`[Scheduler] Could not parse session time for booking ${booking._id}`);
@@ -261,6 +292,11 @@ const scheduleSessionReminders = async (booking) => {
  * Cancels pending Agenda scheduled jobs for a specific booking.
  */
 const cancelScheduledReminders = async (booking) => {
+  if (!agenda || !agenda._collection) {
+    console.warn('[Scheduler Warning] Agenda database collection is not ready. Skipping cancellation of scheduled reminders.');
+    return;
+  }
+
   let cancelledCount = 0;
 
   if (booking.agenda24hJobId) {

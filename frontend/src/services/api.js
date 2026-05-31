@@ -114,6 +114,7 @@ export const fetchBookedSlots = (expertId, date) => API.get(`/bookings/booked-sl
  * Side effects: Performs a POST network request.
  */
 export const createBooking = (bookingData) => API.post('/bookings', bookingData);
+export const verifyPayment = (paymentData) => API.post('/bookings/verify-payment', paymentData);
 
 /**
  * Fetch booking history for a user based on their email.

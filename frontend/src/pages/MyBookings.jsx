@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { fetchBookingsByEmail, updateBookingStatus, rateExpert } from '../services/api';
+import { fetchBookingsByEmail, updateBookingStatus, rateExpert, verifyPayment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
 
@@ -31,6 +31,7 @@ const MyBookings = () => {
   const [email, setEmail] = useState(user?.email || localStorage.getItem('userEmail') || '');
   // State for the list of user bookings
   const [bookings, setBookings] = useState([]);
+  const [keyId, setKeyId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -46,7 +47,7 @@ const MyBookings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, bookingId: null, isLate: false });
 
   useEffect(() => {
-    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 1000);
     return () => window.clearInterval(timerId);
   }, []);
 
@@ -74,6 +75,108 @@ const MyBookings = () => {
     const nowMs = new Date().getTime();
     const twoHoursInMs = 2 * 60 * 60 * 1000;
     return sessionMs > nowMs && (sessionMs - nowMs) <= twoHoursInMs;
+  };
+
+  const getRemainingTime = (createdAtString) => {
+    const createdMs = new Date(createdAtString).getTime();
+    const expiryMs = createdMs + 5 * 60 * 1000;
+    const remaining = expiryMs - currentTime;
+    return Math.max(0, remaining);
+  };
+
+  const formatCountdown = (ms) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handlePaymentRetry = async (booking) => {
+    try {
+      setActionLoading(booking._id);
+      
+      const loadScript = () => {
+        return new Promise((resolve) => {
+          if (window.Razorpay) {
+            resolve(true);
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+      };
+
+      const scriptLoaded = await loadScript();
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        return;
+      }
+
+      const hourlyRate = booking.expert?.hourlyRate;
+      if (!hourlyRate) {
+        alert('Error: Hourly rate not specified.');
+        return;
+      }
+
+      const amount = Math.round(hourlyRate * 100);
+
+      const options = {
+        key: keyId || 'rzp_test_SvdMCegXvNbj2a',
+        amount: amount,
+        currency: 'INR',
+        name: 'SkillSync',
+        description: `Booking session with ${booking.expert?.name || 'Expert'}`,
+        order_id: booking.razorpayOrderId,
+        handler: async function (response) {
+          try {
+            setActionLoading(booking._id);
+            const { data: verifyData } = await verifyPayment({
+              bookingId: booking._id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature
+            });
+
+            if (verifyData.data) {
+              // Refresh list
+              const { data } = await fetchBookingsByEmail(email);
+              setBookings(data.data);
+              setKeyId(data.keyId);
+            } else {
+              alert('Payment verification failed.');
+            }
+          } catch (err) {
+            alert(err.response?.data?.error || 'Payment verification failed.');
+          } finally {
+            setActionLoading(null);
+          }
+        },
+        prefill: {
+          name: booking.userName,
+          email: booking.userEmail,
+          contact: booking.userPhone
+        },
+        theme: {
+          color: '#2563eb'
+        },
+        modal: {
+          ondismiss: function () {
+            alert('Payment cancelled. Please complete payment to confirm your booking.');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('Retry checkout failed:', err);
+      alert('Retry checkout failed. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleCancelClick = (booking) => {
@@ -118,6 +221,7 @@ const MyBookings = () => {
       setError(null);
       const { data } = await fetchBookingsByEmail(email);
       setBookings(data.data);
+      setKeyId(data.keyId);
       // Persist email to localStorage for convenience on next visit
       localStorage.setItem('userEmail', email);
       setHasSearched(true);
@@ -165,6 +269,7 @@ const MyBookings = () => {
       // Refresh list
       const { data } = await fetchBookingsByEmail(email);
       setBookings(data.data);
+      setKeyId(data.keyId);
       // Reset form states
       setActiveRatingId(null);
       setRatingValue(5);
@@ -188,6 +293,7 @@ const MyBookings = () => {
           setError(null);
           const { data } = await fetchBookingsByEmail(user.email);
           setBookings(data.data);
+          setKeyId(data.keyId);
           localStorage.setItem('userEmail', user.email);
           setHasSearched(true);
         } catch (err) {
@@ -352,7 +458,6 @@ const MyBookings = () => {
                     </div>
                   </div>
 
-                  {/* Conditional Actions based on Status */}
                   {booking.status === 'Confirmed' && (
                     <div className="flex flex-wrap gap-4">
                       {/* Only allow completion if session time has arrived */}
@@ -380,6 +485,36 @@ const MyBookings = () => {
                           {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
                           CANCEL SESSION
                         </button>
+                      )}
+                    </div>
+                  )}
+
+                  {booking.status === 'Pending' && (
+                    <div className="flex flex-wrap gap-4 animate-fade-in">
+                      {getRemainingTime(booking.createdAt) > 0 ? (
+                        <>
+                          <button
+                            onClick={() => handlePaymentRetry(booking)}
+                            disabled={actionLoading === booking._id}
+                            className="flex-grow flex items-center justify-center gap-3 bg-yellow-500 hover:bg-yellow-600 text-white font-black py-4 px-8 rounded-2xl transition-all shadow-lg shadow-yellow-500/20 disabled:opacity-50 active:scale-95"
+                          >
+                            {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Clock className="w-5 h-5" />}
+                            PAY NOW ({formatCountdown(getRemainingTime(booking.createdAt))})
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(booking._id, 'Cancelled')}
+                            disabled={actionLoading === booking._id}
+                            className="flex-grow flex items-center justify-center gap-3 bg-white text-red-600 hover:bg-red-50 border-2 border-red-100 font-black py-4 px-8 rounded-2xl transition-all disabled:opacity-50 active:scale-95"
+                          >
+                            {actionLoading === booking._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                            CANCEL RESERVATION
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex-grow flex items-center justify-center gap-3 bg-gray-100 text-gray-400 font-black py-4 px-8 rounded-2xl border-2 border-dashed border-gray-200 w-full" title="Reservation has expired. The slot will be released soon.">
+                          <XCircle className="w-5 h-5 text-gray-400" />
+                          RESERVATION EXPIRED
+                        </div>
                       )}
                     </div>
                   )}

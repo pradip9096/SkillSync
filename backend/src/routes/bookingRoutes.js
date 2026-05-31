@@ -13,10 +13,13 @@ const {
   getBookingsByEmail, 
   updateBookingStatus,
   getBookedSlots,
-  markAsRated
+  markAsRated,
+  verifyPayment,
+  handleWebhook
 } = require('../controllers/bookingController');
 const { protect } = require('../middleware/authMiddleware');
 const { validateParams } = require('../middleware/validationMiddleware');
+const { verifyWebhookSignature } = require('../middleware/webhookMiddleware');
 
 const bookingRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -30,6 +33,20 @@ const bookingRateLimiter = rateLimit({
  * Access: Private (Requires authentication).
  */
 router.post('/', protect, bookingRateLimiter, createBooking);
+
+/**
+ * Route: POST /verify-payment
+ * Purpose: Verify Razorpay payment signature and confirm the booking.
+ * Access: Private (Requires authentication).
+ */
+router.post('/verify-payment', protect, verifyPayment);
+
+/**
+ * Route: POST /webhook
+ * Purpose: Asynchronously verify Razorpay payment notification and confirm the booking.
+ * Access: Public (Signature verified internally).
+ */
+router.post('/webhook', verifyWebhookSignature, handleWebhook);
 
 /**
  * Route: GET /

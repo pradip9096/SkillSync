@@ -12,7 +12,8 @@ const expertSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Please add a name'],
-    trim: true
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
   // Industry category the expert belongs to
   category: {
@@ -30,7 +31,8 @@ const expertSchema = new mongoose.Schema({
   // Years of professional experience
   experience: {
     type: Number,
-    required: [true, 'Please add years of experience']
+    required: [true, 'Please add years of experience'],
+    min: [0, 'Experience cannot be negative']
   },
   // Average rating from 1 to 5
   rating: {

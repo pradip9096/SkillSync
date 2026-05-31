@@ -26,6 +26,11 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.error('CRITICAL ERROR: Razorpay credentials (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET) are not defined in the environment.');
+  process.exit(1);
+}
+
 /** 
  * @type {express.Application} 
  * Express application instance
@@ -152,8 +157,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middleware: Body parser to handle JSON-encoded request bodies
-app.use(express.json());
+// Middleware: Body parser to handle JSON-encoded request bodies with rawBody support for webhook verification
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.includes('/webhook')) {
+      req.rawBody = buf.toString('utf-8');
+    }
+  }
+}));
 
 // Middleware: Enable Cross-Origin Resource Sharing (CORS) for all routes
 app.use(cors());
@@ -211,6 +222,7 @@ const startServer = async () => {
 
     // Start Agenda scheduler
     const agenda = require('./config/agenda');
+    agenda.io = io; // Attach io for background jobs
     require('./services/reminderScheduler'); // Registers job definitions
     await agenda.start();
     console.log('Agenda scheduler started.');

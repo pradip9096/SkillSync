@@ -11,6 +11,12 @@ const Availability = require('../models/Availability');
 const agenda = require('../config/agenda');
 const { formatTime12H } = require('../utils/timeFormatters');
 const { scheduleSessionReminders, cancelScheduledReminders } = require('../services/reminderScheduler');
+const Razorpay = require('razorpay');
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 /**
  * Purpose: Create a new booking after checking for existing conflicts.
@@ -20,9 +26,11 @@ const { scheduleSessionReminders, cancelScheduledReminders } = require('../servi
  * Side effects: Consults the database for existing bookings, writes a new record to the database, and emits a 'slot_booked' event to a Socket.io room.
  */
 const createBooking = async (req, res) => {
+  const mongoose = require('mongoose');
+  const session = await mongoose.startSession();
+
   try {
     const { expert, userName, userEmail, userPhone, bookingDate, slotTime, notes } = req.body;
-    const mongoose = require('mongoose');
     if (!expert || !mongoose.Types.ObjectId.isValid(expert)) {
       return res.status(400).json({ success: false, error: 'Invalid or missing expert identifier' });
     }
@@ -96,96 +104,84 @@ const createBooking = async (req, res) => {
       }
     }
 
-    /**
-     * Check if the selected time slot is already booked.
-     * We exclude 'Cancelled' bookings to allow previously cancelled slots to be re-booked.
-     */
-    const existingBooking = await Booking.findOne({ 
-      expert, 
-      bookingDate, 
-      slotTime,
-      status: { $nin: ['Cancelled', 'Late Cancellation'] }
-    });
-    
-    // If a non-cancelled booking exists for this slot, return an error.
-    if (existingBooking) {
-      return res.status(400).json({
-        success: false,
-        error: 'This time slot is already booked.'
-      });
-    }
+    let bookingData;
+    let order;
 
-    // Check if the slot is blocked in Availability collection
-    const existingBlock = await Availability.findOne({
-      expert,
-      bookingDate,
-      slotTime
-    });
-
-    if (existingBlock) {
-      return res.status(400).json({
-        success: false,
-        error: 'This time slot is blocked by the expert.'
-      });
-    }
-
-    // Create the booking record in the database
-    const booking = await Booking.create({
-      expert,
-      user: userRef,
-      userName,
-      userEmail,
-      userPhone,
-      bookingDate,
-      slotTime,
-      notes
-    });
-
-    try {
-      const Notification = require('../models/Notification');
-      const expertProfileForNotif = await Expert.findById(expert);
-      if (expertProfileForNotif && expertProfileForNotif.user) {
-        const notif = await Notification.create({
-          user: expertProfileForNotif.user,
-          type: 'BOOKING_UPDATE',
-          title: 'New Booking Request',
-          message: `${userName} booked a session with you on ${bookingDate} at ${formatTime12H(slotTime)}.`
-        });
-        const io = req.app.get('io');
-        if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif.toJSON());
+    // Execute database operations and API calls inside a MongoDB transaction session
+    await session.withTransaction(async () => {
+      const existingBooking = await Booking.findOne({ 
+        expert, 
+        bookingDate, 
+        slotTime,
+        status: { $nin: ['Cancelled', 'Late Cancellation'] }
+      }).session(session);
+      
+      if (existingBooking) {
+        throw new Error('This time slot is already booked.');
       }
-    } catch (err) {
-      console.error('Error creating new booking notification:', err);
-    }
 
-    // Schedule confirmations and pre-session reminders via Agenda
+      const existingBlock = await Availability.findOne({
+        expert,
+        bookingDate,
+        slotTime
+      }).session(session);
+
+      if (existingBlock) {
+        throw new Error('This time slot is blocked by the expert.');
+      }
+
+      const booking = new Booking({
+        expert,
+        user: userRef,
+        userName,
+        userEmail,
+        userPhone,
+        bookingDate,
+        slotTime,
+        notes,
+        status: 'Pending'
+      });
+      await booking.save({ session });
+
+      const amount = Math.round(expertProfile.hourlyRate * 100);
+      order = await razorpay.orders.create({
+        amount,
+        currency: 'INR',
+        receipt: booking._id.toString()
+      });
+
+      booking.razorpayOrderId = order.id;
+      await booking.save({ session });
+
+      bookingData = booking;
+    });
+
     try {
-      await agenda.now('send-booking-confirmation', { bookingId: booking._id });
-      await scheduleSessionReminders(booking);
+      if (agenda && agenda._collection) {
+        await agenda.schedule('in 5 minutes', 'cancel-abandoned-booking', { bookingId: bookingData._id });
+      } else {
+        console.warn('[Scheduler Warning] Agenda database collection is not ready. Skipping cleanup job scheduling.');
+      }
     } catch (schedErr) {
-      console.error('[Scheduler Error] Failed to schedule reminders during booking creation:', schedErr.message);
+      console.error('[Scheduler Error] Failed to schedule cleanup job:', schedErr.message);
     }
 
-    /**
-     * Real-time notification via Socket.io.
-     * We emit a 'slot_booked' event to the expert's specific room so other users
-     * viewing that expert see the slot as booked immediately.
-     */
     const io = req.app.get('io');
-    io.to(expert).emit('slot_booked', { bookingDate, slotTime });
+    if (io) {
+      io.to(expert).emit('slot_booked', { bookingDate, slotTime });
+    }
 
     res.status(201).json({
       success: true,
-      data: booking
+      data: bookingData,
+      razorpayOrderId: order.id,
+      amount: order.amount,
+      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_SvdMCegXvNbj2a'
     });
+
   } catch (error) {
-    console.error('Error in createBooking:', error);
+    console.error('Error in createBooking transaction:', error);
     
-    /**
-     * Handle MongoDB Duplicate Key Error (code 11000).
-     * This acts as a secondary safeguard against race conditions where two users
-     * might pass the initial check simultaneously.
-     */
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -193,10 +189,12 @@ const createBooking = async (req, res) => {
       });
     }
     
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: 'Server Error'
+      error: error.message || 'Booking creation failed.'
     });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -235,7 +233,7 @@ const getBookingsByEmail = async (req, res) => {
 
     // Find bookings and populate expert details for the frontend to display
     const bookings = await Booking.find(query)
-      .populate('expert', 'name category')
+      .populate('expert', 'name category hourlyRate')
       .sort({ bookingDate: -1, slotTime: -1 })
       .skip(skip)
       .limit(limitNum);
@@ -247,7 +245,8 @@ const getBookingsByEmail = async (req, res) => {
       count: bookings.length,
       total,
       pages: Math.ceil(total / limitNum),
-      data: bookings
+      data: bookings,
+      keyId: process.env.RAZORPAY_KEY_ID
     });
   } catch (error) {
     console.error('API Error:', error);
@@ -371,6 +370,40 @@ const updateBookingStatus = async (req, res) => {
       }
     }
 
+    // Programmatic Refund Integration
+    if (normalizedStatus === 'Cancelled' && booking.status === 'Confirmed') {
+      const PaymentLog = require('../models/PaymentLog');
+      const paymentRecord = await PaymentLog.findOne({ booking: booking._id, status: 'captured' });
+      
+      if (paymentRecord) {
+        try {
+          const refund = await razorpay.payments.refund(paymentRecord.razorpayPaymentId, {
+            amount: paymentRecord.amount,
+            notes: { reason: 'Client cancelled session outside penalty window.' }
+          });
+
+          // Log the refund transaction
+          await PaymentLog.create({
+            booking: booking._id,
+            user: booking.user,
+            razorpayOrderId: booking.razorpayOrderId,
+            razorpayPaymentId: refund.id,
+            amount: paymentRecord.amount,
+            signature: 'SYSTEM_REFUND',
+            status: 'refunded'
+          });
+          
+          console.log(`[Refund Info] Refund successfully processed for Booking ID ${booking._id}: Refund ID ${refund.id}`);
+        } catch (rzpRefundErr) {
+          console.error('[Refund Error] Razorpay refund API query failed:', rzpRefundErr.message);
+          return res.status(502).json({
+            success: false,
+            error: 'Failed to process refund. Cancellation aborted. Please contact support.'
+          });
+        }
+      }
+    }
+
     // Update and save the booking document
     booking.status = normalizedStatus;
     await booking.save();
@@ -425,17 +458,21 @@ const updateBookingStatus = async (req, res) => {
         // Dispatch instant cancellation alert
         const expertProfile = await Expert.findById(booking.expert).populate('user');
         if (expertProfile && expertProfile.user) {
-          await agenda.now('send-booking-cancellation', {
-            clientEmail: booking.userEmail,
-            clientName: booking.userName,
-            clientPhone: booking.userPhone,
-            expertName: expertProfile.name,
-            expertEmail: expertProfile.user.email,
-            bookingDate: booking.bookingDate,
-            slotTime: booking.slotTime,
-            status: normalizedStatus,
-            cancelledBy: req.user ? (req.user.role === 'Admin' ? 'Administrator' : req.user.role === 'Expert' ? 'Expert' : 'Client') : 'System'
-          });
+          if (agenda && agenda._collection) {
+            await agenda.now('send-booking-cancellation', {
+              clientEmail: booking.userEmail,
+              clientName: booking.userName,
+              clientPhone: booking.userPhone,
+              expertName: expertProfile.name,
+              expertEmail: expertProfile.user.email,
+              bookingDate: booking.bookingDate,
+              slotTime: booking.slotTime,
+              status: normalizedStatus,
+              cancelledBy: req.user ? (req.user.role === 'Admin' ? 'Administrator' : req.user.role === 'Expert' ? 'Expert' : 'Client') : 'System'
+            });
+          } else {
+            console.warn('[Scheduler Warning] Agenda database collection is not ready. Skipping instant cancellation alert.');
+          }
         }
       } catch (schedErr) {
         console.error('[Scheduler Error] Failed to handle cancellation reminders/alerts:', schedErr.message);
@@ -545,10 +582,206 @@ const markAsRated = async (req, res) => {
   }
 };
 
+const confirmBookingPayment = async ({
+  bookingId,
+  razorpayPaymentId,
+  razorpayOrderId,
+  razorpaySignature,
+  io
+}) => {
+  const PaymentLog = require('../models/PaymentLog');
+  const Notification = require('../models/Notification');
+  const Expert = require('../models/Expert');
+
+  // 1. Enforce database-level uniqueness/idempotency
+  const existingLog = await PaymentLog.findOne({ razorpayPaymentId });
+  if (existingLog) {
+    console.log(`[Idempotency Info] Payment ${razorpayPaymentId} already processed.`);
+    const booking = await Booking.findById(bookingId).populate('expert');
+    return { success: true, alreadyProcessed: true, booking };
+  }
+
+  // 2. Retrieve and validate the booking
+  const booking = await Booking.findById(bookingId).populate('expert');
+  if (!booking) {
+    throw new Error('Booking not found');
+  }
+
+  // 3. Skip confirm operations if already marked Confirmed
+  if (booking.status === 'Confirmed') {
+    console.log(`[Idempotency Info] Booking ${bookingId} is already confirmed.`);
+    return { success: true, alreadyProcessed: true, booking };
+  }
+
+  // 4. Save payment audit log
+  const log = new PaymentLog({
+    booking: booking._id,
+    user: booking.user,
+    razorpayOrderId,
+    razorpayPaymentId,
+    amount: Math.round(booking.expert.hourlyRate * 100),
+    signature: razorpaySignature,
+    status: 'captured'
+  });
+  await log.save();
+
+  // 5. Update booking status
+  booking.status = 'Confirmed';
+  await booking.save();
+
+  // 6. Create notification for the expert
+  try {
+    const expertProfileForNotif = await Expert.findById(booking.expert._id || booking.expert);
+    if (expertProfileForNotif && expertProfileForNotif.user) {
+      const notif = await Notification.create({
+        user: expertProfileForNotif.user,
+        type: 'BOOKING_UPDATE',
+        title: 'New Booking Request',
+        message: `${booking.userName} booked a session with you on ${booking.bookingDate} at ${formatTime12H(booking.slotTime)}.`
+      });
+      if (io) io.to(`user_${expertProfileForNotif.user.toString()}`).emit('new_notification', notif.toJSON());
+    }
+  } catch (err) {
+    console.error('Error creating new booking notification:', err);
+  }
+
+  // 7. Schedule confirmations and pre-session reminders via Agenda
+  try {
+    const agenda = require('../config/agenda');
+    if (agenda && agenda._collection) {
+      await agenda.now('send-booking-confirmation', { bookingId: booking._id });
+      await scheduleSessionReminders(booking);
+    } else {
+      console.warn('[Scheduler Warning] Agenda database collection is not ready. Skipping confirmation scheduling.');
+    }
+  } catch (schedErr) {
+    console.error('[Scheduler Error] Failed to schedule reminders during booking confirmation:', schedErr.message);
+  }
+
+  // 8. Emit Socket.io slot_booked event
+  if (io && booking.expert) {
+    io.to((booking.expert._id || booking.expert).toString()).emit('slot_booked', { 
+      bookingDate: booking.bookingDate, 
+      slotTime: booking.slotTime 
+    });
+  }
+
+  return { success: true, booking };
+};
+
+const verifyPayment = async (req, res) => {
+  try {
+    const { bookingId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+
+    if (!bookingId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+      return res.status(400).json({ success: false, error: 'Missing payment verification details' });
+    }
+
+    const booking = await Booking.findById(bookingId).populate('expert');
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found' });
+    }
+
+    // Verify cryptographic signature
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
+    hmac.update(razorpayOrderId + '|' + razorpayPaymentId);
+    const generatedSignature = hmac.digest('hex');
+
+    if (generatedSignature !== razorpaySignature) {
+      return res.status(400).json({ success: false, error: 'Invalid payment signature. Verification failed.' });
+    }
+
+    const io = req.app.get('io');
+    const result = await confirmBookingPayment({
+      bookingId,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
+      io
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result.booking
+    });
+  } catch (error) {
+    console.error('Error in verifyPayment:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const handleWebhook = async (req, res) => {
+  const { event, payload } = req.body;
+  const io = req.app.get('io');
+
+  try {
+    if (event === 'payment.captured' || event === 'order.paid') {
+      const paymentEntity = payload.payment.entity;
+      const razorpayOrderId = paymentEntity.order_id;
+      const razorpayPaymentId = paymentEntity.id;
+      const signatureHeader = req.headers['x-razorpay-signature'];
+
+      // Look up booking by associated Razorpay order ID
+      const booking = await Booking.findOne({ razorpayOrderId });
+      if (!booking) {
+        console.warn(`[Webhook Warn] Webhook received for untracked Order ID: ${razorpayOrderId}`);
+        return res.status(200).json({ success: false, error: 'Associated booking not found' });
+      }
+
+      const result = await confirmBookingPayment({
+        bookingId: booking._id,
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature: signatureHeader,
+        io
+      });
+
+      return res.status(200).json({ success: true, alreadyProcessed: !!result.alreadyProcessed });
+    }
+
+    // Release slot immediately on payment failure
+    if (event === 'payment.failed') {
+      const paymentEntity = payload.payment.entity;
+      const razorpayOrderId = paymentEntity.order_id;
+
+      const booking = await Booking.findOne({ razorpayOrderId });
+      if (booking && booking.status === 'Pending') {
+        booking.status = 'Cancelled';
+        await booking.save();
+
+        try {
+          await cancelScheduledReminders(booking);
+        } catch (err) {
+          console.error('[Scheduler Warning] Failed to cancel reminders on payment fail:', err.message);
+        }
+
+        if (io && booking.expert) {
+          io.to(booking.expert.toString()).emit('slot_released', {
+            bookingDate: booking.bookingDate,
+            slotTime: booking.slotTime
+          });
+        }
+
+        console.log(`[Webhook Info] Booking ${booking._id} cancelled immediately due to payment failure.`);
+      }
+      return res.status(200).json({ success: true, cancelled: true });
+    }
+
+    // Acknowledge other event hooks gracefully
+    return res.status(200).json({ success: true, ignored: true });
+  } catch (error) {
+    console.error('Error processing Razorpay Webhook event:', error);
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+};
+
 module.exports = {
   createBooking,
   getBookingsByEmail,
   updateBookingStatus,
   getBookedSlots,
-  markAsRated
+  markAsRated,
+  verifyPayment,
+  handleWebhook
 };
