@@ -15,6 +15,8 @@ const dotenv = require('dotenv');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 
 // Load environment variables from .env file
@@ -52,7 +54,7 @@ const server = http.createServer(app);
  */
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins for development to resolve connectivity issues
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     methods: ["GET", "POST", "PATCH"],
     credentials: true
   }
@@ -157,8 +159,21 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middleware: Body parser to handle JSON-encoded request bodies with rawBody support for webhook verification
+// Base middleware
+// Add security headers
+app.use(helmet());
+// Prevent NoSQL Injection
+app.use(mongoSanitize());
+
+// Middleware for CORS - strict origin
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
+// Body parser with size limit to prevent payload bloat
 app.use(express.json({
+  limit: '10kb',
   verify: (req, res, buf) => {
     if (req.originalUrl && req.originalUrl.includes('/webhook')) {
       req.rawBody = buf.toString('utf-8');

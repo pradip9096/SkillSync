@@ -58,7 +58,7 @@ const bookingSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'Late Cancellation'],
-    default: 'Confirmed'
+    default: 'Pending'
   },
   // Tracks if the user has already rated this session
   isRated: {
@@ -115,10 +115,14 @@ const parseISTSessionTime = (bookingDate, slotTime) => {
  * Side effects: Throws an error to prevent saving if the session time has not yet passed.
  */
 bookingSchema.pre('save', async function () {
-  // Synchronize the active field state with the status
-  if (['Cancelled', 'Late Cancellation'].includes(this.status)) {
+  // Synchronize the active field state with the status.
+  // active=false releases the compound unique index so the slot can be rebooked.
+  // IMPORTANT: 'Completed' must also set active=false — otherwise the slot is
+  // permanently blocked by the unique index for that expert/date/time combination.
+  if (['Cancelled', 'Late Cancellation', 'Completed'].includes(this.status)) {
     this.active = false;
   } else {
+    // 'Pending' and 'Confirmed' hold the slot exclusively
     this.active = true;
   }
 

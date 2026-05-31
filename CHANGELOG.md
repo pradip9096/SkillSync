@@ -10,11 +10,12 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-31
+
 ### Added
 
 - Added automated cancellation and slot-release handling for `payment.failed` webhook events in the backend to free pending slots immediately upon payment failure.
 - Added conflict-detection and automatic refund triggers for late payments on expired/cancelled bookings where the slot has been booked by another user.
-
 
 ### Fixed
 
@@ -22,6 +23,20 @@ Changelog policy, workflow, and SOP are maintained in
 - Fixed webhook signature validation crashes in local environment by adding a default `RAZORPAY_WEBHOOK_SECRET` configuration value.
 - Fixed Razorpay checkout mobile number prefill blank issue by passing database-validated, correctly prefixed phone numbers directly.
 - Fixed Brave/Adblocker payment freezes by adding explicit UI warning/troubleshooting tips in the error box regarding blocked sardine.ai and lumberjack scripts.
+- Fixed payment idempotency race conditions by gracefully catching MongoDB `11000` duplicate key errors on the `PaymentLog` model during concurrent webhook and client pings.
+- Fixed `Booking` schema default status from `Confirmed` to `Pending` to ensure programmatically created bookings cannot bypass the payment flow.
+
+### Security
+
+- Secured backend API with `helmet` for HTTP headers and `express-mongo-sanitize` for NoSQL injection prevention.
+- Secured backend from denial-of-service via massive payloads by enforcing a `10kb` limit on `express.json()`.
+- Secured HTTP and Socket.io endpoints by replacing wildcard CORS with strict frontend origin configurations.
+- Secured Razorpay webhook verification from timing attacks by using `crypto.timingSafeEqual()` alongside buffer length validations.
+- Secured payment verification by adding booking ownership checks to ensure the authenticated user owns the transaction.
+- Secured the `/auth/forgot-password` endpoint against user enumeration attacks by returning a uniform generic response.
+- Secured the public `/booked-slots` endpoint by stripping Personal Identifiable Information (PII) like names and notes from the response.
+- Secured active sessions by reducing JWT token lifespan from 30 days to 7 days.
+- Removed hardcoded fallback Razorpay secrets from the booking creation flow.
 
 ## [1.4.0] - 2026-05-31
 
@@ -219,7 +234,8 @@ Changelog policy, workflow, and SOP are maintained in
 - Enforced database-level active booking uniqueness so cancelled and late-cancelled sessions
   release slots without allowing duplicate active bookings.
 
-[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/pradip9096/SkillSync/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pradip9096/SkillSync/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pradip9096/SkillSync/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pradip9096/SkillSync/compare/v1.1.1...v1.2.0

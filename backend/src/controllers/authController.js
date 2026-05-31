@@ -19,7 +19,7 @@ const generateToken = (id) => {
   return jwt.sign(
     { id },
     process.env.JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: '7d' }
   );
 };
 
@@ -366,7 +366,8 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      return res.status(404).json({ success: false, error: 'There is no user registered with that email address' });
+      // Prevent user enumeration by returning a generic success message even if email is not found
+      return res.status(200).json({ success: true, data: 'If that email address exists in our system, you will receive a password reset link shortly.' });
     }
 
     // Generate reset token

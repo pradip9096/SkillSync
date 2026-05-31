@@ -20,7 +20,8 @@ import { io } from 'socket.io-client';
  * - 'upgrade: false' ensures it stays on the websocket transport.
  * @type {import('socket.io-client').Socket}
  */
-const socket = io('http://localhost:5000', {
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const socket = io(SOCKET_URL, {
   transports: ['polling', 'websocket'],
   upgrade: true,
   autoConnect: false,

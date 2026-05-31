@@ -68,6 +68,15 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] **Cohesive Custom Modals:** Replaces browser `alert()` and `confirm()` interactions with custom styled React modals.
 - [x] **Global React UI Error boundaries:** Incorporates a client boundary catcher for runtime rendering safety.
 
+### Phase 7: Payment & Advanced Security Hardening (Completed May 2026)
+*Goal: Harden API against side-channel and DoS attacks, prevent data leakage, and ensure transactional consistency during payment flows.*
+- [x] **Transaction Integrity:** Mongoose Session transaction wrapping for atomic booking and payment creation.
+- [x] **Idempotency Resilience:** Tolerates duplicate 11000 errors gracefully during concurrent webhook and client verification pings.
+- [x] **Side-Channel Protection:** Cryptographic timing-safe equality and buffer length checks on Razorpay webhook signatures.
+- [x] **Privacy & Enumeration Hardening:** PII stripping from public socket/slot APIs and uniform generic responses on forgot-password flows.
+- [x] **Resource Exhaustion Shields:** Helmet injection, NoSQL sanitization via express-mongo-sanitize, and strict 10kb JSON body limits.
+- [x] **Strict CORS Constraints:** Explicitly locked down HTTP and Socket.io endpoints to verified frontend origins.
+
 ---
 
 ## 🏗️ Technical Adaptability Strategy

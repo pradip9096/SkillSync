@@ -10,11 +10,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchUserProfile, updateUserProfile, uploadProfileImage } from '../services/api';
+import { fetchUserProfile, updateUserProfile as apiUpdateUserProfile, uploadProfileImage } from '../services/api';
 import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail, Camera, Eye, EyeOff } from 'lucide-react';
 
 const Profile = () => {
-  const { user } = useAuth(); // Use auth helper to get user details
+  const { user, updateUserProfile: syncAuthContext } = useAuth(); // Use auth helper to get user details
   
   // Local form states
   const [email, setEmail] = useState('');
@@ -131,20 +131,17 @@ const Profile = () => {
         updateData.password = password;
       }
 
-      const { data } = await updateUserProfile(updateData);
+      const { data } = await apiUpdateUserProfile(updateData);
       
       if (data && data.success) {
         setSuccessMsg('Profile updated successfully!');
         setPassword('');
         setConfirmPassword('');
         
-        // Refresh local storage user info
-        const updatedLocalUser = {
-          ...user,
-          name: data.user.name,
-          phone: data.user.phone
-        };
-        localStorage.setItem('user', JSON.stringify(updatedLocalUser));
+        // Sync AuthContext so Navbar and all consumers see the updated name/phone
+        // immediately without requiring a page refresh.
+        // Pass the bare 10-digit phone for context (matches how it's displayed everywhere).
+        syncAuthContext(data.user.name, data.user.phone);
       }
     } catch (err) {
       console.error(err);

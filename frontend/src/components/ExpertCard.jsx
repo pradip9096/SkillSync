@@ -62,7 +62,7 @@ const ExpertCard = ({ expert, index }) => {
           {/* Rating overlay badge */}
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5">
             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-            <span className="text-sm font-bold text-gray-800">{expert.rating.toFixed(1)}</span>
+            <span className="text-sm font-bold text-gray-800">{expert.rating != null ? expert.rating.toFixed(1) : 'N/A'}</span>
           </div>
         </div>
 

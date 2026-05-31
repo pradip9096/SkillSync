@@ -38,11 +38,11 @@ const createBooking = async (req, res) => {
     // Check for authenticated user from req.user
     let userRef = null;
     let authUser = req.user;
+    let profileUpdated = false;
 
     if (authUser) {
       userRef = authUser._id;
       // Auto-save: update user's profile details if currently empty
-      let profileUpdated = false;
       if (!authUser.name && userName) {
         authUser.name = userName;
         profileUpdated = true;
@@ -50,9 +50,6 @@ const createBooking = async (req, res) => {
       if (!authUser.phone && userPhone) {
         authUser.phone = userPhone;
         profileUpdated = true;
-      }
-      if (profileUpdated) {
-        await authUser.save();
       }
     }
 
@@ -109,6 +106,10 @@ const createBooking = async (req, res) => {
 
     // Execute database operations and API calls inside a MongoDB transaction session
     await session.withTransaction(async () => {
+      if (profileUpdated && authUser) {
+        await authUser.save({ session });
+      }
+
       const existingBooking = await Booking.findOne({ 
         expert, 
         bookingDate, 
@@ -176,7 +177,7 @@ const createBooking = async (req, res) => {
       data: bookingData,
       razorpayOrderId: order.id,
       amount: order.amount,
-      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_SvdMCegXvNbj2a'
+      keyId: process.env.RAZORPAY_KEY_ID
     });
 
   } catch (error) {
@@ -513,7 +514,7 @@ const getBookedSlots = async (req, res) => {
       expert: expertId, 
       bookingDate: date,
       status: { $nin: ['Cancelled', 'Late Cancellation'] }
-    });
+    }).lean();
 
     // Fetch availability blocks
     const blocks = await Availability.find({
@@ -524,9 +525,7 @@ const getBookedSlots = async (req, res) => {
     // Extract slot details needed by both client and expert dashboards
     const bookedSlots = [
       ...bookings.map(b => ({
-        slotTime: b.slotTime,
-        userName: b.userName,
-        notes: b.notes
+        slotTime: b.slotTime
       })),
       ...blocks.map(a => ({
         slotTime: a.slotTime,
@@ -669,7 +668,17 @@ const confirmBookingPayment = async ({
     signature: razorpaySignature,
     status: 'captured'
   });
-  await log.save();
+  
+  try {
+    await log.save();
+  } catch (err) {
+    if (err.code === 11000) {
+      console.log(`[Payment Idempotency] Duplicate PaymentLog for Payment ID ${razorpayPaymentId}. Already processed.`);
+      const updatedBooking = await Booking.findById(booking._id).populate('expert').lean();
+      return { success: true, booking: updatedBooking };
+    }
+    throw err;
+  }
 
   // 5. Update booking status
   booking.status = 'Confirmed';
@@ -728,13 +737,21 @@ const verifyPayment = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Booking not found' });
     }
 
+    // Security: ensure the authenticated user owns this booking
+    if (booking.user && req.user && booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Unauthorized to verify this booking' });
+    }
+
     // Verify cryptographic signature
     const crypto = require('crypto');
     const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
     hmac.update(razorpayOrderId + '|' + razorpayPaymentId);
     const generatedSignature = hmac.digest('hex');
 
-    if (generatedSignature !== razorpaySignature) {
+    const expectedBuffer = Buffer.from(generatedSignature, 'utf-8');
+    const receivedBuffer = Buffer.from(razorpaySignature, 'utf-8');
+    
+    if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) {
       return res.status(400).json({ success: false, error: 'Invalid payment signature. Verification failed.' });
     }
 

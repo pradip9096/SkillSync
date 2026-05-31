@@ -157,7 +157,7 @@ const MyBookings = () => {
         prefill: {
           name: booking.userName,
           email: booking.userEmail,
-          contact: booking.userPhone
+          contact: (booking.userPhone || '').replace(/^\+91/, '')
         },
         theme: {
           color: '#2563eb'
