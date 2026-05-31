@@ -1,8 +1,18 @@
 const { ObjectId } = require('mongodb');
 const agenda = require('../config/agenda');
 const Booking = require('../models/Booking');
+const PaymentLog = require('../models/PaymentLog');
 const emailService = require('./emailService');
 const smsService = require('./smsService');
+const Razorpay = require('razorpay');
+
+let razorpay;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+}
 
 const sendEmail = (args) => emailService.sendEmail(args);
 const sendSMS = (args) => smsService.sendSMS(args);
@@ -31,18 +41,53 @@ const { formatTime12H } = require('../utils/timeFormatters');
 
 agenda.define('cancel-abandoned-booking', async (job) => {
   const { bookingId } = job.attrs.data;
-  const booking = await Booking.findById(bookingId);
+  
+  try {
+    const booking = await Booking.findById(bookingId).populate('expert');
+    if (!booking) return;
 
-  if (booking && booking.status === 'Pending') {
-    booking.status = 'Cancelled';
-    await booking.save();
-    console.log(`[Scheduler] Cancelled abandoned pending booking ${bookingId}`);
+    if (booking.status === 'Pending') {
+      // Check if there was actually a captured payment that we missed the webhook for
+      if (razorpay && booking.razorpayOrderId) {
+        const payments = await razorpay.orders.fetchPayments(booking.razorpayOrderId);
+        const capturedPayment = payments.items.find(p => p.status === 'captured');
+        
+        if (capturedPayment) {
+          console.log(`[Scheduler] Abandoned booking ${bookingId} has captured payment ${capturedPayment.id}. Refunding...`);
+          await razorpay.payments.refund(capturedPayment.id, {
+            speed: 'optimum'
+          });
+          
+          await PaymentLog.create({
+            razorpayPaymentId: capturedPayment.id,
+            bookingId: booking._id,
+            amount: capturedPayment.amount,
+            status: 'refunded_abandoned_booking'
+          });
+        }
+      }
 
-    if (agenda.io) {
-      agenda.io.to(booking.expert.toString()).emit('slot_released', {
-        bookingDate: booking.bookingDate,
-        slotTime: booking.slotTime
-      });
+      booking.status = 'Cancelled';
+      await booking.save();
+      console.log(`[Scheduler] Cancelled abandoned pending booking ${bookingId}`);
+
+      if (agenda.io && booking.expert) {
+        agenda.io.to(booking.expert._id.toString()).emit('slot_released', {
+          bookingDate: booking.bookingDate,
+          slotTime: booking.slotTime
+        });
+      }
+    }
+  } catch (error) {
+    console.error(`[Scheduler] Error processing cancel-abandoned-booking for ${bookingId}:`, error.message);
+    
+    // Fallback retry logic: If we have tried less than 3 times, throw error so Agenda retries it
+    const failCount = job.attrs.failCount || 0;
+    if (failCount < 3) {
+      console.log(`[Scheduler] Retrying job (Attempt ${failCount + 1}/3)...`);
+      throw error; // Let Agenda's native retry/fail mechanism handle it
+    } else {
+      console.error(`[Scheduler] Job max retries reached. Abandoning retry for ${bookingId}.`);
     }
   }
 });
