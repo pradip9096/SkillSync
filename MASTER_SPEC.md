@@ -2803,6 +2803,12 @@ Integrates the Razorpay payment gateway to process client payments for booking e
   Rationale: Prevents orphaned booking documents from permanently blocking expert calendars if Razorpay order creation fails.
 - [MUST HAVE] The system must automatically process payment refunds using Razorpay's refund API (`razorpay.payments.refund()`) during cancellations if the booking is `Confirmed` and the cancellation occurs more than 2 hours before the session start time (outside the late penalty window).
   Rationale: Automates client refunds for eligible cancellations and creates a refund payment log record.
+- [MUST HAVE] The system must check for conflicting bookings on the selected slot before confirming payment verification. If the slot has been re-booked due to late payment (after 5-minute reservation expiry), the system must keep the current booking Cancelled, log the transaction as refunded, and trigger an automatic refund via Razorpay's API.
+  Rationale: Prevents database unique key constraint violations and double-booking if payment is completed after the reservation window expires.
+- [MUST HAVE] The backend must process `payment.failed` webhook callbacks by immediately releasing the reserved slot and transitioning the booking status to `Cancelled`.
+  Rationale: Frees up the expert's slot immediately for other clients without waiting for the 5-minute background cleanup timeout.
+- [MUST HAVE] The system's background reminder scheduler must verify that the Agenda collection is fully initialized (`agenda && agenda._collection`) before invoking job scheduling routines.
+  Rationale: Prevents application crashes and unhandled promise rejections if the background scheduler boots before the MongoDB database connection is fully ready.
 - [SHOULD HAVE] The frontend must integrate the Razorpay Checkout SDK dynamically and display the payment modal when creating a booking.
   Rationale: Delivers a clean, interactive user experience.
 - [SHOULD HAVE] An automated background cleanup job must cancel `Pending` bookings if the payment is not verified within 5 minutes, releasing the slot.
@@ -2823,7 +2829,8 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 [Client] -> Clicks "Book" on Slot -> [System creates Booking (Pending) & Razorpay Order]
   |-- Success --> Opens Razorpay modal -> Client completes payment -> [System verifies signature & Confirms booking] -> Success screen
   |-- Dismiss/Cancel Modal --> [System shows warning toast + keeps client on form to retry payment]
-  |-- Verification Failure --> Displays error toast + leaves booking Pending
+  |-- Verification Failure / Failed Webhook --> [System marks booking as Cancelled & releases slot] -> Error screen/toast
+  |-- Late Payment Conflict (Paid after 5m expiry, slot re-booked) --> Automatically refunds payment & leaves booking Cancelled
 ```
 
 ### API Specifications
@@ -2850,6 +2857,7 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 
 - When a client closes the payment modal, the booking remains in `Pending` state. The client can re-try checkout or the booking is eventually auto-deleted by the 5-minute cleanup job.
 - When two concurrent users try to book the same slot, MongoDB's compound index on active bookings will cause the second transaction to fail with a `400 Bad Request`.
+- Late payment scenario: A user pays after the 5-minute reservation expires. If another user has booked the slot in the meantime, the late payment is automatically refunded, and the booking remains `Cancelled` to prevent double-booking.
 
 ### Best Practices
 
@@ -2863,6 +2871,9 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 * **AC 21.3:** Invalid signature payloads are rejected with `400 Bad Request` and do not transition the booking to `Confirmed`.
 * **AC 21.4:** Pending bookings left unpaid for more than 5 minutes are deleted or set to `Cancelled`, and the `slot_released` Socket.io event is emitted.
 * **AC 21.5:** Cancellations made outside the 2-hour penalty window process an automatic refund, generate a corresponding refunded `PaymentLog` record, and release the slot.
+* **AC 21.6:** Receiving a `payment.failed` webhook event instantly transitions the associated booking to `Cancelled` and broadcasts `slot_released`.
+* **AC 21.7:** Late payments received after the booking has been cancelled and the slot has been re-booked by another client are automatically refunded, the booking remains `Cancelled`, and no double-booking is allowed.
+* **AC 21.8:** Agenda scheduling checks the database collection ready-state and gracefully avoids errors when MongoDB is initializing.
 
 ### Non-Goals
 
@@ -2878,18 +2889,21 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 ### Testing Strategy
 
 - Unit: Cryptographic signature helper test with mock inputs.
-- Integration: Run automated suites `test_phase_1.js` (for signature/webhook verification) and `test_phase_3.js` (for multi-document transactions and programmatic refunds).
+- Integration: Run automated suites `test_phase_1.js` (for signature/webhook verification), `test_phase_3.js` (for multi-document transactions and programmatic refunds), and `test_late_payment_conflict.js` (for late payment auto-refund conflicts).
 - Manual: Open the checkout modal, pay using Razorpay Test Mode credentials, verify redirect to `MyBookings` and status set to `Confirmed`.
 
 ### Known Bugs / Stability Risks
 
 - [MUST HAVE - Resolved 2026-05-31] "Mismatched Buffer Crash in `crypto.timingSafeEqual`": Signature verification comparisons crashed the server if the payload and header signature buffer lengths differed. Resolved by implementing pre-emptive byte-length validation checks.
 - [MUST HAVE - Resolved 2026-05-31] "Double-Booking / Reminders Duplication Risk": Duplicate or replayed signature verification webhook requests could create duplicate database logs and queue multiple Agenda reminders. Resolved by enforcing unique database indices on the verified transaction records.
+- [MUST HAVE - Resolved 2026-05-31] "Uninitialized Agenda Collection Crash": Agenda scheduler operations caused unhandled crashes if invoked before MongoDB connection initialized the collection. Resolved by wrapping Agenda triggers with database ready-state checks on agenda._collection.
+- [MUST HAVE - Resolved 2026-05-31] "Late Payment Slot Overwriting / Double-Booking": Late payments on expired reservations could cause unique key crashes or double-bookings if the slot was already re-booked. Resolved by adding slot availability verification during payment confirmation and triggering programmatic Razorpay auto-refunds on conflict.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Updated spec with payment safety safeguards: late-payment conflict auto-refund, payment.failed immediate slot release, and Agenda uninitialized state checks. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 3 execution: wrapped booking and order creation in MongoDB multi-document transactions, and automated programmatic refunds during cancellation. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 1 payment hardening (strict env assertions, webhook verification middleware, PaymentLog model, and timing-safe equal checks). |
 | 2026-05-31 | Antigravity AI | Initial spec created for Razorpay Payment Gateway integration. |
