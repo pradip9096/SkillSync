@@ -588,7 +588,8 @@ const ExpertDashboard = () => {
           
           {/* TAB 1: SESSIONS LIST */}
           {activeTab === 'sessions' && (
-            <div className="overflow-x-auto">
+            <>
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -731,6 +732,7 @@ const ExpertDashboard = () => {
                 Next
               </button>
             </div>
+            </>
           )}
 
           {/* TAB 2: SLOT AVAILABILITY BLOCKS */}
