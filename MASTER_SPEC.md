@@ -1409,6 +1409,7 @@ Disabled — within 500ms])
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Documented UI state-clearing post-booking implementation to prevent double-booking from stale client-side form data. |
 | 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Documented ObjectId validation, rate limiting, and query pagination fixes. |
 | 2026-05-26 | Agent | Secured bookings retrieval, status patch, and rating endpoints with JWT ownership validations. Blocked Admin from booking creators. |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
@@ -1926,6 +1927,7 @@ No new endpoints. This feature uses existing Admin Dashboard data fetches only.
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Implemented server-side pagination UI controls (Previous/Next) in Admin and Expert dashboards to prevent memory exhaustion bottlenecks. |
 | 2026-05-29 | Agent | Documented ReDoS protection and administrative pagination query parameter logic. |
 | 2026-05-27 | Agent | Initial spec created and marked complete for local Admin Dashboard search across users, bookings, and experts. |
 | 2026-05-27 | Agent | Fixed Booking Manager client email search to support populated client user fallback fields. |
@@ -2541,6 +2543,7 @@ Integrates an automated scheduling layer via Agenda.js to dispatch immediate boo
 ### Spec Change Log
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Added fallback retry limits and database error catchers to Agenda scheduled background cancellation jobs. |
 | 2026-05-28 | Agent | Created detailed specification for Automated Email & SMS Reminders. |
 
 ### Status
@@ -2903,6 +2906,7 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Updated spec with fallback retries and automated Razorpay refund queries to recover from dropped webhooks on abandoned bookings. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 7 advanced security hardening: graceful handling of 11000 duplicate keys for payment idempotency, and explicit booking ownership checks. |
 | 2026-05-31 | Antigravity AI | Updated spec with payment safety safeguards: late-payment conflict auto-refund, payment.failed immediate slot release, and Agenda uninitialized state checks. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 3 execution: wrapped booking and order creation in MongoDB multi-document transactions, and automated programmatic refunds during cancellation. |
