@@ -2843,9 +2843,9 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 
 * `POST /bookings/verify-payment` (New)
   Input: `{ bookingId: ObjectId, razorpayPaymentId: String, razorpayOrderId: String, razorpaySignature: String }`
-  Validation: Cryptographic signature verification check.
+  Validation: Cryptographic signature verification check, and booking ownership check (user must own the booking).
   Output: `{ success: true, data: Booking }`
-  Auth: Private (Client role)
+  Auth: Private (Client role, must own the booking)
 
 * `POST /bookings/webhook` (New Webhook Endpoint)
   Input: `{ event: String, payload: Object }` (Headers: `x-razorpay-signature`)
@@ -2903,6 +2903,7 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 7 advanced security hardening: graceful handling of 11000 duplicate keys for payment idempotency, and explicit booking ownership checks. |
 | 2026-05-31 | Antigravity AI | Updated spec with payment safety safeguards: late-payment conflict auto-refund, payment.failed immediate slot release, and Agenda uninitialized state checks. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 3 execution: wrapped booking and order creation in MongoDB multi-document transactions, and automated programmatic refunds during cancellation. |
 | 2026-05-31 | Antigravity AI | Updated spec to reflect Phase 1 payment hardening (strict env assertions, webhook verification middleware, PaymentLog model, and timing-safe equal checks). |
