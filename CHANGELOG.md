@@ -20,6 +20,8 @@ Changelog policy, workflow, and SOP are maintained in
 
 - Fixed Agenda scheduler integration crashes by checking the database collection initialization status before trying to schedule/cancel reminders.
 - Fixed webhook signature validation crashes in local environment by adding a default `RAZORPAY_WEBHOOK_SECRET` configuration value.
+- Fixed Razorpay checkout mobile number prefill blank issue by passing database-validated, correctly prefixed phone numbers directly.
+- Fixed Brave/Adblocker payment freezes by adding explicit UI warning/troubleshooting tips in the error box regarding blocked sardine.ai and lumberjack scripts.
 
 ## [1.4.0] - 2026-05-31
 
