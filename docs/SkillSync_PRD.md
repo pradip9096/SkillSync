@@ -52,7 +52,7 @@
 | **Expert Business Analytics** | Add a dashboard tab for experts featuring revenue, utilization tracking, slot distribution trends, and client review logs. | *Should Have (Completed)* | *Medium* |
 | **Automated Email & SMS Reminders** | Scheduled pre-session alerts and instant confirmations sent to both Clients and Experts via Agenda.js, Nodemailer, and Twilio. | *Should Have (Completed)* | *Medium* |
 | **Password Recovery & Auto-Login** | Secure Forgot Password self-service with SHA-256 hashed temporary reset tokens, 10-minute expiry time-locks, and auto-login redirection. | *Should Have (Completed)* | *Medium* |
-| **API Security Hardening** | Synchronous startup secret check, ReDoS query escaping, 100-character input limits, and endpoint rate limiting. | *Must Have (Completed)* | *Medium* |
+| **API Security Hardening** | Synchronous startup secret check, ReDoS query escaping, 100-character input limits, endpoint rate limiting, and Express 5.0 NoSQL sanitization wrappers. | *Must Have (Completed)* | *Medium* |
 | **Parameter ObjectId Validation** | Validation middleware validating parameter ObjectId compatibility on path queries to prevent CastError crashes. | *Must Have (Completed)* | *Low* |
 | **Custom UX Dialog Modals** | Cohesive React modal dialog prompts replacing native browser alert and confirm interactions. | *Should Have (Completed)* | *Low* |
 | **Razorpay Payment Gateway** | Automated payment flow during booking creation, client-side signature verification, and fail-safe webhook event processing with automatic slot-release handlers. | *Must Have (Completed)* | *High* |

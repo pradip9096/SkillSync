@@ -1238,6 +1238,7 @@ Client redirects to Login page])
 
 ### Known Bugs / Stability Risks
 
+- [MUST HAVE - Resolved 2026-05-31] "Express 5.0 TypeError in NoSQL Sanitize Middleware": Global NoSQL sanitization mutated `req.query`, which is immutable in Express 5.0, causing server crashes and CORS preflight failures. Resolved by writing an Express 5.0-compatible wrapper.
 - [MUST HAVE - Resolved 2026-05-29] "Hardcoded Fallback JWT Secrets": The application used a fallback string when JWT_SECRET was missing. Resolved by removing all fallback secrets and adding a synchronous startup validation crash when JWT_SECRET is unset.
 - [MUST HAVE - Resolved 2026-05-29] "Brute-Force vulnerability on authentication endpoints": Endpoints had no rate limiting, leaving them open to automated attacks. Resolved by applying express-rate-limit middleware on registration, login, forgot-password, reset-password, and booking endpoints.
 - [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId casting crashes": Passing non-hexadecimal 24-character strings as parameters caused internal mongoose cast errors. Resolved by introducing validationMiddleware checking MongoDB ObjectId format on all parameterized requests.
@@ -1246,6 +1247,7 @@ Client redirects to Login page])
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-05-31 | Agent | Logged and resolved Express 5.0 CORS preflight crash caused by NoSQL sanitization middleware immutability. |
 | 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Logged security hardening checks (JWT secret verification, rate limiting, and parameter verification). |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
 | 2026-05-26 | Agent | Added startup profile sync requirement to prevent stale client-side role and user state. |
@@ -1254,7 +1256,7 @@ Client redirects to Login page])
 `Complete`
 
 ### Last Updated
-2026-05-29
+2026-05-31
 
 ---
 

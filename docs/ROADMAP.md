@@ -74,7 +74,7 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] **Idempotency Resilience:** Tolerates duplicate 11000 errors gracefully during concurrent webhook and client verification pings.
 - [x] **Side-Channel Protection:** Cryptographic timing-safe equality and buffer length checks on Razorpay webhook signatures.
 - [x] **Privacy & Enumeration Hardening:** PII stripping from public socket/slot APIs and uniform generic responses on forgot-password flows.
-- [x] **Resource Exhaustion Shields:** Helmet injection, NoSQL sanitization via express-mongo-sanitize, and strict 10kb JSON body limits.
+- [x] **Resource Exhaustion Shields:** Helmet injection, Express 5.0 compatible NoSQL sanitization wrapper, and strict 10kb JSON body limits.
 - [x] **Strict CORS Constraints:** Explicitly locked down HTTP and Socket.io endpoints to verified frontend origins.
 
 ### Phase 8: Agent Tooling & Developer Experience

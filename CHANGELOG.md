@@ -21,6 +21,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Fixed
 
+- Fixed backend crashes and CORS preflight failures caused by Express 5.0 `req.query` immutability when sanitizing NoSQL injection payloads.
 - Fixed messaging UI crash caused by unhandled `.map()` operations by injecting fallback array chaining.
 - Fixed guest checkout double-booking risks by completely resetting the UI form state and inputs upon a successful booking redirection.
 - Fixed `cancel-abandoned-booking` Agenda scheduler failing silently on database errors by enforcing exception-throws and utilizing Agenda's native exponential backoff retries.
