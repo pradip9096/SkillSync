@@ -13,6 +13,8 @@ Changelog policy, workflow, and SOP are maintained in
 ### Added
 
 - Added automated cancellation and slot-release handling for `payment.failed` webhook events in the backend to free pending slots immediately upon payment failure.
+- Added conflict-detection and automatic refund triggers for late payments on expired/cancelled bookings where the slot has been booked by another user.
+
 
 ### Fixed
 

@@ -613,6 +613,52 @@ const confirmBookingPayment = async ({
     return { success: true, alreadyProcessed: true, booking };
   }
 
+  // 3.5. If the booking was Cancelled, check if the slot has been booked by another active booking in the meantime
+  if (booking.status === 'Cancelled') {
+    const conflictingBooking = await Booking.findOne({
+      expert: booking.expert._id || booking.expert,
+      bookingDate: booking.bookingDate,
+      slotTime: booking.slotTime,
+      active: true,
+      _id: { $ne: booking._id }
+    });
+
+    if (conflictingBooking) {
+      console.warn(`[Conflict Warning] Booking ${bookingId} was cancelled/expired and the slot has already been taken by active Booking ${conflictingBooking._id}. Initiating automatic refund.`);
+
+      // Save payment audit log with status 'refunded'
+      const log = new PaymentLog({
+        booking: booking._id,
+        user: booking.user,
+        razorpayOrderId,
+        razorpayPaymentId,
+        amount: Math.round(booking.expert.hourlyRate * 100),
+        signature: razorpaySignature,
+        status: 'refunded'
+      });
+      await log.save();
+
+      // Trigger automatic refund on Razorpay
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET
+      });
+
+      try {
+        const refund = await razorpay.payments.refund(razorpayPaymentId, {
+          amount: Math.round(booking.expert.hourlyRate * 100),
+          notes: { reason: 'Automatic refund: Slot was booked by another user during late payment.' }
+        });
+        console.log(`[Refund Success] Automatic refund processed successfully for Payment ID ${razorpayPaymentId}: Refund ID ${refund.id}`);
+      } catch (refundErr) {
+        console.error(`[Refund Error] Failed to process automatic refund for Payment ID ${razorpayPaymentId}:`, refundErr.message);
+      }
+
+      return { success: false, conflict: true, booking };
+    }
+  }
+
   // 4. Save payment audit log
   const log = new PaymentLog({
     booking: booking._id,
@@ -700,6 +746,13 @@ const verifyPayment = async (req, res) => {
       razorpaySignature,
       io
     });
+
+    if (result.conflict) {
+      return res.status(409).json({
+        success: false,
+        error: 'This time slot was already booked by another user because the payment window expired. Your payment has been automatically refunded.'
+      });
+    }
 
     res.status(200).json({
       success: true,
