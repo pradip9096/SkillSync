@@ -141,7 +141,7 @@ const Messaging = () => {
         const isFromOrToParticipant = (conv) => 
           conv.otherUser._id === msg.sender || conv.otherUser._id === msg.receiver;
 
-        const updated = prev.map(conv => {
+        const updated = (prev || []).map(conv => {
           if (isFromOrToParticipant(conv)) {
             return { 
               ...conv, 
@@ -229,7 +229,7 @@ const Messaging = () => {
         
         // Optimistically update the left sidebar too and sort by recency
         setConversations(prev => {
-          const updated = prev.map(conv => {
+          const updated = (prev || []).map(conv => {
             if (conv._id === activeChat._id) {
               return { ...conv, lastMessage: res.data };
             }

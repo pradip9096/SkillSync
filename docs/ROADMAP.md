@@ -77,6 +77,11 @@ We utilize a two-tiered approach to ensure sustainable growth:
 - [x] **Resource Exhaustion Shields:** Helmet injection, NoSQL sanitization via express-mongo-sanitize, and strict 10kb JSON body limits.
 - [x] **Strict CORS Constraints:** Explicitly locked down HTTP and Socket.io endpoints to verified frontend origins.
 
+### Phase 8: Agent Tooling & Developer Experience
+*Goal: Empower AI agents with native capabilities to inspect systems and enforce code quality without writing boilerplate scripts.*
+- [ ] **MongoDB Database Inspector (MCP Server):** A dedicated server exposing direct query, count, and index verification tools to AI agents for rapid state inspection.
+- [ ] **Husky / Lint Fixer (Agent Skill):** An autonomous skill that detects pre-commit hook failures (like `ENOENT` on `eslint`), resolves pathing issues, and auto-fixes formatting violations.
+
 ---
 
 ## 🏗️ Technical Adaptability Strategy

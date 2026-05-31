@@ -292,6 +292,15 @@ const ExpertDetail = () => {
                 updateUserProfile(formData.userName, phoneClean);
               }
               setSuccess(true);
+              // Clear form data so if the user navigates back, it isn't prepopulated
+              setFormData({
+                userName: user?.name || '',
+                userEmail: user?.email || '',
+                userPhone: (user?.phone || '').replace(/^\+91/, ''),
+                notes: ''
+              });
+              setBookingError(null);
+              setSelectedSlot('');
               setTimeout(() => navigate('/my-bookings'), 3000);
             } else {
               setBookingError('Payment verification failed.');
@@ -608,6 +617,7 @@ const ExpertDetail = () => {
                       name="userName"
                       required
                       type="text" 
+                      maxLength="50"
                       placeholder="Enter your name"
                       value={formData.userName}
                       disabled={isBookingDisabled}
@@ -666,6 +676,7 @@ const ExpertDetail = () => {
                       id="notes"
                       name="notes"
                       type="text" 
+                      maxLength="200"
                       placeholder="Briefly describe your goals..."
                       value={formData.notes}
                       disabled={isBookingDisabled}
