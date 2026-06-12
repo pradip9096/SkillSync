@@ -166,6 +166,25 @@ You can boot both the frontend and backend simultaneously using the provided aut
    npm run build
    ```
 
+## 🧪 Node.js Software Testing Technology Matrix
+
+| Category | Testing Activity | Technology |
+|---|---|---|
+| Testing Level | Unit Testing | Jest |
+| Testing Level | Integration Testing | Jest + SuperTest |
+| Testing Level | System Testing | Playwright |
+| Testing Level | E2E Testing | Playwright |
+| Testing Type | Smoke Testing | Playwright |
+| Testing Type | Sanity Testing | Playwright |
+| Testing Type | Regression Testing | Jest + Playwright |
+| Testing Type | API Testing | Supertest |
+| Quality Practice | Code Coverage | Jest Coverage |
+| Quality Practice | Code Quality (Static Code Analysis) | ESLint |
+| Testing Technique | Assertions | Jest Assertions |
+| Testing Technique | Mocking/Stubbing | Jest Mocks |
+| Process | CI/CD Execution | GitHub Actions |
+| Non-Functional Testing | Performance Testing | k6 |
+
 ## 📜 Coding Guidelines & Scripts
 - Frontend runs on Vite (`npm run dev`, `npm run build`, `npm run preview`).
 - Frontend linting is available via `npm run lint`.

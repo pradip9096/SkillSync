@@ -6,12 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Changelog policy, workflow, and SOP are maintained in
-[docs/CHANGELOG_POLICY.md](docs/CHANGELOG_POLICY.md).
+[.agents/skills/changelog-guardian/references/CHANGELOG_POLICY.md](.agents/skills/changelog-guardian/references/CHANGELOG_POLICY.md).
 
 ## [Unreleased]
 
 ### Added
 
+- Added comprehensive ISO/IEC/IEEE 29119-3 compliant test specifications and implementation plans across the `docs/software-testing/` directory for all End-to-End user journeys.
+- Added System Hardening (Webhook Idempotency & Job Recovery) feature specifications to `MASTER_SPEC.md`.
 - Added automated Razorpay refund check and log dispatch to the background abandoned-booking cancellation job to gracefully handle dropped payment webhooks.
 
 ### Changed
@@ -21,10 +23,13 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Fixed
 
+- Fixed Admin Dashboard E2E test suite flakiness by replacing brittle network intercepts with stable UI toast assertions and resolving dialog timing.
 - Fixed backend crashes and CORS preflight failures caused by Express 5.0 `req.query` immutability when sanitizing NoSQL injection payloads.
 - Fixed messaging UI crash caused by unhandled `.map()` operations by injecting fallback array chaining.
 - Fixed guest checkout double-booking risks by completely resetting the UI form state and inputs upon a successful booking redirection.
 - Fixed `cancel-abandoned-booking` Agenda scheduler failing silently on database errors by enforcing exception-throws and utilizing Agenda's native exponential backoff retries.
+- Fixed E2E test suite timeout by isolating the checkout flow with a global `window.Razorpay` mock and correcting native date-picker DOM locators.
+- Fixed testing environment authentication failures caused by a double-hashing bug in the database seeding scripts.
 
 ## [1.5.0] - 2026-05-31
 
@@ -136,7 +141,7 @@ Changelog policy, workflow, and SOP are maintained in
 - Added email delivery service with Nodemailer, including support for Ethereal Mail preview URLs and console log fallbacks.
 - Added SMS delivery service with Twilio SDK and development console logging fallbacks.
 - Added integration test suite `test_reminders.js` covering creation, cancellation, and manual execution flows.
-- Added Forgot Password and Reset Password self-service capabilities for Clients and Experts, with token generation, hashing, 10-minute expiry time-locks, and Ethereal/SMTP email reset notifications.
+- Added Forgot and Reset Password self-service flows with 10-minute expiring tokens and SMTP email alerts.
 - Added frontend ForgotPassword and ResetPassword pages with glassmorphic cards, validation rules, navigation links on the Login view, and automatic dashboard redirection upon successful credential updates.
 - Added integration test suite `test_forgot_password.js` covering token requests, token validations, expiry constraints, resets, and post-reset credentials verification.
 
@@ -150,12 +155,15 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [1.0.1] - 2026-05-27
 
+### Added
+
+- Added [docs/CHANGELOG_POLICY.md](docs/CHANGELOG_POLICY.md) to define changelog process,
+  workflow, SOP, requirements, constraints, and writing guidelines.
+
 ### Changed
 
 - Refactored this changelog to align with Keep a Changelog structure and SemVer release
   headings, keeping release history separate from changelog policy.
-- Added [docs/CHANGELOG_POLICY.md](docs/CHANGELOG_POLICY.md) to define changelog process,
-  workflow, SOP, requirements, constraints, and writing guidelines.
 
 ### Fixed
 

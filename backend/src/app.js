@@ -1,3 +1,6 @@
+
+
+
 /**
  * @file app.js
  * @description Main entry point for the Real-Time Expert Session Booking System backend.
@@ -8,6 +11,7 @@
  * @outputs Running HTTP and WebSocket server
  * @side_effects Database connection, file system logs, network socket listeners
  */
+
 
 const express = require('express');
 const cors = require('cors');
@@ -226,6 +230,11 @@ app.use('/expert-dashboard', expertDashboardRoutes);
 app.use('/messages', messageRoutes);
 app.use('/notifications', notificationRoutes);
 
+if (process.env.NODE_ENV !== 'production') {
+  const testRoutes = require('./routes/testRoutes');
+  app.use('/api/test', testRoutes);
+}
+
 /** 
  * @type {number|string} 
  * Port number for the server to listen on
@@ -264,8 +273,12 @@ const startServer = async () => {
   }
 };
 
-// Execute the server startup function
-startServer();
+// Execute the server startup function only if this file is run directly
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, server };
 
 /**
  * Global Error Handling

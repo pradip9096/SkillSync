@@ -176,6 +176,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Password Recovery & Auto-Login](#feature-password-recovery--auto-login) | `Complete` | SkillSync | 2026-05-29 |
 | [Chat Messaging and Notifications](#feature-chat-messaging-and-notifications) | `Complete` | SkillSync | 2026-05-29 |
 | [Razorpay Payment Gateway](#feature-razorpay-payment-gateway) | `Complete` | SkillSync | 2026-05-31 |
+| [System Hardening (Webhook Idempotency & Job Recovery)](#feature-system-hardening-webhook-idempotency--job-recovery) | `Complete` | SkillSync | 2026-06-12 |
 
 ---
 
@@ -523,37 +524,12 @@ session as Completed before its scheduled start time.
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Client]) --> B[Opens My Bookings page]
-    B --> C[Views a Confirmed booking]
-    C --> D{Session start time
-vs current IST time}
-    D -->|Start time in future| E[Button hidden / disabled
-'Mark as Completed' not available]
-    D -->|Start time reached or passed| F[Button active
-'Mark as Completed' visible]
-
-    G([Expert]) --> H[Opens Expert Dashboard]
-    H --> I[Views session row in table]
-    I --> J{Session start time
-vs current IST time}
-    J -->|Start time in future| K[Button rendered as 'Locked'
-Disabled — no action]
-    J -->|Start time reached or passed| L[Button active
-'Complete' clickable]
-
-    M([Any user]) --> N[Sends PATCH /bookings/:id/status
-body: status = 'Completed']
-    N --> O[Backend parses session datetime
-date + slot + '+05:30']
-    O --> P{sessionStartMs
-vs Date.now}
-    P -->|sessionStartMs > Date.now| Q([400 Bad Request
-error + sessionTime + currentTime
-in response body])
-    P -->|sessionStartMs <= Date.now| R([200 OK
-Booking status updated to Completed])
+```
+[Client] -> Opens My Bookings page -> [System evaluates Booking status]
+  |-- Confirmed or Pending --> Rate and Review button NOT shown
+  |-- Completed --> System checks isRated flag
+        |-- isRated == true --> Rate and Review button hidden
+        |-- isRated == false --> Rate and Review button visible
 ```
 
 ### API Specifications
@@ -694,34 +670,12 @@ from users and handling the required country prefix (+91) transparently.
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([User]) --> B[Opens Registration / Profile / Booking form]
-    B --> C[Phone input displayed
-No +91 prefix visible to user]
-
-    C --> D[User types 10-digit number
-e.g. '9876543210']
-    D --> E{Frontend validation
-exactly 10 digits?}
-    E -->|Invalid length| F([Validation error shown
-Form not submitted])
-    E -->|Valid 10 digits| G[Frontend prepends '+91'
-Sends '+919876543210' to API]
-
-    G --> H{API Mongoose regex
-^\+91 followed by 10 digits}
-    H -->|Invalid| I([400 Bad Request
-Validation error])
-    H -->|Valid| J([Stored as '+919876543210'
-in database])
-
-    K([User]) --> L[Opens Edit Profile page]
-    L --> M[API returns
-phone: '+919876543210']
-    M --> N[Frontend strips '+91' prefix]
-    N --> O([Input field displays
-'9876543210' — clean 10 digits])
+```
+[User] -> Submits 10-digit phone number -> [Frontend normalizePhone]
+  |-- Success --> Prepends '+91' -> API receives E.164 format
+  |-- Failure --> Validation error shown, form not submitted
+[User] -> Opens Edit Profile -> [API returns phone]
+  |-- Success --> Frontend strips '+91' -> Displays clean 10 digits
 ```
 
 ### API Specifications
@@ -841,28 +795,12 @@ Displays all session slot times in a clean, user-friendly 12-hour AM/PM format
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Expert]) --> B[Opens Expert Dashboard]
-    B --> C[DB returns slot time
-e.g. '14:00' in 24-hour format]
-    C --> D[formatTo12Hour utility applied
-at render time]
-    D --> E([Grid and session table display
-'02:00 PM' — not '14:00'])
-
-    F([Client]) --> G[Opens ExpertDetail page]
-    G --> H[Available slot buttons rendered]
-    H --> I[formatTo12Hour applied to each slot]
-    I --> J([Buttons display '09:00 AM'
-'02:00 PM' — '06:00 PM'])
-
-    K([Socket.io event received
-slot_booked]) --> L{Is slot time
-rendered in UI?}
-    L -->|Yes — notification or badge| M[formatTo12Hour applied]
-    M --> N([Displayed in 12-hour format])
-    L -->|No visible render| O([No action needed])
+```
+[User] -> Opens Dashboard/Detail Page -> [System returns 24-hour time]
+  |-- Render Time --> formatTo12Hour applied -> Displays 12-hour format
+[Socket] -> Receives slot_booked event -> [System checks UI state]
+  |-- Slot visible --> formatTo12Hour applied -> Displays 12-hour format
+  |-- Slot hidden --> No action needed
 ```
 
 ### API Specifications
@@ -986,36 +924,11 @@ to build marketplace credibility and provide quality feedback to experts.
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Client]) --> B[Opens My Bookings page]
-    B --> C{Booking status?}
-
-    C -->|Confirmed or Pending| D([Rate and Review button
-NOT shown — status gate])
-
-    C -->|Completed| E{isRated flag?}
-    E -->|true — already rated| F([Rate and Review button hidden
-Rating already submitted])
-    E -->|false — not yet rated| G[Rate and Review button visible]
-
-    G --> H[Client clicks Rate and Review]
-    H --> I[Navigates to Review page]
-    I --> J[Selects star rating 1 to 5
-Optional text comment]
-    J --> K[Clicks Submit]
-
-    K --> L{API validation
-POST /experts/:id/rate}
-    L -->|Booking not Completed| M([400 Bad Request
-Status gate rejection])
-    L -->|isRated already true| N([400 Bad Request
-Duplicate rating blocked])
-    L -->|Valid submission| O[Review created in DB
-booking.isRated set to true
-expert.averageRating updated atomically]
-    O --> P([Rate and Review button replaced
-by submitted rating display])
+```
+[Client] -> Clicks Rate and Review -> [System validates POST /experts/:id/rate]
+  |-- Valid --> Review created, booking.isRated set to true -> Success UI
+  |-- Not Completed --> 400 Bad Request
+  |-- Already Rated --> 400 Bad Request
 ```
 
 ### API Specifications
@@ -1146,35 +1059,13 @@ control for multi-tenant systems. Ensures only authorized roles can access prote
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Visitor]) --> B[Clicks Register]
-    B --> C[Enters name / email / password / role]
-    C --> D{POST /auth/register
-Server validation}
-    D -->|Email already exists| E([400 Bad Request
-Error shown — stays on Register page])
-    D -->|Valid payload| F[JWT generated
-Stored in localStorage]
-    F --> G([Redirected to Dashboard])
-
-    H([Visitor]) --> I[Clicks Login]
-    I --> J[Enters email and password]
-    J --> K{POST /auth/login
-Credential check}
-    K -->|Wrong credentials| L([401 Unauthorized
-Error shown — stays on Login page])
-    K -->|Valid credentials| M[JWT generated
-Stored in localStorage]
-    M --> N([Redirected to Dashboard])
-
-    O([Authenticated User]) --> P[Accesses a protected route]
-    P --> Q{Auth middleware
-JWT validation}
-    Q -->|Valid JWT| R([Request proceeds
-Req.user populated])
-    Q -->|Invalid or expired JWT| S([401 Unauthorized returned
-Client redirects to Login page])
+```
+[Visitor] -> Submits Auth Form -> [System validates payload]
+  |-- Valid --> JWT generated, stored in localStorage -> Redirect to Dashboard
+  |-- Invalid / Wrong Credentials --> Error shown -> Stays on page
+[User] -> Accesses Protected Route -> [Auth Middleware checks JWT]
+  |-- Valid JWT --> Request proceeds
+  |-- Invalid JWT --> 401 Unauthorized -> Redirect to Login
 ```
 
 ### API Specifications
@@ -1242,11 +1133,13 @@ Client redirects to Login page])
 - [MUST HAVE - Resolved 2026-05-29] "Hardcoded Fallback JWT Secrets": The application used a fallback string when JWT_SECRET was missing. Resolved by removing all fallback secrets and adding a synchronous startup validation crash when JWT_SECRET is unset.
 - [MUST HAVE - Resolved 2026-05-29] "Brute-Force vulnerability on authentication endpoints": Endpoints had no rate limiting, leaving them open to automated attacks. Resolved by applying express-rate-limit middleware on registration, login, forgot-password, reset-password, and booking endpoints.
 - [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId casting crashes": Passing non-hexadecimal 24-character strings as parameters caused internal mongoose cast errors. Resolved by introducing validationMiddleware checking MongoDB ObjectId format on all parameterized requests.
+- [MUST HAVE - Resolved 2026-06-11] "Double-hashed passwords breaking login": Test and seed scripts manually bcrypt-hashed passwords before saving, triggering the Mongoose pre-save hook which re-hashed them, leading to authentication failures. Resolved by removing manual hashing in seed scripts and letting the schema handle it automatically.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-06-11 | Antigravity AI | Logged and resolved double-hashing bug in user credential seeding logic. |
 | 2026-05-31 | Agent | Logged and resolved Express 5.0 CORS preflight crash caused by NoSQL sanitization middleware immutability. |
 | 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Logged security hardening checks (JWT secret verification, rate limiting, and parameter verification). |
 | 2026-05-26 | Agent | Generic Blueprint created. Migrated and enriched from deprecated STANDARD_FEATURE_CATALOG.md. |
@@ -1256,7 +1149,7 @@ Client redirects to Login page])
 `Complete`
 
 ### Last Updated
-2026-05-31
+2026-06-11
 
 ---
 
@@ -1302,33 +1195,12 @@ Socket.io real-time synchronization.
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Client A]) --> B[Opens Expert Detail page]
-    B --> C[Selects date]
-    C --> D[GET /booked-slots — slot grid loaded]
-    D --> E[Socket.io connected
-Slot grid updates live]
-
-    E --> F[Client A selects available slot]
-    F --> G[Fills booking form]
-    G --> H[Submits POST /bookings]
-
-    H --> I{Server availability check
-+ unique index enforcement}
-    I -->|Slot available| J[Booking written to DB]
-    J --> K[Socket.io emits slot_booked event
-to all connected clients]
-    K --> L([201 Created
-Client A sees confirmation])
-
-    I -->|Race condition — slot taken| M([400 Bad Request
-UI shows 'Slot already booked'])
-
-    K --> N([Client B on same page
-Receives slot_booked event])
-    N --> O([Slot transitions to 'Booked'
-Disabled — within 500ms])
+```
+[Client] -> Submits POST /bookings -> [System checks availability]
+  |-- Slot Available --> Booking written -> Socket emits slot_booked -> 201 Created
+  |-- Race Condition --> 400 Bad Request -> UI shows 'Slot already booked'
+[Client B] -> Receives slot_booked event -> [System updates UI]
+  |-- Success --> Slot transitions to 'Booked' and is disabled
 ```
 
 ### API Specifications
@@ -1403,6 +1275,7 @@ Disabled — within 500ms])
 
 ### Known Bugs / Stability Risks
 
+- [MUST HAVE - Resolved 2026-06-11] "Playwright E2E Razorpay Mock Timeout": The Razorpay payment gateway triggered a native `window.Razorpay` overlay during E2E testing, causing test timeouts. Resolved by injecting a global `window.Razorpay` mock into the browser context via `page.evaluate` before interacting with the booking submission.
 - [MUST HAVE - Resolved 2026-05-29] "Unvalidated ObjectId casting crashes on booking API": Endpoints accepted invalid MongoDB ObjectIds which caused unhandled Mongoose CastError exceptions. Resolved by introducing parameter ObjectId validation on booking status, rate, and availability checks.
 - [MUST HAVE - Resolved 2026-05-29] "Brute-Force booking creation": Client booking endpoint was vulnerable to automated reservation spam. Resolved by adding an API rate limiter restricting booking creation requests.
 - [MUST HAVE - Resolved 2026-05-29] "Query performance degradation on large histories": Fetching bookings lacked pagination, causing resource exhaustion when histories grew. Resolved by implementing pagination on GET /bookings with skip and limit controls.
@@ -1411,6 +1284,7 @@ Disabled — within 500ms])
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-06-11 | Antigravity AI | Documented E2E test fixes for Razorpay SDK mock isolation and native date picker locators. |
 | 2026-05-31 | Antigravity AI | Documented UI state-clearing post-booking implementation to prevent double-booking from stale client-side form data. |
 | 2026-05-29 | Agent | Promoted from Generic Blueprint to Complete for SkillSync. Documented ObjectId validation, rate limiting, and query pagination fixes. |
 | 2026-05-26 | Agent | Secured bookings retrieval, status patch, and rating endpoints with JWT ownership validations. Blocked Admin from booking creators. |
@@ -1420,7 +1294,7 @@ Disabled — within 500ms])
 `Complete`
 
 ### Last Updated
-2026-05-29
+2026-06-11
 
 ---
 
@@ -1458,34 +1332,11 @@ time slots on a calendar grid, with guards preventing modification of historical
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Provider / Expert]) --> B[Opens Expert Dashboard]
-    B --> C[Selects date on calendar]
-    C --> D{Which date?}
-
-    D -->|Past date| E([All slots shown as 'Passed'
-Disabled — greyed out])
-    D -->|Today| F{For each slot
-vs current IST hour}
-    F -->|Past hour| G([Slot shown as 'Passed'
-Disabled])
-    F -->|Future hour| H[Slot shown as Active]
-    D -->|Future date| I[All slots shown as Active]
-
-    H --> J{What is the slot's current state?}
-    I --> J
-    J -->|Open slot| K[Provider clicks slot]
-    K --> L[POST /dashboard/block-slot]
-    L --> M([Slot turns 'Blocked' in grid])
-
-    J -->|Blocked slot| N[Provider clicks slot]
-    N --> O[POST /dashboard/unblock-slot]
-    O --> P([Slot returns to 'Available'])
-
-    J -->|Client-booked slot| Q([No action
-Shows 'Booked' — not toggleable
-No API call made])
+```
+[Expert] -> Clicks Open Slot -> [System processes POST /dashboard/block-slot]
+  |-- Success --> Slot turns 'Blocked'
+[Expert] -> Clicks Blocked Slot -> [System processes POST /dashboard/unblock-slot]
+  |-- Success --> Slot returns to 'Available'
 ```
 
 ### API Specifications
@@ -1604,32 +1455,10 @@ conventions, decoupling locale-specific formatting from core business logic.
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([User]) --> B[Enters 10-digit phone number
-No country code required]
-    B --> C[Submits form]
-    C --> D[Frontend normalizePhone utility
-prepends '+91']
-    D --> E[API receives '+91XXXXXXXXXX'
-E.164 format]
-    E --> F([Stored in DB as '+91XXXXXXXXXX'])
-
-    G([User]) --> H[Views booking date and time]
-    H --> I[DB returns date '2026-05-26'
-time '14:00' in 24-hour format]
-    I --> J[Frontend locale formatter applies
-DD-MM-YYYY + formatTo12Hour]
-    J --> K([Rendered as
-'26 May 2026 02:00 PM IST'])
-
-    L([System]) --> M[Needs to calculate slot eligibility]
-    M --> N[Reads current UTC time via Date.now]
-    N --> O[Applies +05:30 IST offset
-Builds IST moment from slot date + time]
-    O --> P{slotTimeMs vs Date.now}
-    P -->|slotTimeMs > now| Q([Slot is FUTURE — allowed])
-    P -->|slotTimeMs <= now| R([Slot is PAST — rejected])
+```
+[System] -> Calculates slot eligibility -> [System reads Date.now + applies IST offset]
+  |-- slotTimeMs > now --> Slot is FUTURE -> allowed
+  |-- slotTimeMs <= now --> Slot is PAST -> rejected
 ```
 
 ### API Specifications
@@ -1732,26 +1561,10 @@ Allows all users to upload custom profile pictures, and allows Experts to upload
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    subgraph Client/Expert
-        A([User]) --> B[Selects Image in Profile/Dashboard UI]
-        B --> C[Submits File]
-    end
-    
-    subgraph Backend API
-        C --> D{Upload Endpoint Validation
-        Type / Size}
-        D -->|Invalid Type/Size| E([400 Bad Request
-        Error Feedback])
-        D -->|Valid| F[Save to /uploads]
-        F --> G[Update DB Document]
-        G --> H([200 OK
-        Return new URL])
-    end
-    
-    E --> I[UI Shows Error Banner]
-    H --> J[UI Updates Immediately]
+```
+[User] -> Submits Image File -> [Backend validates Type/Size]
+  |-- Valid --> Saves file, updates DB -> 200 OK + returns new URL
+  |-- Invalid Type/Size --> 400 Bad Request -> UI shows error banner
 ```
 
 ### API Specifications
@@ -1969,33 +1782,10 @@ Integrates native MongoDB Replica Set ACID multi-document transactions (`session
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    subgraph Client/Admin
-        A([User]) --> B[Triggers complex mutation
-        e.g., POST /auth/register]
-    end
-    
-    subgraph Backend Transaction Bubble
-        B --> C[Backend Controller:
-        mongoose.startSession]
-        C --> D[session.withTransaction]
-        D --> E[Operation 1: Create User
-        with session]
-        E --> F{Operation 1 Success?}
-        F -->|Yes| G[Operation 2: Create Expert Profile
-        with session]
-        F -->|No| H([Error Thrown])
-        G --> I{Operation 2 Success?}
-        I -->|Yes| J[Commit Transaction
-        Write to Main DB]
-        I -->|No| H
-        H --> K([Transaction Aborted
-        All partial data rolled back])
-    end
-    
-    J --> L([201 Created Response])
-    K --> M([500 / 400 Error Response])
+```
+[User] -> Triggers complex mutation -> [System starts mongoose transaction]
+  |-- All Operations Succeed --> Commit transaction -> 201 Created
+  |-- Any Operation Fails --> Abort transaction, rollback data -> 500/400 Error
 ```
 
 ### API Specifications
@@ -2373,16 +2163,10 @@ Provides an analytics suite for experts to track commercial performance, schedul
 
 ### User Interaction Flow
 
-```mermaid
-flowchart TD
-    A([Expert User]) --> B[Navigates to Expert Dashboard]
-    B --> C[Clicks 'Business Analytics' Tab]
-    C --> D[Sends GET /expert-dashboard/analytics]
-    D --> E{Backend queries MongoDB}
-    E --> F[Aggregates Bookings, Availability Blocks, and Reviews]
-    F --> G[Computes KPIs, Trends, and Distributions]
-    G --> H[Returns JSON Payload]
-    H --> I[Frontend renders KPI cards & CSS charts]
+```
+[Expert] -> Clicks 'Business Analytics' -> [System GET /expert-dashboard/analytics]
+  |-- Success --> Aggregates data, computes KPIs -> Returns JSON Payload
+  |-- Failure --> Error state shown
 ```
 
 ### API Specifications
@@ -2921,3 +2705,92 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 ### Last Updated
 2026-05-31
 
+---
+
+## Feature: System Hardening (Webhook Idempotency & Job Recovery)
+
+### Overview
+Hardens the Razorpay webhook endpoint and Agenda task scheduler against network failures, duplicate deliveries, and unexpected process termination. Ensures the system remains stable and does not double-process critical financial callbacks or lose background email jobs.
+
+### Functional Requirements
+
+- [MUST HAVE] Webhook endpoints must process duplicate payloads idempotently.
+  Rationale: Razorpay may retry webhooks if network drops occur. Duplicates must not recreate bookings or send duplicate emails.
+
+- [MUST HAVE] Background job queues (Agenda) must implement job recovery or concurrency limits to survive process restarts.
+  Rationale: Prevents lost jobs when the backend restarts before completing pending emails or reminders.
+
+- [SHOULD HAVE] Logging for skipped duplicate webhooks.
+  Rationale: Important for auditing and verifying idempotency mechanisms are active.
+
+- [COULD HAVE] Graceful shutdown hooks for Agenda.
+  Rationale: Allows currently running jobs to complete before the Node process exits.
+
+- [CAN HAVE] Dead-letter queue for failed Agenda jobs.
+  Rationale: Would allow manual retry of failed background jobs via an admin console in the future.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Idempotency checks must execute within < 50ms before committing transactions.
+  Rationale: Prevent long-running locks when duplicate webhooks bombard the server simultaneously.
+
+### User Interaction Flow
+
+```
+[System] -> Receives Webhook -> [Database Check]
+  |-- Success (New) --> Process Payment -> [Status 200]
+  |-- Success (Duplicate) --> Skip Processing -> [Status 200]
+  |-- Failure (DB Error) --> Throw Error -> [Status 500] (Webhook Retries Later)
+```
+
+### API Specifications
+
+* `POST /api/webhooks/razorpay`
+  Input: { event: string, payload: object }
+  Validation: [Verify signature, check idempotency key in DB]
+  Output: { success: boolean }
+  Auth: [Public + Razorpay Signature verification]
+
+### Edge Cases
+
+- When *a duplicate webhook arrives concurrently with the first*, the feature must *use database-level unique constraints to prevent race conditions during insertion*.
+
+### Best Practices
+
+* *Store the Razorpay `payment.id` or `order.id` + `event` combined as a unique constraint on a `WebhookEventLog` collection to guarantee idempotency across nodes.*
+
+### Acceptance Criteria
+
+* **AC 1.1:** *Sending the identical Razorpay webhook payload twice returns 200 OK both times, but only updates the booking status once.*
+* **AC 1.2:** *Agenda scheduled jobs that are interrupted midway (by process kill) are picked up again on reboot.*
+
+### Non-Goals
+
+- This feature does NOT *provide a UI for administrators to manually replay webhooks*.
+
+### Dependencies
+
+- Feature: *[Razorpay Payment Gateway]* — *requires the webhook receiver to be hardened*
+- Service: *[Agenda]* — *the task scheduler being hardened*
+
+### Testing Strategy
+
+- Unit: *Test idempotency middleware logic with mocked DB unique constraint errors.*
+- Integration: *Send duplicate POST requests to the webhook route and verify DB only has one entry.*
+- Manual: *Kill Node.js process while a job is locked, restart, and observe if it's recovered.*
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-12 | Antigravity AI | Initial spec created. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-06-12
