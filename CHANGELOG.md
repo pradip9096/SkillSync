@@ -12,6 +12,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Added
 
+- Added formal Verification and Validation (V&V) integration test sandbox and evaluation reports aligned with ISO/IEC/IEEE 29119-3 and IEEE Std 1012.
 - Added comprehensive ISO/IEC/IEEE 29119-3 compliant test specifications and implementation plans across the `docs/software-testing/` directory for all End-to-End user journeys.
 - Added System Hardening (Webhook Idempotency & Job Recovery) feature specifications to `MASTER_SPEC.md`.
 - Added automated Razorpay refund check and log dispatch to the background abandoned-booking cancellation job to gracefully handle dropped payment webhooks.
@@ -23,6 +24,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Fixed
 
+- Fixed husky `lint-staged` pre-commit hooks failing to resolve ESLint execution paths within the frontend workspace.
 - Fixed Admin Dashboard E2E test suite flakiness by replacing brittle network intercepts with stable UI toast assertions and resolving dialog timing.
 - Fixed backend crashes and CORS preflight failures caused by Express 5.0 `req.query` immutability when sanitizing NoSQL injection payloads.
 - Fixed messaging UI crash caused by unhandled `.map()` operations by injecting fallback array chaining.
@@ -30,6 +32,14 @@ Changelog policy, workflow, and SOP are maintained in
 - Fixed `cancel-abandoned-booking` Agenda scheduler failing silently on database errors by enforcing exception-throws and utilizing Agenda's native exponential backoff retries.
 - Fixed E2E test suite timeout by isolating the checkout flow with a global `window.Razorpay` mock and correcting native date-picker DOM locators.
 - Fixed testing environment authentication failures caused by a double-hashing bug in the database seeding scripts.
+
+### Security
+
+- Secured API payload boundaries using Zod schema-based strict validation middleware.
+- Secured booking Data Transfer Objects (DTOs) by stripping sensitive Razorpay Key IDs from client responses.
+- Secured frontend payment integrations by replacing hardcoded Razorpay fallback keys with environment variable injections.
+- Secured authentication flows by enforcing strict `JWT_SECRET` presence checks during server initialization to eliminate fallback vulnerabilities.
+- Secured authentication endpoints against credential stuffing by implementing strict IP rate limiting (10 requests per 15 minutes).
 
 ## [1.5.0] - 2026-05-31
 
