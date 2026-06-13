@@ -22,7 +22,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Password Recovery & Auto-Login:** Secure Forgot Password flow utilizing random crypto token generation, SHA-256 database-level token hashing, 10-minute expiry locks, Nodemailer link dispatch, and instant JWT auto-login upon successful resets.
 - **Real-Time Messaging & Notifications:** Private, booking-bounded chat messaging between Clients and Experts with instant WebSocket notifications, global unread badges, and clean unique-conversation grouping.
 - **Payment Gateway Integration:** Integrated Razorpay checkout with client-side signature verification, transaction audit logging, idempotent webhook event processing, automatic fail-safe slot-release handlers for dropped payments, and a frontend 5-minute reservation countdown timer.
-- **API Security Hardening & Robust Validation:** Full protection including ReDoS regex sanitization, 100-character input capping on search, IP rate limiting on core authentication and booking routes, parameter checking middleware to prevent MongoDB CastError server crashes, Express 5.0 compatible NoSQL sanitization wrappers, and server-side JWT verification checks.
+- **API Security Hardening & Robust Validation:** Full protection including **Zod schema-based payload validation**, ReDoS regex sanitization, IP rate limiting on core authentication routes (preventing credential stuffing), DTO serialization to prevent Razorpay key leaks, mandatory JWT fallback prevention, Express 5.0 compatible NoSQL sanitization wrappers, and strict parameter checking.
 - **Query Pagination Controls:** Enforced pagination limits (using limit/skip) on heavy queries including admin dashboard lists, user notifications (capped to 50 items), and client history tables.
 - **Custom UX Dialog Modals:** Tailored glassmorphic React dialog boxes replacing standard browser `alert()` and `confirm()` prompts, ensuring a consistent user experience during slot bookings and cancellations.
 - **Automated Directory Environments (direnv):** Opt-in automated per-directory environment loading from `backend/.env` using a root `.envrc` configuration, keeping the developer shell clean and securely isolated.
@@ -184,6 +184,12 @@ You can boot both the frontend and backend simultaneously using the provided aut
 | Testing Technique | Mocking/Stubbing | Jest Mocks |
 | Process | CI/CD Execution | GitHub Actions |
 | Non-Functional Testing | Performance Testing | k6 |
+
+### 📋 Formal Verification & Validation (V&V)
+SkillSync strictly adheres to international software engineering documentation standards for quality assurance:
+- **ISO/IEC/IEEE 29119-3 (Software Testing):** Automated tests are documented using standardized Test Execution Logs and Test Completion Reports to ensure robust empirical validation.
+- **IEEE Std 1012 (Verification and Validation):** Codebase modifications are gated by formal V&V execution reports and anomaly tracking to prevent security regressions from reaching production.
+- **Integration Test Sandbox:** Critical API boundaries and transaction handlers are subjected to automated `jest` and `supertest` verification using an isolated, ephemeral `mongodb-memory-server` database, ensuring 100% test pass rates before deployment.
 
 ## 📜 Coding Guidelines & Scripts
 - Frontend runs on Vite (`npm run dev`, `npm run build`, `npm run preview`).
