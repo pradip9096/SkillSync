@@ -177,6 +177,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Chat Messaging and Notifications](#feature-chat-messaging-and-notifications) | `Complete` | SkillSync | 2026-05-29 |
 | [Razorpay Payment Gateway](#feature-razorpay-payment-gateway) | `Complete` | SkillSync | 2026-05-31 |
 | [System Hardening (Webhook Idempotency & Job Recovery)](#feature-system-hardening-webhook-idempotency--job-recovery) | `Complete` | SkillSync | 2026-06-12 |
+| [API Security Boundaries & Validation](#feature-api-security-boundaries--validation) | `Complete` | SkillSync | 2026-06-13 |
 
 ---
 
@@ -2794,3 +2795,95 @@ Hardens the Razorpay webhook endpoint and Agenda task scheduler against network 
 
 ### Last Updated
 2026-06-12
+
+---
+
+## Feature: API Security Boundaries & Validation
+
+### Overview
+Hardens the application's external API boundary against malicious payloads, credential stuffing, and data leaks using robust input validation, rate limiting, and output sanitization strategies.
+
+### Functional Requirements
+
+- [MUST HAVE] Backend API must validate all incoming request payloads (`body`, `query`, `params`) against strict Zod schema definitions.
+  Rationale: Prevents malformed requests, injected properties, and data corruption from entering the core business logic.
+
+- [MUST HAVE] Backend API must strip sensitive credential properties (e.g., `RAZORPAY_KEY_ID`) from any client-facing Data Transfer Object (DTO).
+  Rationale: Protects server-side secrets from being leaked to the client browser during booking history or session retrievals.
+
+- [MUST HAVE] The frontend must exclusively source external gateway keys (like Razorpay) from strictly typed, non-hardcoded environment variables (e.g., `VITE_RAZORPAY_KEY_ID`).
+  Rationale: Eliminates hardcoded secrets from the compiled JavaScript bundles, mitigating scraping attacks.
+
+- [MUST HAVE] Backend API must enforce a rate limit of 10 requests per 15 minutes on all sensitive authentication routes (`/auth/register`, `/auth/login`, `/auth/forgot-password`).
+  Rationale: Thwarts brute-force credential stuffing and password-guessing botnet attacks.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] The application backend must immediately throw a fatal initialization error and crash if the `JWT_SECRET` environment variable is not explicitly provided during startup.
+  Rationale: Eradicates weak security fallbacks, preventing the server from signing tokens with an easily guessable default string.
+
+### User Interaction Flow
+
+```
+[Attacker] -> POST /auth/login (11th attempt) -> [Rate Limiter]
+  |-- Failure --> 429 Too Many Requests 'Too many login attempts. Please try again after 15 minutes'
+
+[Client] -> POST /bookings (Missing payload fields) -> [Zod Middleware]
+  |-- Failure --> 400 Bad Request + Structured Array of Zod validation error messages
+```
+
+### API Specifications
+
+* `ALL /api/v1/*`
+  Input: `Any`
+  Validation: Schema matching via `validateRequest` middleware
+  Output: `400 Bad Request` containing `{ errors: [{ field, message }] }` on schema violation
+  Auth: N/A
+
+### Edge Cases
+
+- When a rate limit is hit, the API must correctly set standard `Retry-After` headers and return `429 Too Many Requests`.
+- When Mongoose fails to resolve mock models in the integration test sandbox due to missing fields, the Zod validations must intercept the errors and return clean JSON structures instead of HTML or generic 500 crashes.
+
+### Best Practices
+
+* Use `express-rate-limit` mapped strictly to `/api/auth/` routes rather than global application routes to prevent blocking normal site navigation.
+* Use Zod's `strip()` behavior or `z.object({}).strict()` to silently discard or aggressively reject unexpected properties.
+
+### Acceptance Criteria
+
+* **AC X.1:** Submitting a malformed payload to `/bookings` without a required `expertId` returns a `400 Bad Request` with a Zod validation error message.
+* **AC X.2:** Executing 11 sequential requests to `/auth/login` within a 15-minute window returns a `429 Too Many Requests` status code.
+* **AC X.3:** Retrieving a booking via `getBookingsByEmail` or similar query returns the DTO without the `razorpayOrderId` or `razorpayKeyId` secrets exposed.
+* **AC X.4:** Booting the Node.js server without `JWT_SECRET` in the environment results in an immediate `process.exit(1)` and terminal error.
+
+### Non-Goals
+
+- This feature does NOT protect against sophisticated distributed denial-of-service (DDoS) network attacks, which are handled at the WAF/Cloudflare layer.
+
+### Dependencies
+
+- Service: `express-rate-limit` for memory-based IP threshold counting.
+- Service: `zod` for robust typescript-first schema definitions.
+
+### Testing Strategy
+
+- Unit: Test `serializers.js` to ensure the stripping logic perfectly removes secrets from raw MongoDB documents.
+- Integration: Sandboxed tests using `mongodb-memory-server` hitting live routes with `supertest` to assert 429 limits, 400 Zod boundaries, and clean DTO bodies.
+- Manual: Open Chrome DevTools Network Tab during a checkout sequence and inspect the `/bookings` response body to verify no keys are present.
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-13 | Antigravity AI | Initial spec created detailing Phase 1 security boundary remediations. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-06-13
