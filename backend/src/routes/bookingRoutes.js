@@ -27,12 +27,15 @@ const bookingRateLimiter = rateLimit({
   message: { success: false, error: 'Too many booking attempts. Please try again after a minute.' }
 });
 
+const { validateRequest } = require('../middleware/validateRequest');
+const { bookingSchema } = require('../utils/validationSchemas');
+
 /**
  * Route: POST /
  * Purpose: Create a new session booking.
  * Access: Private (Requires authentication).
  */
-router.post('/', protect, bookingRateLimiter, createBooking);
+router.post('/', protect, bookingRateLimiter, validateRequest(bookingSchema), createBooking);
 
 /**
  * Route: POST /verify-payment

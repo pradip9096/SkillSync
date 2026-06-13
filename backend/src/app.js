@@ -293,3 +293,40 @@ process.on('unhandledRejection', (err, promise) => {
   // Close the server and exit the process with a failure code
   server.close(() => process.exit(1));
 });
+
+/**
+ * Graceful Shutdown Handlers
+ * Captures OS termination signals to safely shut down Agenda, the HTTP server, and Mongoose.
+ */
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  try {
+    const agenda = require('./config/agenda');
+    const mongoose = require('mongoose');
+
+    // 1. Stop Agenda from accepting new jobs and wait for active jobs to yield/finish
+    console.log('Stopping Agenda...');
+    await agenda.stop();
+    console.log('Agenda stopped.');
+
+    // 2. Close the HTTP server
+    console.log('Closing HTTP server...');
+    server.close(async () => {
+      console.log('HTTP server closed.');
+
+      // 3. Disconnect Mongoose
+      console.log('Disconnecting from MongoDB...');
+      await mongoose.connection.close();
+      console.log('MongoDB disconnected.');
+
+      // Exit process successfully
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

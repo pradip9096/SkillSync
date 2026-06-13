@@ -124,7 +124,7 @@ const MyBookings = () => {
       const amount = Math.round(hourlyRate * 100);
 
       const options = {
-        key: keyId || 'rzp_test_SvdMCegXvNbj2a',
+        key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amount,
         currency: 'INR',
         name: 'SkillSync',

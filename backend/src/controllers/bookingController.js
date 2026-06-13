@@ -8,9 +8,11 @@
 const Booking = require('../models/Booking');
 const Expert = require('../models/Expert');
 const Availability = require('../models/Availability');
+const ProcessedWebhook = require('../models/ProcessedWebhook');
 const agenda = require('../config/agenda');
 const { formatTime12H } = require('../utils/timeFormatters');
 const { scheduleSessionReminders, cancelScheduledReminders } = require('../services/reminderScheduler');
+const { serializeBookingDTO } = require('../utils/serializers');
 const Razorpay = require('razorpay');
 
 const razorpay = new Razorpay({
@@ -246,8 +248,7 @@ const getBookingsByEmail = async (req, res) => {
       count: bookings.length,
       total,
       pages: Math.ceil(total / limitNum),
-      data: bookings,
-      keyId: process.env.RAZORPAY_KEY_ID
+      data: bookings.map(serializeBookingDTO)
     });
   } catch (error) {
     console.error('API Error:', error);
@@ -784,6 +785,21 @@ const verifyPayment = async (req, res) => {
 const handleWebhook = async (req, res) => {
   const { event, payload } = req.body;
   const io = req.app.get('io');
+
+  // Idempotency Check
+  const eventId = req.headers['x-razorpay-event-id'];
+  if (eventId) {
+    try {
+      await ProcessedWebhook.create({ eventId });
+    } catch (err) {
+      if (err.code === 11000) {
+        console.log(`[Webhook Info] Duplicate webhook event ${eventId} ignored.`);
+        return res.status(200).json({ success: true, ignored: true });
+      }
+      console.error('[Webhook Error] Error storing ProcessedWebhook:', err);
+      return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+  }
 
   try {
     if (event === 'payment.captured' || event === 'order.paid') {
