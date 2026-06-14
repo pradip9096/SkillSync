@@ -20,13 +20,12 @@ const loginSchema = z.object({
 });
 
 const bookingSchema = z.object({
-  expertId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid expert ID format"),
+  expert: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid expert ID format"),
   userName: z.string().min(2, "User name must be at least 2 characters").max(50),
   userEmail: z.string().email("Invalid email format"),
   userPhone: z.string().regex(phoneRegex, "Phone must be a valid Indian mobile number starting with +91"),
-  date: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid date format"),
-  slot: z.string().min(5), // e.g., "09:00 AM"
-  duration: z.number().min(30).max(240).default(60),
+  bookingDate: z.string().refine(val => !isNaN(Date.parse(val)), "Invalid date format"),
+  slotTime: z.string().min(5),
   notes: z.string().max(500).optional()
 });
 

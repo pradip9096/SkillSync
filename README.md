@@ -58,12 +58,16 @@ This is a two-package JavaScript application:
   - `src/config/db.js` - MongoDB Atlas connection configuration using Mongoose.
   - `src/controllers/authController.js` - Registration and login credentials handlers.
   - `src/controllers/adminController.js` - System-wide dashboard override handlers.
-  - `src/controllers/expertDashboardController.js` - Expert portal biography and availability blocking handlers.
-  - `src/controllers/bookingController.js` - Client session booking, completion, and cancellation handlers.
+  - `src/controllers/expertDashboardController.js` - Controller passing requests to ExpertService.
+  - `src/controllers/bookingController.js` - Controller passing requests to BookingService.
   - `src/controllers/expertController.js` - Public directory filters and reviews aggregation query handlers.
   - `src/controllers/reviewController.js` - Client review and rating submission handlers.
   - `src/controllers/messageController.js` - Messaging chat request handlers.
   - `src/controllers/notificationController.js` - Notification retrieval and state change handlers.
+  - `src/services/BookingService.js` - Core business logic and transaction boundaries for bookings.
+  - `src/services/ExpertService.js` - Core business logic for expert operations and metrics.
+  - `src/repositories/` - Data Access Layer (DAL) abstracts MongoDB queries for Availability, Booking, Expert, and User models.
+  - `src/__tests__/unit/services/` - Isolated unit tests for the Service layer using Jest.
   - `src/middleware/authMiddleware.js` - JWT verification and role authentication checks.
   - `src/middleware/uploadMiddleware.js` - Multer configuration for expert portfolio uploads.
   - `src/middleware/validationMiddleware.js` - Parameter MongoDB ObjectId validation middleware.
@@ -194,5 +198,5 @@ SkillSync strictly adheres to international software engineering documentation s
 ## 📜 Coding Guidelines & Scripts
 - Frontend runs on Vite (`npm run dev`, `npm run build`, `npm run preview`).
 - Frontend linting is available via `npm run lint`.
-- The application focuses on clean architecture, segregating responsibilities between routes, controllers, and models. 
+- The backend adheres to a strict **3-Tier Clean Architecture**, segregating responsibilities across Routes, Controllers, Services (Business Logic), Repositories (Data Access Layer), and Mongoose Models to maximize testability and reusability.
 - Real-time updates rely heavily on accurate Room management in Socket.io to optimize network performance.

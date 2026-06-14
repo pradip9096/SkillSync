@@ -154,30 +154,42 @@ const rateExpert = async (req, res) => {
       return res.status(400).json({ success: false, error: 'This session has already been rated.' });
     }
 
-    // Create the Review document
-    const newReview = await Review.create({
-      expert: expertId,
-      user: req.user._id,
-      userName: req.user.name || 'Anonymous Client',
-      rating,
-      comment: comment || undefined,
-      booking: bookingId
-    });
+    const mongoose = require('mongoose');
+    const session = await mongoose.startSession();
+    let newReview;
 
-    /**
-     * Calculate new average rating:
-     * Formula: New Average = ((Current Average * Current Count) + New Rating) / (Current Count + 1)
-     */
-    const currentTotal = expert.rating * expert.numReviews;
-    expert.numReviews += 1;
-    expert.rating = (currentTotal + rating) / expert.numReviews;
+    try {
+      await session.withTransaction(async () => {
+        // Create the Review document
+        const reviewDocs = await Review.create([{
+          expert: expertId,
+          user: req.user._id,
+          userName: req.user.name || 'Anonymous Client',
+          rating,
+          comment: comment || undefined,
+          booking: bookingId
+        }], { session });
+        
+        newReview = reviewDocs[0];
 
-    // Save the updated expert document
-    await expert.save();
+        /**
+         * Calculate new average rating:
+         * Formula: New Average = ((Current Average * Current Count) + New Rating) / (Current Count + 1)
+         */
+        const currentTotal = expert.rating * expert.numReviews;
+        expert.numReviews += 1;
+        expert.rating = (currentTotal + rating) / expert.numReviews;
 
-    // Mark the booking as rated
-    booking.isRated = true;
-    await booking.save();
+        // Save the updated expert document
+        await expert.save({ session });
+
+        // Mark the booking as rated
+        booking.isRated = true;
+        await booking.save({ session });
+      });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({
       success: true,

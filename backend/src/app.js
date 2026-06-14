@@ -70,6 +70,20 @@ const io = new Server(server, {
   }
 });
 
+if (process.env.REDIS_URI) {
+  const { createClient } = require('redis');
+  const { createAdapter } = require('@socket.io/redis-adapter');
+  const pubClient = createClient({ url: process.env.REDIS_URI });
+  const subClient = pubClient.duplicate();
+
+  Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('Redis adapter attached to Socket.io');
+  }).catch((err) => {
+    console.error('Redis connection failed:', err);
+  });
+}
+
 // Make io accessible to our routers/controllers
 app.set('io', io);
 

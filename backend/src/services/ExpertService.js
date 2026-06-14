@@ -316,23 +316,34 @@ class ExpertService {
       throw err;
     }
 
-    const clientReview = await ClientReview.create({
-      client: clientUser._id,
-      expert: expert._id,
-      expertName: expert.name,
-      rating: numericRating,
-      comment: comment || undefined,
-      booking: bookingId
-    });
+    const session = await mongoose.startSession();
+    let clientReview;
+    
+    try {
+      await session.withTransaction(async () => {
+        const reviewDocs = await ClientReview.create([{
+          client: clientUser._id,
+          expert: expert._id,
+          expertName: expert.name,
+          rating: numericRating,
+          comment: comment || undefined,
+          booking: bookingId
+        }], { session });
 
-    const currentTotal = clientUser.rating * clientUser.numReviews;
-    clientUser.numReviews += 1;
-    clientUser.rating = (currentTotal + numericRating) / clientUser.numReviews;
+        clientReview = reviewDocs[0];
 
-    await UserRepository.save(clientUser);
+        const currentTotal = clientUser.rating * clientUser.numReviews;
+        clientUser.numReviews += 1;
+        clientUser.rating = (currentTotal + numericRating) / clientUser.numReviews;
 
-    booking.isClientRated = true;
-    await BookingRepository.save(booking);
+        await UserRepository.save(clientUser, { session });
+
+        booking.isClientRated = true;
+        await BookingRepository.save(booking, { session });
+      });
+    } finally {
+      session.endSession();
+    }
 
     return { clientUser, review: clientReview };
   }

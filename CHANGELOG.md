@@ -12,6 +12,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Added
 
+- Added execution verification and formal V&V reports for the Phase 2 structural refactoring.
 - Added formal Verification and Validation (V&V) integration test sandbox and evaluation reports aligned with ISO/IEC/IEEE 29119-3 and IEEE Std 1012.
 - Added comprehensive ISO/IEC/IEEE 29119-3 compliant test specifications and implementation plans across the `docs/software-testing/` directory for all End-to-End user journeys.
 - Added System Hardening (Webhook Idempotency & Job Recovery) feature specifications to `MASTER_SPEC.md`.
@@ -19,6 +20,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Changed
 
+- Changed backend architecture by extracting monolithic booking and expert dashboard controllers into a testable 3-tier Service and Repository structure.
 - Changed Admin and Expert dashboard data fetching to use server-side pagination to prevent memory exhaustion bottlenecks on large datasets.
 - Changed guest booking form inputs to explicitly enforce database field `maxLength` properties on the client side.
 

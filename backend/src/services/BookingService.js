@@ -81,9 +81,24 @@ class BookingService {
       }
     }
 
+    const bookingId = new mongoose.Types.ObjectId();
+    let order;
+
+    try {
+      const amount = Math.round(expertProfile.hourlyRate * 100);
+      order = await razorpay.orders.create({
+        amount,
+        currency: 'INR',
+        receipt: bookingId.toString()
+      });
+    } catch (rzpErr) {
+      const err = new Error('Payment gateway error: ' + rzpErr.message);
+      err.status = 400;
+      throw err;
+    }
+
     const session = await mongoose.startSession();
     let bookingData;
-    let order;
 
     try {
       await session.withTransaction(async () => {
@@ -111,10 +126,13 @@ class BookingService {
         }, { session });
 
         if (existingBlock) {
-          throw new Error('This time slot is blocked by the expert.');
+          const err = new Error('This time slot is blocked by the expert.');
+          err.status = 400;
+          throw err;
         }
 
         const booking = BookingRepository.createInstance({
+          _id: bookingId,
           expert,
           user: userRef,
           userName,
@@ -123,18 +141,9 @@ class BookingService {
           bookingDate,
           slotTime,
           notes,
-          status: 'Pending'
+          status: 'Pending',
+          razorpayOrderId: order.id
         });
-        await BookingRepository.save(booking, { session });
-
-        const amount = Math.round(expertProfile.hourlyRate * 100);
-        order = await razorpay.orders.create({
-          amount,
-          currency: 'INR',
-          receipt: booking._id.toString()
-        });
-
-        booking.razorpayOrderId = order.id;
         await BookingRepository.save(booking, { session });
 
         bookingData = booking;

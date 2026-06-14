@@ -178,6 +178,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Razorpay Payment Gateway](#feature-razorpay-payment-gateway) | `Complete` | SkillSync | 2026-05-31 |
 | [System Hardening (Webhook Idempotency & Job Recovery)](#feature-system-hardening-webhook-idempotency--job-recovery) | `Complete` | SkillSync | 2026-06-12 |
 | [API Security Boundaries & Validation](#feature-api-security-boundaries--validation) | `Complete` | SkillSync | 2026-06-13 |
+| [3-Tier Backend Architecture & Services Extraction](#feature-3-tier-backend-architecture--services-extraction) | `Complete` | SkillSync | 2026-10-10 |
 
 ---
 
@@ -2887,3 +2888,94 @@ Hardens the application's external API boundary against malicious payloads, cred
 
 ### Last Updated
 2026-06-13
+
+---
+
+## Feature: 3-Tier Backend Architecture & Services Extraction
+
+### Overview
+
+Extracts monolithic business logic from Express controllers into isolated Services and Repositories to enforce a strict 3-tier architecture, maximizing modularity and testability.
+
+### Functional Requirements
+
+- [MUST HAVE] The application must isolate data access queries (Mongoose) into a dedicated Repository layer.
+  Rationale: Decouples business logic from specific ORM implementations and database schemas.
+
+- [MUST HAVE] The application must manage all transaction boundaries, validations, and domain workflows within a dedicated Service layer.
+  Rationale: Prevents "fat controllers" and ensures business logic can be tested in isolation without an HTTP context.
+
+- [MUST HAVE] Express controllers must be strictly limited to parsing HTTP requests, calling the appropriate Service, and formatting HTTP responses.
+  Rationale: Enforces the Single Responsibility Principle at the API boundary.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Services must be independently testable using mocked Repositories.
+  Rationale: Eliminates the need for a live database or in-memory MongoDB replica set during unit testing, significantly improving test speed and reliability.
+
+### User Interaction Flow
+
+```mermaid
+flowchart TD
+    A([Client]) --> B[POST /bookings]
+    B --> C[Controller]
+    C -->|Parses req.body| D[BookingService]
+    D -->|Validates rules| E[BookingRepository]
+    E -->|Executes DB Queries| D
+    D -->|Returns Domain Result| C
+    C -->|Formats Response| F([HTTP 201])
+```
+
+### API Specifications
+
+* `ALL /api/v1/*`
+  Input: `Any`
+  Validation: Domain rules enforced at the Service layer
+  Output: Defined by Service response signatures
+  Auth: Handled via middleware prior to Controller invocation
+
+### Edge Cases
+
+- When a database operation fails, the Repository layer must throw an exception that the Service layer catches and translates into an appropriate domain error, which the Controller then maps to an HTTP 500 or 400.
+
+### Best Practices
+
+* Never inject the `req` or `res` objects into the Service layer; always pass extracted Data Transfer Objects (DTOs).
+* Repositories should strictly return pure data objects or Mongoose documents; they must contain zero business logic.
+
+### Acceptance Criteria
+
+* **AC 5.1:** Controllers for `bookings` and `expertDashboard` contain no direct Mongoose model queries (e.g., `Booking.find()`).
+* **AC 5.2:** Unit tests for `BookingService` and `ExpertService` can run successfully using Jest mocks without initiating a MongoDB connection.
+* **AC 5.3:** Business transactions (e.g., slot booking and payment logic) are completely encapsulated within the Service layer `withTransaction` blocks.
+
+### Non-Goals
+
+- This feature does NOT alter any existing API endpoints, request payloads, or response structures exposed to the frontend.
+
+### Dependencies
+
+- Service: Jest framework for executing isolated unit tests on the new Service classes.
+
+### Testing Strategy
+
+- Unit: Test `BookingService` and `ExpertService` core logic (e.g., time-locks, cancellations) using `jest.mock()` on the Repository layer.
+- Integration: E2E and Controller integration tests verify the end-to-end wiring across the 3 tiers.
+- Manual: Perform a standard booking flow via the UI to confirm architectural changes introduced no regressions.
+
+### Known Bugs / Stability Risks
+
+- [MUST HAVE] During integration testing (Validation phase), the Booking API creation route (`createBooking`) returned `400 Bad Request` instead of `201 Created`. This appears to be a regression caused by the abstraction of the `BookingRepository` triggering premature schema validations, or payload mapping failures during the Controller->Service handoff. This breaks E2E booking flows and socket emission events.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-10-10 | Antigravity AI | Initial spec created detailing the Phase 2 structural refactor (AP-001, AP-007). |
+| 2026-10-10 | Antigravity AI | Logged `MUST HAVE` known bug regarding 400 Bad Request regressions in `createBooking` integration tests. Changed status to Needs Review. |
+
+### Status
+`Needs Review`
+
+### Last Updated
+2026-10-10

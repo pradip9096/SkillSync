@@ -292,7 +292,21 @@ const updateUserProfile = async (req, res) => {
       user.password = req.body.password;
     }
 
-    const updatedUser = await user.save();
+    const session = await mongoose.startSession();
+    let updatedUser;
+    
+    try {
+      await session.withTransaction(async () => {
+        updatedUser = await user.save({ session });
+        
+        if (updatedUser.role === 'Expert' && req.body.name !== undefined) {
+          const Expert = require('../models/Expert');
+          await Expert.findOneAndUpdate({ user: updatedUser._id }, { name: updatedUser.name }, { session });
+        }
+      });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({
       success: true,
@@ -330,13 +344,20 @@ const uploadProfileImage = async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    user.profileImage = imagePath;
-    await user.save();
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        user.profileImage = imagePath;
+        await user.save({ session });
 
-    // If user is an Expert, keep the Expert profile in sync
-    if (user.role === 'Expert') {
-      const Expert = require('../models/Expert');
-      await Expert.findOneAndUpdate({ user: user._id }, { profileImage: imagePath });
+        // If user is an Expert, keep the Expert profile in sync
+        if (user.role === 'Expert') {
+          const Expert = require('../models/Expert');
+          await Expert.findOneAndUpdate({ user: user._id }, { profileImage: imagePath }, { session });
+        }
+      });
+    } finally {
+      session.endSession();
     }
 
     res.status(200).json({
