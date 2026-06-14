@@ -178,7 +178,8 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Razorpay Payment Gateway](#feature-razorpay-payment-gateway) | `Complete` | SkillSync | 2026-05-31 |
 | [System Hardening (Webhook Idempotency & Job Recovery)](#feature-system-hardening-webhook-idempotency--job-recovery) | `Complete` | SkillSync | 2026-06-12 |
 | [API Security Boundaries & Validation](#feature-api-security-boundaries--validation) | `Complete` | SkillSync | 2026-06-13 |
-| [3-Tier Backend Architecture & Services Extraction](#feature-3-tier-backend-architecture--services-extraction) | `Complete` | SkillSync | 2026-10-10 |
+| [3-Tier Backend Architecture & Services Extraction](#feature-3-tier-backend-architecture--services-extraction) | `Complete` | SkillSync | 2026-06-14 |
+| [Distributed State & Database Concurrency](#feature-distributed-state--database-concurrency) | `Complete` | SkillSync | 2026-06-14 |
 
 ---
 
@@ -2965,7 +2966,8 @@ flowchart TD
 
 ### Known Bugs / Stability Risks
 
-- [MUST HAVE] During integration testing (Validation phase), the Booking API creation route (`createBooking`) returned `400 Bad Request` instead of `201 Created`. This appears to be a regression caused by the abstraction of the `BookingRepository` triggering premature schema validations, or payload mapping failures during the Controller->Service handoff. This breaks E2E booking flows and socket emission events.
+- [MUST HAVE - Resolved 2026-06-14] During integration testing (Validation phase), the Booking API creation route (`createBooking`) returned `400 Bad Request` instead of `201 Created`. This appears to be a regression caused by the abstraction of the `BookingRepository` triggering premature schema validations, or payload mapping failures during the Controller->Service handoff. This breaks E2E booking flows and socket emission events.
+  Fix: Resolved field mapping mismatches in validation schema and ensured explicit HTTP error code propagation in the Service layer.
 
 ### Spec Change Log
 
@@ -2973,9 +2975,101 @@ flowchart TD
 |---|---|---|
 | 2026-10-10 | Antigravity AI | Initial spec created detailing the Phase 2 structural refactor (AP-001, AP-007). |
 | 2026-10-10 | Antigravity AI | Logged `MUST HAVE` known bug regarding 400 Bad Request regressions in `createBooking` integration tests. Changed status to Needs Review. |
+| 2026-06-14 | Antigravity AI | Resolved 400 Bad Request regression by mapping Zod schema fields to Mongoose schema exactly. Changed status to Complete. |
 
 ### Status
-`Needs Review`
+`Complete`
 
 ### Last Updated
-2026-10-10
+2026-06-14
+
+---
+
+## Feature: Distributed State & Database Concurrency
+
+### Overview
+Hardens the application to support horizontal scaling across multiple instances and mitigates race conditions via strictly enforced Two-Phase Commit strategies and MongoDB ACID transactions.
+
+### Functional Requirements
+
+- [MUST HAVE] The application must synchronize real-time WebSocket state across horizontal clusters using a centralized message broker (Redis).
+  Rationale: Ensures socket events (e.g. `slot_booked`) reach all connected clients globally, not just those connected to the node that processed the booking.
+
+- [MUST HAVE] The backend must wrap any domain logic modifying multiple MongoDB collections into atomic `session.withTransaction()` blocks.
+  Rationale: Prevents orphaned records (e.g., creating a user without its accompanying Expert profile, or leaving a booking as 'rated' without updating the Expert's average score) if a partial failure occurs.
+
+- [MUST HAVE] The application must invoke external API dependencies (like Razorpay order creation) strictly *before* opening a Mongoose transaction, fulfilling the Two-Phase Commit pattern.
+  Rationale: Network calls inside an active database transaction block locks resources for unpredictable durations and causes transaction timeouts or cascading deadlocks during network latency spikes.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Database transactions must be scoped correctly by passing `{ session }` into all sub-operations.
+  Rationale: Mongoose commands fall out of the transaction boundary if the session object is missing.
+
+### User Interaction Flow
+
+```mermaid
+flowchart TD
+    A([Client Posts Booking]) --> B[Razorpay Order API Call]
+    B -->|Success| C[Mongoose startSession & withTransaction]
+    C --> D[MongoDB saves Booking]
+    D --> E[Socket.io emits slot_booked via RedisAdapter]
+    E -->|Success| F([HTTP 201])
+    C -->|Fails| G[MongoDB Rolls back Booking]
+    G --> H([HTTP 400])
+    B -->|Fails| I([HTTP 400 - Order Failed])
+```
+
+### API Specifications
+
+* `ALL Endpoints with Multi-Document Mutations`
+  Input: `Any`
+  Validation: Executed before transactions open
+  Output: Atomic Success or Safe Rejection without partial states
+  Auth: N/A
+
+### Edge Cases
+
+- When a Razorpay connection times out, the backend throws an error immediately without opening a database lock or dropping existing connections.
+
+### Best Practices
+
+- `session.endSession()` must be wrapped in a `finally` block to prevent session leaks during uncaught exceptions.
+
+### Acceptance Criteria
+
+* **AC 6.1:** Connecting two test clients to disparate application instances correctly bridges socket emissions via the Redis Pub/Sub adapter.
+* **AC 6.2:** If a document save operation fails midway through an `ExpertService.rateClient` or `authController.uploadProfileImage` routine, no database modifications persist.
+* **AC 6.3:** Razorpay network failures abort the `createBooking` operation cleanly without holding dangling database locks or leaving ghost bookings.
+
+### Non-Goals
+
+- Does not migrate to PostgreSQL or switch ORMs; relies on MongoDB's native replica-set transaction features.
+
+### Dependencies
+
+- Service: Redis server for Pub/Sub brokering of Socket.io payloads.
+- Service: MongoDB Replica Set (transactions require replica sets in Mongo).
+
+### Testing Strategy
+
+- Unit: Test Two-Phase Commit transaction isolation via mock failures injected mid-block.
+- Integration: E2E test `createBooking` confirming transactional rollback behavior and `slot_booked` socket suppression upon intentional domain failure.
+- Manual: Connect multiple browser tabs across different Node ports to verify Redis adapter properly syncs real-time events.
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-14 | Antigravity AI | Initial spec created detailing Phase 3 Concurrency, State, and Two-Phase Commit architectures. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-06-14
+

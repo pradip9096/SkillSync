@@ -21,7 +21,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Automated Email & SMS Reminders:** Persistent scheduler using Agenda.js to dispatch immediate booking confirmations, cancellations, and pre-session reminders (at 24 hours and 2 hours in IST) via Nodemailer and Twilio with robust development console logging fallbacks.
 - **Password Recovery & Auto-Login:** Secure Forgot Password flow utilizing random crypto token generation, SHA-256 database-level token hashing, 10-minute expiry locks, Nodemailer link dispatch, and instant JWT auto-login upon successful resets.
 - **Real-Time Messaging & Notifications:** Private, booking-bounded chat messaging between Clients and Experts with instant WebSocket notifications, global unread badges, and clean unique-conversation grouping.
-- **Payment Gateway Integration:** Integrated Razorpay checkout with client-side signature verification, transaction audit logging, idempotent webhook event processing, automatic fail-safe slot-release handlers for dropped payments, and a frontend 5-minute reservation countdown timer.
+- **Payment Gateway Integration:** Integrated Razorpay checkout with client-side signature verification, transaction audit logging, idempotent webhook event processing, **Two-Phase Commit boundaries**, automatic fail-safe slot-release handlers for dropped payments, and a frontend 5-minute reservation countdown timer.
 - **API Security Hardening & Robust Validation:** Full protection including **Zod schema-based payload validation**, ReDoS regex sanitization, IP rate limiting on core authentication routes (preventing credential stuffing), DTO serialization to prevent Razorpay key leaks, mandatory JWT fallback prevention, Express 5.0 compatible NoSQL sanitization wrappers, and strict parameter checking.
 - **Query Pagination Controls:** Enforced pagination limits (using limit/skip) on heavy queries including admin dashboard lists, user notifications (capped to 50 items), and client history tables.
 - **Custom UX Dialog Modals:** Tailored glassmorphic React dialog boxes replacing standard browser `alert()` and `confirm()` prompts, ensuring a consistent user experience during slot bookings and cancellations.
@@ -42,6 +42,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Node.js (v18+) & Express (v5.2):** Robust event-driven Javascript runtime and minimalist server framework.
 - **Mongoose (v9.6) & MongoDB Atlas:** Schema-based ODM layer connecting to cloud-hosted NoSQL cluster. Enforces ACID transactions (`session.withTransaction()`) across multiple collections and handles schema validations/indexes.
 - **Socket.io (v4.8):** WebSockets engine structured around Room boundaries to broadcast slot status updates instantly to target client listeners.
+- **Redis (v6.0) & @socket.io/redis-adapter (v8.3):** Message broker and adapter for horizontally scaling real-time WebSocket state across multiple instances.
 - **Multer (v2.1):** Multipart/form-data parser utility to secure local media uploads.
 - **dotenv (v17.4):** Zero-dependency module that loads environment variables from a `.env` file into `process.env`.
 - **CORS (v2.8):** Express middleware to enable Cross-Origin Resource Sharing with various options.

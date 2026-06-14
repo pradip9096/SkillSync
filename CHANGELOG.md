@@ -12,6 +12,8 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Added
 
+- Added `@socket.io/redis-adapter` for distributed, multi-instance horizontal scaling of real-time WebSockets.
+- Added explicit ACID Mongoose transaction boundaries for operations mutating multiple documents simultaneously, including `rateClient`, `rateExpert`, and User profile cascades.
 - Added execution verification and formal V&V reports for the Phase 2 structural refactoring.
 - Added formal Verification and Validation (V&V) integration test sandbox and evaluation reports aligned with ISO/IEC/IEEE 29119-3 and IEEE Std 1012.
 - Added comprehensive ISO/IEC/IEEE 29119-3 compliant test specifications and implementation plans across the `docs/software-testing/` directory for all End-to-End user journeys.
@@ -20,11 +22,14 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Changed
 
+- Changed Razorpay external order generation to execute outside Mongoose transactional blocks, ensuring Two-Phase Commit atomicity for booking creation.
 - Changed backend architecture by extracting monolithic booking and expert dashboard controllers into a testable 3-tier Service and Repository structure.
 - Changed Admin and Expert dashboard data fetching to use server-side pagination to prevent memory exhaustion bottlenecks on large datasets.
 - Changed guest booking form inputs to explicitly enforce database field `maxLength` properties on the client side.
 
 ### Fixed
+
+- Fixed a validation regression in the booking creation route by aligning the Zod schema with the underlying Mongoose model payload structure.
 
 - Fixed husky `lint-staged` pre-commit hooks failing to resolve ESLint execution paths within the frontend workspace.
 - Fixed Admin Dashboard E2E test suite flakiness by replacing brittle network intercepts with stable UI toast assertions and resolving dialog timing.
