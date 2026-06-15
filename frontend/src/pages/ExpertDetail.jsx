@@ -13,10 +13,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { fetchExpertById, fetchBookedSlots, createBooking, verifyPayment } from '../services/api';
 import socket from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle, X, ChevronRight } from 'lucide-react';
+
+const bookingSchema = z.object({
+  userName: z.string().min(1, 'Name is required'),
+  userEmail: z.string().email('Invalid email address'),
+  userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number'),
+  notes: z.string().max(200).optional(),
+});
 
 /**
  * ExpertDetail Page Component.
@@ -29,45 +40,29 @@ import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Load
 const ExpertDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { user, updateUserProfile } = useAuth();
 
   // State Management
-  const [expert, setExpert] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [bookedSlots, setBookedSlots] = useState([]);
-  const [reviews, setReviews] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Initialize with current date in IST format
     const now = new Date();
     const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    //  The toISOString() method converts a Date object into a standardized string format (ISO 8601).
     return istNow.toISOString().split('T')[0]; 
   });
   const [selectedSlot, setSelectedSlot] = useState('');
-  const [formData, setFormData] = useState({
-    userName: '',
-    userEmail: '',
-    userPhone: '',
-    notes: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [bookingError, setBookingError] = useState(null);
 
-  // Lightbox state
-  const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed, number = open at that index
-
-  const openLightbox = (idx) => setLightboxIdx(idx);
-  const closeLightbox = useCallback(() => setLightboxIdx(null), []);
-  const lightboxPrev = useCallback(() => {
-    if (!expert?.gallery) return;
-    setLightboxIdx(i => (i - 1 + expert.gallery.length) % expert.gallery.length);
-  }, [expert]);
-  const lightboxNext = useCallback(() => {
-    if (!expert?.gallery) return;
-    setLightboxIdx(i => (i + 1) % expert.gallery.length);
-  }, [expert]);
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      userName: user?.name || '',
+      userEmail: user?.email || '',
+      userPhone: (user?.phone || '').replace(/^\+91/, ''),
+      notes: ''
+    }
+  });
 
   const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
   const isAdmin = !!(user && user.role === 'Admin');
@@ -93,27 +88,7 @@ const ExpertDetail = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [lightboxIdx, closeLightbox, lightboxPrev, lightboxNext]);
 
-  // Pre-fill form from user details
-  useEffect(() => {
-    if (user) {
-      const formatPhoneForInput = (phone) => {
-        if (!phone) return '';
-        let val = phone.replace(/\s|-/g, '');
-        if (val.startsWith('+91')) {
-          val = val.slice(3);
-        }
-        return val.slice(0, 10);
-      };
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormData(prev => ({
-        ...prev,
-        userName: prev.userName || user.name || '',
-        userEmail: prev.userEmail || user.email || '',
-        userPhone: prev.userPhone || formatPhoneForInput(user.phone)
-      }));
-    }
-  }, [user]);
+  // React Hook Form handles default values via its config object
 
   /**
    * Helper: Check if a time slot has already passed for the current day.
@@ -147,73 +122,75 @@ const ExpertDetail = () => {
     { value: '22:00', label: '10:00 PM' }
   ];
 
-  /**
-   * Effect Hook for Expert Data and Socket Listeners.
-   * Joins the expert's room and listens for real-time slot updates.
-   */
-  useEffect(() => {
-    /**
-     * Fetches expert details from the API.
-     */
-    const getExpertData = async () => {
-      try {
-        const { data } = await fetchExpertById(id);
-        setExpert(data.data);
-        setReviews(data.reviews || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getExpertData();
+  // React Query: Fetch Expert Data
+  const { data: expertRes, isLoading: loadingExpert } = useQuery({
+    queryKey: ['expert', id],
+    queryFn: async () => {
+      const { data } = await fetchExpertById(id);
+      return data;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+  const expert = expertRes?.data;
+  const reviews = expertRes?.reviews || [];
 
-    // Socket: Join expert-specific room for real-time updates
+  // Lightbox state
+  const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed, number = open at that index
+  const openLightbox = (idx) => setLightboxIdx(idx);
+  const closeLightbox = useCallback(() => setLightboxIdx(null), []);
+  const lightboxPrev = useCallback(() => {
+    if (!expert?.gallery) return;
+    setLightboxIdx(i => (i - 1 + expert.gallery.length) % expert.gallery.length);
+  }, [expert]);
+  const lightboxNext = useCallback(() => {
+    if (!expert?.gallery) return;
+    setLightboxIdx(i => (i + 1) % expert.gallery.length);
+  }, [expert]);
+
+  // React Query: Fetch Booked Slots
+  const { data: bookedSlotsRes, isLoading: loadingSlots } = useQuery({
+    queryKey: ['bookedSlots', id, selectedDate],
+    queryFn: async () => {
+      const { data } = await fetchBookedSlots(id, selectedDate);
+      return data;
+    },
+    staleTime: 1000 * 60
+  });
+  const bookedSlots = bookedSlotsRes?.data || [];
+  const loading = loadingExpert || loadingSlots;
+
+  // Socket: Join expert-specific room for real-time updates
+  useEffect(() => {
     const joinExpertRoom = () => socket.emit('join_expert_room', id);
     joinExpertRoom();
     socket.on('connect', joinExpertRoom);
 
-    // Listener for when a slot is booked by someone else
     const handleSlotBooked = (data) => {
       if (data.bookingDate === selectedDate) {
-        setBookedSlots((prev) => [...prev, { slotTime: data.slotTime }]);
+        queryClient.setQueryData(['bookedSlots', id, selectedDate], (oldData) => {
+          if (!oldData) return oldData;
+          return { ...oldData, data: [...(oldData.data || []), { slotTime: data.slotTime }] };
+        });
       }
     };
     socket.on('slot_booked', handleSlotBooked);
 
-    // Listener for when a booking is cancelled, releasing the slot
     const handleSlotReleased = (data) => {
       if (data.bookingDate === selectedDate) {
-        setBookedSlots((prev) => prev.filter(s => (typeof s === 'string' ? s : s.slotTime) !== data.slotTime));
+        queryClient.setQueryData(['bookedSlots', id, selectedDate], (oldData) => {
+          if (!oldData) return oldData;
+          return { ...oldData, data: (oldData.data || []).filter(s => s.slotTime !== data.slotTime) };
+        });
       }
     };
     socket.on('slot_released', handleSlotReleased);
 
-    // Cleanup: remove listeners when component unmounts
     return () => {
       socket.off('connect', joinExpertRoom);
       socket.off('slot_booked', handleSlotBooked);
       socket.off('slot_released', handleSlotReleased);
     };
-  }, [id, selectedDate]);
-
-  /**
-   * Effect Hook to fetch currently booked slots for the selected date.
-   */
-  useEffect(() => {
-    /**
-     * Fetches booked slots for the given expert and date.
-     */
-    const getBooked = async () => {
-      try {
-        const { data } = await fetchBookedSlots(id, selectedDate);
-        setBookedSlots(data.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    getBooked();
-  }, [id, selectedDate]);
+  }, [id, selectedDate, queryClient]);
 
   /**
    * Handles the booking form submission.
@@ -238,36 +215,24 @@ const ExpertDetail = () => {
     });
   };
 
-  const handleBooking = async (e) => {
-    e.preventDefault();
-    if (!selectedSlot) return;
-
-    try {
-      setIsSubmitting(true);
-      setBookingError(null);
-
-      // Load Razorpay Script first
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        setBookingError('Failed to load payment gateway SDK. Please check your internet connection.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Construct payload, strip any non-digits, and prepend +91 prefix
-      let phoneClean = formData.userPhone.replace(/\D/g, '');
+  // React Query Mutation for Booking
+  const bookingMutation = useMutation({
+    mutationFn: async (data) => {
+      let phoneClean = data.userPhone.replace(/\D/g, '');
       if (phoneClean && !phoneClean.startsWith('+91')) {
         phoneClean = '+91' + phoneClean;
       }
-
-      const { data: resData } = await createBooking({
+      const payload = {
         expert: id,
         bookingDate: selectedDate,
         slotTime: selectedSlot,
-        ...formData,
+        ...data,
         userPhone: phoneClean
-      });
-
+      };
+      const res = await createBooking(payload);
+      return { resData: res.data, payload };
+    },
+    onSuccess: async ({ resData, payload }) => {
       const { data: booking, razorpayOrderId, amount, keyId } = resData;
 
       const options = {
@@ -279,7 +244,6 @@ const ExpertDetail = () => {
         order_id: razorpayOrderId,
         handler: async function (response) {
           try {
-            setIsSubmitting(true);
             const { data: verifyData } = await verifyPayment({
               bookingId: booking._id,
               razorpayPaymentId: response.razorpay_payment_id,
@@ -288,17 +252,9 @@ const ExpertDetail = () => {
             });
 
             if (verifyData.success) {
-              if (user) {
-                updateUserProfile(formData.userName, phoneClean);
-              }
+              if (user) updateUserProfile(payload.userName, payload.userPhone);
               setSuccess(true);
-              // Clear form data so if the user navigates back, it isn't prepopulated
-              setFormData({
-                userName: user?.name || '',
-                userEmail: user?.email || '',
-                userPhone: (user?.phone || '').replace(/^\+91/, ''),
-                notes: ''
-              });
+              reset(); // Clear React Hook Form data
               setBookingError(null);
               setSelectedSlot('');
               setTimeout(() => navigate('/my-bookings'), 3000);
@@ -307,20 +263,14 @@ const ExpertDetail = () => {
             }
           } catch (err) {
             setBookingError(err.response?.data?.error || 'Payment verification failed.');
-          } finally {
-            setIsSubmitting(false);
           }
         },
         prefill: {
           name: booking.userName,
           email: booking.userEmail,
-          // Razorpay v2 prefill.contact expects a bare 10-digit number (no +91 prefix).
-          // The modal handles the country selector itself. Strip the +91 if present.
           contact: (booking.userPhone || '').replace(/^\+91/, '')
         },
-        theme: {
-          color: '#2563eb'
-        },
+        theme: { color: '#2563eb' },
         modal: {
           ondismiss: function () {
             setBookingError('Payment cancelled. Please complete payment to confirm your booking.');
@@ -329,13 +279,28 @@ const ExpertDetail = () => {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function () {
+        setBookingError('Payment failed.');
+      });
       rzp.open();
-    } catch (err) {
+    },
+    onError: (err) => {
       setBookingError(err.response?.data?.error || 'Booking failed');
-    } finally {
-      setIsSubmitting(false);
     }
+  });
+
+  const onSubmit = async (data) => {
+    if (!selectedSlot) return;
+    setBookingError(null);
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded) {
+      setBookingError('Failed to load payment gateway SDK.');
+      return;
+    }
+    bookingMutation.mutate(data);
   };
+  
+  const isSubmitting = bookingMutation.isPending;
 
   // Render: Loading State
   if (loading) return (
@@ -589,7 +554,7 @@ const ExpertDetail = () => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleBooking} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
               {bookingError && (
                 <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex flex-col gap-2 animate-fade-in">
                   <div className="flex items-center gap-3">
@@ -614,17 +579,15 @@ const ExpertDetail = () => {
                     <User className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <input 
                       id="userName"
-                      name="userName"
-                      required
                       type="text" 
                       maxLength="50"
                       placeholder="Enter your name"
-                      value={formData.userName}
-                      disabled={isBookingDisabled}
-                      onChange={(e) => setFormData({...formData, userName: e.target.value})}
+                      {...register("userName")}
+                      disabled={isBookingDisabled || isSubmitting}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
+                  {errors.userName && <p className="text-red-500 text-xs font-bold mt-1 px-1">{errors.userName.message}</p>}
                 </div>
                 <div className="space-y-3">
                   <label htmlFor="userEmail" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Email Address</label>
@@ -632,16 +595,14 @@ const ExpertDetail = () => {
                     <Mail className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <input 
                       id="userEmail"
-                      name="userEmail"
-                      required
                       type="email" 
                       placeholder="name@example.com"
-                      value={formData.userEmail}
-                      disabled={isBookingDisabled}
-                      onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
+                      {...register("userEmail")}
+                      disabled={isBookingDisabled || isSubmitting}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
+                  {errors.userEmail && <p className="text-red-500 text-xs font-bold mt-1 px-1">{errors.userEmail.message}</p>}
                 </div>
               </div>
 
@@ -652,21 +613,14 @@ const ExpertDetail = () => {
                     <Phone className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <input 
                       id="userPhone"
-                      name="userPhone"
-                      required
                       type="tel" 
                       placeholder="9876543210"
-                      pattern="[6-9][0-9]{9}"
-                      title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
-                      value={formData.userPhone}
-                      disabled={isBookingDisabled}
-                      onChange={(e) => {
-                        let val = e.target.value.replace(/\D/g, ''); 
-                        setFormData({...formData, userPhone: val.slice(0, 10)});
-                      }}
+                      {...register("userPhone")}
+                      disabled={isBookingDisabled || isSubmitting}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
+                  {errors.userPhone && <p className="text-red-500 text-xs font-bold mt-1 px-1">{errors.userPhone.message}</p>}
                 </div>
                 <div className="space-y-3">
                   <label htmlFor="notes" className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Meeting Notes</label>
@@ -674,16 +628,15 @@ const ExpertDetail = () => {
                     <MessageSquare className="absolute left-4 top-4 w-6 h-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <input 
                       id="notes"
-                      name="notes"
                       type="text" 
                       maxLength="200"
                       placeholder="Briefly describe your goals..."
-                      value={formData.notes}
-                      disabled={isBookingDisabled}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      {...register("notes")}
+                      disabled={isBookingDisabled || isSubmitting}
                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
+                  {errors.notes && <p className="text-red-500 text-xs font-bold mt-1 px-1">{errors.notes.message}</p>}
                 </div>
               </div>
 

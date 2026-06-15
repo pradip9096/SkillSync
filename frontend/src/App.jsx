@@ -8,25 +8,28 @@
  * Side Effects: None.
  */
 
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import ExpertListing from './pages/ExpertListing';
-import ExpertDetail from './pages/ExpertDetail';
-import MyBookings from './pages/MyBookings';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import AdminDashboard from './pages/AdminDashboard';
-import ExpertDashboard from './pages/ExpertDashboard';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Messaging from './pages/Messaging';
-import Notifications from './pages/Notifications';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+
+// Lazy load route-level components
+const Home = lazy(() => import('./pages/Home'));
+const ExpertListing = lazy(() => import('./pages/ExpertListing'));
+const ExpertDetail = lazy(() => import('./pages/ExpertDetail'));
+const MyBookings = lazy(() => import('./pages/MyBookings'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Profile = lazy(() => import('./pages/Profile'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const ExpertDashboard = lazy(() => import('./pages/ExpertDashboard'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Messaging = lazy(() => import('./pages/Messaging'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 /**
  * Main App Component.
@@ -47,65 +50,74 @@ function App() {
               {/* Persistent Navigation Bar */}
               <Navbar />
             
-            {/* Route Definitions */}
-            <Routes>
-              {/* Landing page */}
-              <Route path="/" element={<Home />} />
+            {/* Suspense boundary for code-split routes */}
+            <Suspense fallback={
+              <div className="flex justify-center items-center h-screen w-full">
+                <div className="animate-pulse flex flex-col items-center">
+                  <div className="h-12 w-12 bg-gray-300 rounded-full mb-4"></div>
+                  <div className="h-4 w-24 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+            }>
+              <Routes>
+                {/* Landing page */}
+                <Route path="/" element={<Home />} />
 
-              {/* Public authentication routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
+                {/* Public authentication routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-              {/* List of experts */}
-              <Route path="/experts" element={<ExpertListing />} />
-              
-              {/* Detailed view for a specific expert */}
-              <Route path="/expert/:id" element={<ExpertDetail />} />
-              
-              {/* User's booking history page (protected, Clients only) */}
-              <Route path="/my-bookings" element={
-                <ProtectedRoute allowedRoles={['Client']}>
-                  <MyBookings />
-                </ProtectedRoute>
-              } />
+                {/* List of experts */}
+                <Route path="/experts" element={<ExpertListing />} />
+                
+                {/* Detailed view for a specific expert */}
+                <Route path="/expert/:id" element={<ExpertDetail />} />
+                
+                {/* User's booking history page (protected, Clients only) */}
+                <Route path="/my-bookings" element={
+                  <ProtectedRoute allowedRoles={['Client']}>
+                    <MyBookings />
+                  </ProtectedRoute>
+                } />
 
-              {/* User's profile page (protected) */}
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
+                {/* User's profile page (protected) */}
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
 
-              {/* Messaging page (protected, Client/Expert) */}
-              <Route path="/messaging" element={
-                <ProtectedRoute allowedRoles={['Client', 'Expert']}>
-                  <Messaging />
-                </ProtectedRoute>
-              } />
+                {/* Messaging page (protected, Client/Expert) */}
+                <Route path="/messaging" element={
+                  <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                    <Messaging />
+                  </ProtectedRoute>
+                } />
 
-              {/* Notifications page (protected, Client/Expert) */}
-              <Route path="/notifications" element={
-                <ProtectedRoute allowedRoles={['Client', 'Expert']}>
-                  <Notifications />
-                </ProtectedRoute>
-              } />
+                {/* Notifications page (protected, Client/Expert) */}
+                <Route path="/notifications" element={
+                  <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                    <Notifications />
+                  </ProtectedRoute>
+                } />
 
-              {/* Admin dashboard page (protected, Admin only) */}
-              <Route path="/admin" element={
-                <ProtectedRoute allowedRoles={['Admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } />
+                {/* Admin dashboard page (protected, Admin only) */}
+                <Route path="/admin" element={
+                  <ProtectedRoute allowedRoles={['Admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } />
 
-              {/* Expert dashboard page (protected, Expert only) */}
-              <Route path="/expert-dashboard" element={
-                <ProtectedRoute allowedRoles={['Expert']}>
-                  <ExpertDashboard />
-                </ProtectedRoute>
-              } />
-            </Routes>
+                {/* Expert dashboard page (protected, Expert only) */}
+                <Route path="/expert-dashboard" element={
+                  <ProtectedRoute allowedRoles={['Expert']}>
+                    <ExpertDashboard />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </Suspense>
             </div>
           </GlobalErrorBoundary>
         </NotificationProvider>

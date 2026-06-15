@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { fetchUnreadMessageCount, fetchUnreadNotificationCount, markNotificationAsRead, markAllNotificationsAsRead, markMessagesAsRead } from '../services/api';
 import socket from '../services/socket';
@@ -13,19 +13,32 @@ export const NotificationProvider = ({ children }) => {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
-  const fetchCounts = async () => {
+  const fetchTimeoutRef = useRef(null);
+
+  const fetchCounts = useCallback(async () => {
     if (!user || (user.role !== 'Client' && user.role !== 'Expert')) return;
-    try {
-      const [msgRes, notifRes] = await Promise.all([
-        fetchUnreadMessageCount(),
-        fetchUnreadNotificationCount()
-      ]);
-      setUnreadMessages(msgRes.data.count);
-      setUnreadNotifications(notifRes.data.count);
-    } catch (err) {
-      console.error('Failed to fetch counts', err);
+    
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
     }
-  };
+    
+    return new Promise((resolve) => {
+      fetchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const [msgRes, notifRes] = await Promise.all([
+            fetchUnreadMessageCount(),
+            fetchUnreadNotificationCount()
+          ]);
+          setUnreadMessages(msgRes.data.count);
+          setUnreadNotifications(notifRes.data.count);
+          resolve();
+        } catch (err) {
+          console.error('Failed to fetch counts', err);
+          resolve();
+        }
+      }, 300); // 300ms debounce
+    });
+  }, [user]);
 
   const markNotifAsReadGlobally = async (id) => {
     try {
@@ -58,7 +71,7 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     fetchCounts();
 
     if (user) {

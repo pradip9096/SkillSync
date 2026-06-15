@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchExperts } from '../services/api';
 import ExpertCard from '../components/ExpertCard';
 import { useAuth } from '../context/AuthContext';
@@ -20,59 +21,37 @@ import { Search, Filter, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
  * Purpose: Manages the state for expert listings, search queries, and category filters.
  * Parameters: None.
  * Return value: {JSX.Element} The rendered expert listing page.
- * Side effects: Triggers API calls to fetch experts.
+ * Side effects: Triggers API calls to fetch experts via React Query.
  */
 const ExpertListing = () => {
   const { user } = useAuth();
-  // State for storing the list of experts
-  const [experts, setExperts] = useState([]);
-  // State for managing loading and error states
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  
   // State for search input and category filter
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
 
   // Predefined list of expert categories
   const categories = ['Technology', 'Finance', 'Health', 'Marketing', 'Design', 'Business'];
 
-  /**
-   * Effect Hook to fetch experts whenever search or category filters change.
-   * Includes a debounce mechanism to prevent excessive API calls while typing.
-   */
+  // Debounce search input to prevent excessive API calls
   useEffect(() => {
-    /**
-     * Async function to fetch experts based on current filters.
-     * 
-     * Purpose: Calls the API and updates state with the results.
-     */
-    const getExperts = async () => {
-      try {
-        setLoading(true);
-        // Fetch experts with current filter parameters
-        const { data } = await fetchExperts({ search, category });
-        setExperts(data.data);
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to fetch experts. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    const handler = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(handler);
+  }, [search]);
 
-    /**
-     * Debounce logic:
-     * We wait for 500ms after the last keystroke or filter change before 
-     * making the API request.
-     */
-    const delayDebounceFn = setTimeout(() => {
-      getExperts();
-    }, 500);
+  // React Query for data fetching
+  const { data: response, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['experts', debouncedSearch, category],
+    queryFn: async () => {
+      const { data } = await fetchExperts({ search: debouncedSearch, category });
+      return data;
+    },
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
 
-    // Cleanup function to clear the timeout if the effect is re-triggered
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, category]);
+  const experts = response?.data || [];
+  const error = queryError ? 'Failed to fetch experts. Please try again later.' : null;
 
   // Filter out the expert's own profile card if logged in
   const displayedExperts = (experts || []).filter(

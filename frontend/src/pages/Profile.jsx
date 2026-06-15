@@ -14,7 +14,7 @@ import { fetchUserProfile, updateUserProfile as apiUpdateUserProfile, uploadProf
 import { User, Phone, Lock, Loader2, AlertCircle, CheckCircle2, Shield, Mail, Camera, Eye, EyeOff } from 'lucide-react';
 
 const Profile = () => {
-  const { user, updateUserProfile: syncAuthContext } = useAuth(); // Use auth helper to get user details
+  const { updateUserProfile: syncAuthContext } = useAuth(); // Use auth helper to get user details
   
   // Local form states
   const [email, setEmail] = useState('');
@@ -321,6 +321,7 @@ const Profile = () => {
                         type="text"
                         placeholder="Enter your name"
                         value={name}
+                        maxLength="50"
                         onChange={(e) => setName(e.target.value)}
                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
                       />
@@ -340,6 +341,7 @@ const Profile = () => {
                         type="text"
                         placeholder="9876543210"
                         value={phone}
+                        maxLength="10"
                         onChange={handlePhoneChange}
                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 font-semibold bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm"
                       />
