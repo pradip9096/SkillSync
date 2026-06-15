@@ -1,9 +1,22 @@
 # SkillSync - Strategic Product Roadmap
 
-**Last Updated: 2026-06-12**
+**Last Updated: 2026-06-15**
 
-## Vision & Strategy
+## Executive Summary & Vision
 Our goal is to build a highly adaptable, real-time platform. As the product scales, our architecture and feature sets must remain flexible to accommodate market feedback and new requirements without breaking existing functionalities.
+
+## Target Personas
+- **Client:** Users seeking real-time discovery and conflict-free booking of expert sessions.
+- **Expert:** Professionals needing robust scheduling controls, analytics, and protected availability.
+- **Administrator:** Platform operators managing system health, user governance, and revenue operations.
+
+## Objectives and Key Results (OKRs)
+- **Objective 1: Ensure Platform Reliability & Consistency**
+  - *KR1:* Maintain 99.9% uptime for core transactional endpoints.
+  - *KR2:* Achieve zero double-booking anomalies through atomic database locks.
+- **Objective 2: Enhance User Engagement & Trust**
+  - *KR3:* Facilitate a 90% session completion rate via pre-session reminders.
+  - *KR4:* Secure >80% participation in the mutual P2P feedback system.
 
 ## Prioritization Framework
 We utilize a two-tiered approach to ensure sustainable growth:
@@ -101,3 +114,11 @@ To ensure the product can sustainably absorb new features down the line, we adhe
 2. **Clean Resource-Based Paths:** Mounting API routes directly under resource root contexts (e.g., `/bookings`, `/auth`, `/expert-dashboard`) ensures clean structures and reduces request routing hops.
 3. **Feature Toggles:** New UI features can be deployed behind configuration flags, allowing us to test them in production without risking stability.
 4. **Schema Extensibility:** Leveraging MongoDB's NoSQL flexibility allows us to add new data requirements (like `paymentStatus`) later without painful database migrations.
+
+---
+
+## 🛡️ Risk Management & Dependencies
+To proactively mitigate delivery friction, the roadmap tracks the following strategic dependencies and risks:
+- **Third-Party API Latency:** Dependency on external payment gateways (Razorpay/Stripe) and notification dispatchers (Twilio/Nodemailer). Addressed via Circuit Breaker patterns and async job queues.
+- **Horizontal Scaling Limits:** Redis Pub/Sub bounds on Socket.io. Mitigated via load/stress testing (Phase 10).
+- **Security Vulnerabilities:** Dependency drift in open-source packages. Handled by persistent SAST/DAST scanning (Phase 10).
