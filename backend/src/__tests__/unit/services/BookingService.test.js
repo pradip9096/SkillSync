@@ -1,3 +1,5 @@
+process.env.RAZORPAY_KEY_ID = 'test_key';
+process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 const mongoose = require('mongoose');
 
 // Mocks
@@ -90,7 +92,7 @@ describe('BookingService Unit Tests', () => {
         expert: 'expert_123',
         userName: 'John',
         userEmail: 'john@test.com',
-        userPhone: '1234567890',
+        userPhone: '+919876543210',
         bookingDate: '2026-10-10',
         slotTime: '10:00'
       };
@@ -101,7 +103,7 @@ describe('BookingService Unit Tests', () => {
       
       expect(result).toBeDefined();
       expect(result.razorpayOrderId).toBe('order_test_123');
-      expect(BookingRepository.save).toHaveBeenCalledTimes(2);
+      expect(BookingRepository.save).toHaveBeenCalledTimes(1);
     });
 
     it('should throw an error if the slot is already booked (double booking)', async () => {
@@ -116,7 +118,7 @@ describe('BookingService Unit Tests', () => {
         expert: 'expert_123',
         userName: 'John',
         userEmail: 'john@test.com',
-        userPhone: '1234567890',
+        userPhone: '+919876543210',
         bookingDate: '2026-10-10',
         slotTime: '10:00'
       };
@@ -159,6 +161,7 @@ describe('BookingService Unit Tests', () => {
       // 17:30 IST < 18:00 IST -> Should throw time-lock violation
       BookingRepository.findById.mockResolvedValue({
         _id: 'booking_123',
+        status: 'Confirmed',
         user: 'client_123',
         bookingDate: '2026-10-10',
         slotTime: '17:00'
@@ -179,6 +182,7 @@ describe('BookingService Unit Tests', () => {
       // Session is in 1 hour (which is within 2 hours) -> Should warn late cancellation
       BookingRepository.findById.mockResolvedValue({
         _id: 'booking_123',
+        status: 'Confirmed',
         user: 'client_123',
         userEmail: 'test@test.com',
         bookingDate: '2026-10-10',

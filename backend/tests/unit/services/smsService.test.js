@@ -16,7 +16,12 @@ describe('smsService', () => {
     const createMock = jest.fn().mockResolvedValue({ sid: 'msg1' });
     twilio.mockReturnValue({ messages: { create: createMock } });
 
-    await sendSMS({ to: '12345', message: 'msg' });
+    jest.resetModules();
+    const twilioMock = require('twilio');
+    twilioMock.mockReturnValue({ messages: { create: createMock } });
+    const { sendSMS: sendSMSReloaded } = require('../../../src/services/smsService');
+
+    await sendSMSReloaded({ to: '12345', message: 'msg' });
     
     expect(createMock).toHaveBeenCalled();
 

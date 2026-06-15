@@ -13,6 +13,8 @@ const jwt = require('jsonwebtoken');
 
 let mongoServer;
 
+jest.setTimeout(30000);
+
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
@@ -66,7 +68,7 @@ describe('Phase 1 Security & Boundaries (TC-004)', () => {
       expect(response.body.details).toBeInstanceOf(Array);
       // Ensure specific zod errors exist
       const errorPaths = response.body.details.map(d => d.field);
-      expect(errorPaths).toContain('expertId');
+      expect(errorPaths).toContain('expert');
       expect(errorPaths).toContain('userEmail');
     });
 

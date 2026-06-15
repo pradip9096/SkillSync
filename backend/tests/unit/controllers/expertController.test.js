@@ -4,6 +4,16 @@ const Expert = require('../../../src/models/Expert');
 const Booking = require('../../../src/models/Booking');
 const Review = require('../../../src/models/Review');
 
+jest.mock('mongoose', () => {
+  const originalMongoose = jest.requireActual('mongoose');
+  return {
+    ...originalMongoose,
+    startSession: jest.fn().mockResolvedValue({
+      withTransaction: jest.fn().mockImplementation(cb => cb()),
+      endSession: jest.fn()
+    })
+  };
+});
 jest.mock('../../../src/models/Expert');
 jest.mock('../../../src/models/Booking');
 jest.mock('../../../src/models/Review');
@@ -111,7 +121,8 @@ describe('Feature 1.7: Reviews & P2P Feedback Unit Tests', () => {
       const mockReview = { _id: 'review1', rating: 4 };
       Review.create.mockResolvedValue(mockReview);
       
-      await rateExpert(req, res);
+      const next = jest.fn();
+      await rateExpert(req, res, next);
       expect(res.statusCode).toBe(200);
       
       expect(mockExpert.numReviews).toBe(3);
@@ -121,12 +132,17 @@ describe('Feature 1.7: Reviews & P2P Feedback Unit Tests', () => {
       expect(mockBooking.isRated).toBe(true);
       expect(mockBooking.save).toHaveBeenCalled();
       
-      expect(Review.create).toHaveBeenCalledWith(expect.objectContaining({
-        expert: 'expert1',
-        user: 'clientUser1',
-        rating: 4,
-        comment: 'Great!'
-      }));
+      expect(Review.create).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            expert: 'expert1',
+            user: 'clientUser1',
+            rating: 4,
+            comment: 'Great!'
+          })
+        ]),
+        expect.anything()
+      );
     });
   });
 

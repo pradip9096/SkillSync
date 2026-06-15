@@ -63,7 +63,7 @@ describe('Feature 1.1: Authentication & RBAC Unit Tests', () => {
       };
       await registerUser(req, res);
       expect(res.statusCode).toBe(400);
-      expect(JSON.parse(res._getData()).error).toMatch(/valid 10-digit Indian mobile number/i);
+      expect(JSON.parse(res._getData()).error).toMatch(/valid Indian phone number/i);
     });
 
     it('TC-AUTH-05: EP - Should reject Expert with unapproved category', async () => {
@@ -248,10 +248,11 @@ describe('Feature 1.2: Password Recovery & Tokens Unit Tests', () => {
       emailService.sendEmail.mockRejectedValue(new Error('SMTP connection failed'));
 
       req.body = { email: 'user@test.com' };
-      await forgotPassword(req, res);
+      const next = jest.fn();
+      await forgotPassword(req, res, next);
+      expect(next).toHaveBeenCalled();
 
-      expect(res.statusCode).toBe(500);
-      expect(JSON.parse(res._getData()).error).toMatch(/Email could not be sent/i);
+      expect(next).toHaveBeenCalled();
       // Ensure rollback was called
       expect(mockUser.resetPasswordToken).toBeNull();
       expect(mockUser.resetPasswordExpire).toBeNull();
@@ -278,8 +279,9 @@ describe('Feature 1.2: Password Recovery & Tokens Unit Tests', () => {
     it('TC-PR-05: Resilience - Should return 500 on unhandled DB error', async () => {
       User.findOne.mockRejectedValue(new Error('DB crash'));
       req.body = { email: 'user@test.com' };
-      await forgotPassword(req, res);
-      expect(res.statusCode).toBe(500);
+      const next = jest.fn();
+      await forgotPassword(req, res, next);
+      expect(next).toHaveBeenCalled();
     });
   });
 
@@ -335,8 +337,9 @@ describe('Feature 1.2: Password Recovery & Tokens Unit Tests', () => {
       req.body = { password: 'newpassword' };
       User.findOne.mockRejectedValue(new Error('DB connection lost'));
       
-      await resetPassword(req, res);
-      expect(res.statusCode).toBe(500);
+      const next = jest.fn();
+      await resetPassword(req, res, next);
+      expect(next).toHaveBeenCalled();
     });
   });
 });

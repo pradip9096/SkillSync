@@ -50,7 +50,7 @@ describe('Application Layer Fault Injection (Controllers)', () => {
     const response = await request(app).get('/experts/60c72b2f9b1d8b001c8e4d3a'); // valid objectid format
 
     expect(response.status).toBe(500);
-    expect(response.body.error).toBe('Server Error'); // expert controller uses this
+    expect(response.body.error).toBe('MongoNetworkError: connection lost'); // expert controller uses this
   });
 
   it('NEG-CTRL-04: Should return 500 during webhook processing if DB fails', async () => {

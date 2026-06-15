@@ -7,6 +7,16 @@ const ClientReview = require('../../../src/models/ClientReview');
 const Review = require('../../../src/models/Review');
 const { blockSlot, unblockSlot, rateClient, getExpertBookings, getExpertProfile, updateExpertProfile } = require('../../../src/controllers/expertDashboardController');
 
+jest.mock('mongoose', () => {
+  const originalMongoose = jest.requireActual('mongoose');
+  return {
+    ...originalMongoose,
+    startSession: jest.fn().mockResolvedValue({
+      withTransaction: jest.fn().mockImplementation(cb => cb()),
+      endSession: jest.fn()
+    })
+  };
+});
 jest.mock('../../../src/models/Expert');
 jest.mock('../../../src/models/Booking');
 jest.mock('../../../src/models/Availability');
@@ -261,9 +271,11 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
       User.findById.mockResolvedValue(mockUser);
       
       const mockClientReview = { _id: 'clientReview1', rating: 2 };
-      ClientReview.create.mockResolvedValue(mockClientReview);
+      ClientReview.create.mockResolvedValue([mockClientReview]);
       
-      await rateClient(req, res);
+      const next = jest.fn();
+      await rateClient(req, res, next);
+      if (res.statusCode !== 200) { console.error('TC-REV-13 Error:', res._getData()); }
       expect(res.statusCode).toBe(200);
       
       // Math check: Average = 5, Count = 1, Total = 5. New rating = 2. Total = 7. Count = 2. Average = 7/2 = 3.5.
@@ -276,12 +288,17 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
       expect(mockBooking.save).toHaveBeenCalled();
       
       // Review Creation check
-      expect(ClientReview.create).toHaveBeenCalledWith(expect.objectContaining({
-        client: 'clientUser1',
-        expert: 'expert1',
-        rating: 2,
-        comment: 'Late'
-      }));
+      expect(ClientReview.create).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            client: 'clientUser1',
+            expert: 'expert1',
+            rating: 2,
+            comment: 'Late'
+          })
+        ]),
+        expect.anything()
+      );
     });
   });
 

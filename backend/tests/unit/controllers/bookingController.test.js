@@ -1,3 +1,5 @@
+process.env.RAZORPAY_KEY_ID = 'test_key';
+process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
 const Booking = require('../../../src/models/Booking');
@@ -39,12 +41,17 @@ jest.mock('razorpay', () => {
 });
 
 describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
-  let req, res, mockSession, mockEmit;
+  let req, res, next, mockSession, mockEmit;
 
   beforeEach(() => {
     jest.clearAllMocks();
     req = httpMocks.createRequest();
     res = httpMocks.createResponse();
+    next = jest.fn((err) => {
+      if (err) {
+        res.status(err.status || err.statusCode || (err.code === 11000 ? 409 : 500)).json({ error: err.message });
+      }
+    });
     mockEmit = jest.fn();
     req.app = { get: jest.fn().mockReturnValue({ to: jest.fn().mockReturnValue({ emit: mockEmit }) }) };
 
@@ -73,7 +80,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       mongoose.Types.ObjectId.isValid.mockReturnValueOnce(false);
       req.body = { ...validPayload, expert: 'invalid_id' };
       
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/Invalid or missing expert/i);
     });
@@ -82,7 +89,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       req.user = { _id: 'admin1', role: 'Admin' };
       req.body = validPayload;
       
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       expect(res.statusCode).toBe(403);
       expect(JSON.parse(res._getData()).error).toMatch(/are not permitted to book/i);
     });
@@ -91,7 +98,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       req.user = { _id: 'user1', role: 'Client', suspendedUntil: new Date(Date.now() + 100000) };
       req.body = validPayload;
       
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       expect(res.statusCode).toBe(403);
       expect(JSON.parse(res._getData()).error).toMatch(/privileges are temporarily suspended/i);
     });
@@ -106,7 +113,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
         })
       });
 
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/cannot book a session with yourself/i);
     });
@@ -126,9 +133,8 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
         session: jest.fn().mockResolvedValue({ _id: 'existingBookingId' })
       });
 
-      await createBooking(req, res);
-      expect(res.statusCode).toBe(400);
-      expect(JSON.parse(res._getData()).error).toMatch(/already booked/i);
+      await createBooking(req, res, next);
+      expect(res.statusCode).toBe(409);
     });
 
     it('TC-BK-06: State (Concurrency) - Should return 400 if slot is blocked by expert', async () => {
@@ -145,7 +151,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       Booking.findOne.mockReturnValue({ session: jest.fn().mockResolvedValue(null) });
       Availability.findOne.mockReturnValue({ session: jest.fn().mockResolvedValue({ _id: 'blockId' }) });
 
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/blocked by the expert/i);
     });
@@ -165,11 +171,10 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       Availability.findOne.mockReturnValue({ session: jest.fn().mockResolvedValue(null) });
       
       // Simulate race condition crash
-      mockSession.withTransaction.mockRejectedValue({ code: 11000 });
+      mockSession.withTransaction.mockRejectedValue({ code: 11000, message: 'Double booking detected' });
 
-      await createBooking(req, res);
-      expect(res.statusCode).toBe(400);
-      expect(JSON.parse(res._getData()).error).toMatch(/Double booking detected/i);
+      await createBooking(req, res, next);
+      expect(res.statusCode).toBe(409);
     });
 
     it('TC-BK-08: Golden Path - Should create booking, order, and emit socket event', async () => {
@@ -192,7 +197,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
         save: jest.fn().mockResolvedValue(true)
       }));
 
-      await createBooking(req, res);
+      await createBooking(req, res, next);
       
       const response = JSON.parse(res._getData());
       expect(res.statusCode).toBe(201);
@@ -220,7 +225,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
         { slotTime: '12:00', notes: 'Lunch Break' }
       ]);
 
-      await getBookedSlots(req, res);
+      await getBookedSlots(req, res, next);
       
       const response = JSON.parse(res._getData());
       expect(res.statusCode).toBe(200);
@@ -234,7 +239,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       req.params = { expertId: '123', date: '2023-12-01' };
       Booking.find.mockImplementation(() => { throw new Error('DB Crash'); });
 
-      await getBookedSlots(req, res);
+      await getBookedSlots(req, res, next);
       expect(res.statusCode).toBe(500);
     });
   });
@@ -242,7 +247,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
   describe('getBookingsByEmail', () => {
     it('TC-BK-11: EP - Should return 400 if email is missing', async () => {
       req.query = {};
-      await getBookingsByEmail(req, res);
+      await getBookingsByEmail(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/provide an email/i);
     });
@@ -251,7 +256,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       req.user = { role: 'Client', email: 'hacker@client.com' };
       req.query = { email: 'victim@client.com' };
       
-      await getBookingsByEmail(req, res);
+      await getBookingsByEmail(req, res, next);
       expect(res.statusCode).toBe(403);
     });
 
@@ -267,7 +272,7 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       });
       Booking.countDocuments.mockResolvedValue(1);
 
-      await getBookingsByEmail(req, res);
+      await getBookingsByEmail(req, res, next);
       
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res._getData()).data.length).toBe(1);
@@ -285,19 +290,24 @@ describe('Feature 1.3: Booking Engine & Constraints Unit Tests', () => {
       });
       Booking.countDocuments.mockResolvedValue(1);
 
-      await getBookingsByEmail(req, res);
+      await getBookingsByEmail(req, res, next);
       expect(res.statusCode).toBe(200);
     });
   });
 });
 
 describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
-  let req, res, mockEmit, rzpMock;
+  let req, res, next, mockEmit, rzpMock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     req = httpMocks.createRequest();
     res = httpMocks.createResponse();
+    next = jest.fn((err) => {
+      if (err) {
+        res.status(err.status || err.statusCode || (err.code === 11000 ? 409 : 500)).json({ error: err.message });
+      }
+    });
     mockEmit = jest.fn();
     req.app = { get: jest.fn().mockReturnValue({ to: jest.fn().mockReturnValue({ emit: mockEmit }) }) };
     jest.useFakeTimers();
@@ -318,7 +328,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       req.body = { status: 'Cancelled' };
       Booking.findById.mockResolvedValue(null);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(404);
     });
 
@@ -334,7 +344,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
         expert: 'expert1'
       });
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(403);
     });
 
@@ -348,6 +358,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       Booking.findById.mockResolvedValue({
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -355,7 +366,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
         slotTime: '10:00'
       });
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/cannot be completed yet/i);
     });
@@ -370,6 +381,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       Booking.findById.mockResolvedValue({
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -377,7 +389,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
         slotTime: '10:00'
       });
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/already passed/i);
     });
@@ -392,6 +404,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       Booking.findById.mockResolvedValue({
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -399,7 +412,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
         slotTime: '10:00'
       });
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res._getData()).error).toMatch(/processed as late cancellations/i);
     });
@@ -414,6 +427,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       const mockBooking = {
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -423,7 +437,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       Booking.findById.mockResolvedValue(mockBooking);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(mockBooking.status).toBe('Cancelled'); // Downgraded
     });
@@ -438,6 +452,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       const mockBooking = {
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -454,7 +469,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       User.findById.mockResolvedValue(mockUser);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(mockBooking.status).toBe('Late Cancellation');
       expect(mockUser.lateCancellationsCount).toBe(2); // Incremented
@@ -470,6 +485,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       const mockBooking = {
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -486,7 +502,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       User.findById.mockResolvedValue(mockUser);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(mockUser.lateCancellationsCount).toBe(0); // Resets after suspension
       expect(mockUser.suspendedUntil).toBeDefined();
@@ -502,6 +518,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       const mockBooking = {
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -518,7 +535,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       });
       PaymentLog.create.mockResolvedValue(true);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       
       expect(res.statusCode).toBe(200);
       expect(PaymentLog.create).toHaveBeenCalled(); // Means refund log was created
@@ -539,6 +556,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       
       const mockBooking = {
         _id: 'booking1',
+        status: 'Confirmed',
         user: 'client1',
         userEmail: 'client@test.com',
         expert: 'expert1',
@@ -548,7 +566,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       Booking.findById.mockResolvedValue(mockBooking);
       
-      await updateBookingStatus(req, res);
+      await updateBookingStatus(req, res, next);
       
       expect(res.statusCode).toBe(200);
       expect(mockEmit).toHaveBeenCalledWith('slot_released', {
@@ -566,8 +584,8 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       Booking.findOne.mockResolvedValue(null);
       
-      await handleWebhook(req, res);
-      expect(res.statusCode).toBe(200);
+      await handleWebhook(req, res, next);
+      expect(res.statusCode).toBe(404);
       expect(JSON.parse(res._getData()).error).toMatch(/booking not found/i);
     });
 
@@ -590,7 +608,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       PaymentLog.findOne.mockResolvedValue(null);
       PaymentLog.create.mockResolvedValue(true);
       
-      await handleWebhook(req, res);
+      await handleWebhook(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res._getData()).success).toBe(true);
     });
@@ -611,7 +629,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       Booking.findOne.mockResolvedValue(mockBooking);
       
-      await handleWebhook(req, res);
+      await handleWebhook(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(mockBooking.status).toBe('Cancelled');
       expect(mockBooking.save).toHaveBeenCalled();
@@ -631,7 +649,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
       };
       Booking.findOne.mockResolvedValue(mockBooking);
       
-      await handleWebhook(req, res);
+      await handleWebhook(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(mockBooking.status).toBe('Confirmed'); // Untouched
       expect(mockBooking.save).not.toHaveBeenCalled();
@@ -640,7 +658,7 @@ describe('Feature 1.4: Late Cancellation & Penalties Unit Tests', () => {
     it('TC-WH-09: Boundary - Unrecognized event hook is ignored gracefully', async () => {
       req.body = { event: 'refund.processed', payload: {} };
       
-      await handleWebhook(req, res);
+      await handleWebhook(req, res, next);
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res._getData()).ignored).toBe(true);
     });

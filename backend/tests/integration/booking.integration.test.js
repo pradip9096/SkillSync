@@ -213,7 +213,7 @@ describe('Feature 2.2: Booking Transaction Rollbacks Integration', () => {
     // One must succeed, one must fail
     const statuses = [res1.status, res2.status].sort();
     expect(statuses[0]).toBe(201); // First succeeds
-    expect(statuses[1]).toBe(400); // Second is caught by transaction conflict
+    expect(statuses[1]).toBe(409); // Second is caught by transaction conflict
 
     // DB Assertion
     const bookings = await Booking.find();
