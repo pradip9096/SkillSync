@@ -77,7 +77,8 @@ Real-Time-Expert-Session-Booking-System/
 │   │   ├── routes/           # API Endpoint mounts
 │   │   ├── seeds/            # Database seeder scripts and utilities
 │   │   ├── services/         # Core Business Logic and Transaction Boundaries
-│   │   └── __tests__/        # Unit and Integration test suites
+│   │   └── __tests__/        # Colocated Unit test suites (White-box testing)
+│   ├── tests/                # Root Integration/E2E test suites (Black-box testing)
 │   ├── .env.example          # Environment variable template
 │   └── package.json          # Backend dependencies
 ├── frontend/                 # React + Vite Client
@@ -143,6 +144,15 @@ npm install
 npm run dev
 ```
 
+#### 3. Running Tests
+The backend strictly separates unit and integration tests. Run them using:
+```bash
+cd backend
+npm run test:unit         # Executes fast, isolated unit tests
+npm run test:integration  # Executes database-connected integration suites
+npm test                  # Executes the full V&V test pipeline
+```
+
 ---
 
 ## 🧪 Testing & Quality Assurance
@@ -163,6 +173,11 @@ SkillSync strictly adheres to international software engineering documentation s
 - **IEEE Std 1012:** Codebase modifications are gated by formal V&V execution reports and anomaly tracking.
 - **Integration Test Sandbox:** Critical API boundaries are subjected to automated `jest` and `supertest` verification using an isolated `mongodb-memory-server` database, ensuring 100% test pass rates before deployment.
 - **Engineering Principle Compliance:** The codebase is systematically audited against a 270-principle framework managing technical debt and Engineering Maturity.
+
+### Testing Architecture Boundaries
+To enforce maximum isolation and test reliability, the backend adheres to a strict physical boundary split:
+- **Unit Tests (`src/__tests__/unit/`):** Colocated with the source files they test. They execute rapidly and mock external database/service dependencies, verifying granular logic (White-box testing).
+- **Integration Tests (`tests/integration/`):** Situated at the project root outside `src/`. They load the fully compiled Express application and hit endpoints via HTTP requests, verifying end-to-end database transactions and API responses (Black-box testing).
 
 ---
 
