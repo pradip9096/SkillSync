@@ -10,6 +10,20 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-15
+
+### Added
+
+- Added formal Master Verification and Validation Report (IEEE 1012-2016) and Phase 3 V&V Report, successfully concluding the remediation lifecycle.
+- Added Phase 4 Engineering Principle Compliance Assessment report (`engineering-compliance-report-2026-06-14`) and JSON sidecar.
+
+### Fixed
+
+- Fixed runtime crashes during client rating submissions by resolving a missing `mongoose` dependency import within `ExpertService.js`.
+- Fixed backend unit test suite regressions by correcting Mongoose transaction, double-booking, and repository mocks, restoring a 100% test pass rate.
+
+## [1.6.0] - 2026-06-14
+
 ### Added
 
 - Added `@socket.io/redis-adapter` for distributed, multi-instance horizontal scaling of real-time WebSockets.
@@ -19,6 +33,11 @@ Changelog policy, workflow, and SOP are maintained in
 - Added comprehensive ISO/IEC/IEEE 29119-3 compliant test specifications and implementation plans across the `docs/software-testing/` directory for all End-to-End user journeys.
 - Added System Hardening (Webhook Idempotency & Job Recovery) feature specifications to `MASTER_SPEC.md`.
 - Added automated Razorpay refund check and log dispatch to the background abandoned-booking cancellation job to gracefully handle dropped payment webhooks.
+- Added Opossum circuit breakers for Razorpay and Twilio API integrations to enforce fail-fast fault tolerance.
+- Added graceful shutdown sequence (`SIGTERM`/`SIGINT`) for safe server, database, and background job termination.
+- Added structured JSON `pino` logging and a global Express error-handling middleware to suppress stack traces.
+- Added GitHub Actions CI pipeline (`.github/workflows/ci.yml`) for automated linting, testing, and TruffleHog secret scanning.
+- Added robust Indian phone number formatting validation (+91 prefix) across all authentication and booking endpoints.
 
 ### Changed
 
@@ -30,7 +49,6 @@ Changelog policy, workflow, and SOP are maintained in
 ### Fixed
 
 - Fixed a validation regression in the booking creation route by aligning the Zod schema with the underlying Mongoose model payload structure.
-
 - Fixed husky `lint-staged` pre-commit hooks failing to resolve ESLint execution paths within the frontend workspace.
 - Fixed Admin Dashboard E2E test suite flakiness by replacing brittle network intercepts with stable UI toast assertions and resolving dialog timing.
 - Fixed backend crashes and CORS preflight failures caused by Express 5.0 `req.query` immutability when sanitizing NoSQL injection payloads.
@@ -39,6 +57,8 @@ Changelog policy, workflow, and SOP are maintained in
 - Fixed `cancel-abandoned-booking` Agenda scheduler failing silently on database errors by enforcing exception-throws and utilizing Agenda's native exponential backoff retries.
 - Fixed E2E test suite timeout by isolating the checkout flow with a global `window.Razorpay` mock and correcting native date-picker DOM locators.
 - Fixed testing environment authentication failures caused by a double-hashing bug in the database seeding scripts.
+- Fixed Razorpay checkout modal freezing by resetting the `isSubmitting` state uniformly upon dismissal or payment failure.
+- Fixed UI notification badge flickering and excessive network calls by introducing a debounced refetch strategy.
 
 ### Security
 
@@ -47,6 +67,8 @@ Changelog policy, workflow, and SOP are maintained in
 - Secured frontend payment integrations by replacing hardcoded Razorpay fallback keys with environment variable injections.
 - Secured authentication flows by enforcing strict `JWT_SECRET` presence checks during server initialization to eliminate fallback vulnerabilities.
 - Secured authentication endpoints against credential stuffing by implementing strict IP rate limiting (10 requests per 15 minutes).
+- Secured business logic integrity by enforcing a strict, immutable state transition matrix for booking statuses.
+- Secured messaging endpoints against Cross-Site Scripting (XSS) by introducing server-side `sanitize-html` filtering.
 
 ## [1.5.0] - 2026-05-31
 
@@ -275,7 +297,9 @@ Changelog policy, workflow, and SOP are maintained in
 - Enforced database-level active booking uniqueness so cancelled and late-cancelled sessions
   release slots without allowing duplicate active bookings.
 
-[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/pradip9096/SkillSync/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/pradip9096/SkillSync/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/pradip9096/SkillSync/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/pradip9096/SkillSync/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pradip9096/SkillSync/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pradip9096/SkillSync/compare/v1.2.0...v1.3.0

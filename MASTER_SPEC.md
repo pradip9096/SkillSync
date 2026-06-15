@@ -180,6 +180,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [API Security Boundaries & Validation](#feature-api-security-boundaries--validation) | `Complete` | SkillSync | 2026-06-13 |
 | [3-Tier Backend Architecture & Services Extraction](#feature-3-tier-backend-architecture--services-extraction) | `Complete` | SkillSync | 2026-06-14 |
 | [Distributed State & Database Concurrency](#feature-distributed-state--database-concurrency) | `Complete` | SkillSync | 2026-06-14 |
+| [Process Resilience & System Reliability](#feature-process-resilience--system-reliability) | `Complete` | SkillSync | 2026-06-14 |
 
 ---
 
@@ -998,7 +999,7 @@ to build marketplace credibility and provide quality feedback to experts.
 
 ### Known Bugs / Stability Risks
 
-None identified.
+- [MUST HAVE - Resolved 2026-06-14] "Missing mongoose dependency in ExpertService": Client rating submissions crashed the server because `mongoose.startSession()` was called inside `ExpertService.rateClient` without importing `mongoose`. Resolved by adding the `mongoose` require statement to the service.
 
 ### Spec Change Log
 
@@ -1006,12 +1007,13 @@ None identified.
 |---|---|---|
 | 2026-05-25 | Agent | Initial implementation. Review model, rate endpoint, isRated flag, and averageRating calculation added. |
 | 2026-05-26 | Agent | Spec enriched to 15-block structure. Merged with Generic Blueprint content from deprecated STANDARD_FEATURE_CATALOG.md. |
+| 2026-06-14 | Antigravity AI | Logged and resolved missing `mongoose` dependency crash during rating submissions. |
 
 ### Status
 `Complete`
 
 ### Last Updated
-2026-05-26
+2026-06-14
 
 ---
 ---
@@ -3059,17 +3061,112 @@ flowchart TD
 
 ### Known Bugs / Stability Risks
 
-*None identified.*
+- [MUST HAVE - Resolved 2026-06-15] Integration test runners execute parallel tests resulting in `MongoServerSelectionError` transaction timeouts and Socket.IO port exhaustion. Resolved by forcing sequential `--runInBand` Jest execution and explicitly terminating Agenda instances in test teardowns.
 
 ### Spec Change Log
 
 | Date | Author | Summary |
 |---|---|---|
 | 2026-06-14 | Antigravity AI | Initial spec created detailing Phase 3 Concurrency, State, and Two-Phase Commit architectures. |
+| 2026-06-15 | Antigravity AI | Documented resolution of integration test concurrency timeouts and socket race conditions. |
 
 ### Status
 `Complete`
 
 ### Last Updated
-2026-06-14
+2026-06-15
 
+---
+
+## Feature: Process Resilience & System Reliability
+
+### Overview
+This feature implements robust fault tolerance mechanisms—including graceful shutdowns, circuit breakers, structured error handling, and strict state transitions—to prevent cascading failures, resource exhaustion, and invalid data states during transient network errors or process crashes.
+
+### Functional Requirements
+
+- [MUST HAVE] The application must intercept `SIGTERM`, `SIGINT`, and `unhandledRejection` events to perform a graceful shutdown (closing the server, background job engine, and database connections) before terminating.
+  Rationale: Prevents in-flight user requests and database transactions from being forcefully dropped during deployments or scaling events.
+
+- [MUST HAVE] All calls to external third-party APIs (Razorpay, Twilio) must be wrapped in a Circuit Breaker pattern.
+  Rationale: Prevents network latency or outages in third-party systems from consuming the application's connection pool and causing a widespread denial of service.
+
+- [MUST HAVE] A global error-handling middleware must intercept all application exceptions and return standardized JSON error responses, suppressing stack traces in production.
+  Rationale: Ensures consistent error APIs for the frontend and prevents sensitive internal implementation details from leaking.
+
+- [MUST HAVE] The application must enforce a strict, predefined state transition matrix for business entities (e.g., Bookings).
+  Rationale: Eliminates invalid business flows, such as transitioning a booking from `Pending` directly to `Completed` without passing through `Confirmed`.
+
+- [MUST HAVE] The UI must accurately reflect active background processes, including disabling submit buttons during the full lifecycle of third-party modals (e.g., Razorpay checkout).
+  Rationale: Prevents duplicate submissions and confused user states when interacting with popups.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Circuit breakers must have configured failure thresholds and timeout limits, returning a fallback response immediately when the circuit is "Open".
+  Rationale: Enforces fail-fast behavior.
+
+- [MUST HAVE] Graceful shutdown sequences must be subject to a strict hard-timeout (e.g., 30 seconds).
+  Rationale: Prevents zombie processes if a connection refuses to close gracefully.
+
+### User Interaction Flow
+
+```
+[System Event] -> Unhandled Rejection -> [Application]
+  |-- Success --> Logs error, stops accepting connections, allows existing to drain, exits safely
+  |-- Failure --> Hits 30s timeout, forcefully exits
+```
+
+### API Specifications
+
+* `ALL Endpoints`
+  Input: N/A
+  Validation: N/A
+  Output: In event of error, structured JSON: `{ "success": false, "error": "Message" }`
+  Auth: N/A
+
+### Edge Cases
+
+- When a third-party API is experiencing a prolonged outage, the circuit breaker opens and immediately rejects subsequent outbound requests without waiting for network timeouts.
+- When the application receives a shutdown signal, it must wait for running Agenda background jobs to complete (up to the 30s timeout) before disconnecting MongoDB.
+
+### Best Practices
+
+- Use a structured logger (`pino`) rather than `console.log` for machine-readable JSON logs that integrate smoothly with observability platforms.
+
+### Acceptance Criteria
+
+* **AC 1.1:** Injecting an unhandled promise rejection logs the error, emits no stack trace to clients, and cleanly stops the Node.js process within 5 seconds.
+* **AC 1.2:** Simulating a Razorpay API timeout causes the `opossum` circuit breaker to open and return a fast-fail HTTP fallback response on the next request.
+
+### Non-Goals
+
+- This feature does NOT attempt to recover from fatal Out-Of-Memory (OOM) errors, as those corrupt the V8 heap and mandate an immediate hard crash.
+
+### Dependencies
+
+- Library: `opossum` — Provides circuit breaker functionality.
+- Library: `pino` — Provides structured logging.
+- Service: Process Manager (e.g., PM2, Docker, Kubernetes) — Responsible for restarting the process after a graceful exit.
+
+### Testing Strategy
+
+- Unit: Test Circuit Breaker fallback invocation using mocked external dependencies.
+- Integration: Intentionally trigger invalid state transitions in the Booking Service and assert that a `400` or `422` error is returned according to the Transition Matrix.
+- Manual: Send a `SIGINT` to the local development server while a long-polling request is active to verify it completes before the server shuts down.
+
+### Known Bugs / Stability Risks
+
+- [MUST HAVE - Resolved 2026-06-15] Mongoose 11000 Duplicate Key errors returned generic HTTP 500 statuses instead of specific 409 Conflict statuses due to the global error handler masking `err.code` and unit test mocks misaligning. Fixed by standardizing `err.statusCode = 409` in the handler and test stubs.
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-14 | Antigravity AI | Initial spec created detailing Phase 4 Resilience, Circuit Breakers, and Global Error Handling. |
+| 2026-06-15 | Antigravity AI | Documented resolution of Mongoose 11000 global error handler mapping bug. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-06-15
