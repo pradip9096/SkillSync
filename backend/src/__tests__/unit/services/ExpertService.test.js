@@ -1,5 +1,5 @@
 // Mocks
-jest.mock('../../../../src/repositories/BookingRepository', () => ({
+jest.mock('../../../repositories/BookingRepository', () => ({
   find: jest.fn(),
   countDocuments: jest.fn(),
   findById: jest.fn(),
@@ -7,32 +7,32 @@ jest.mock('../../../../src/repositories/BookingRepository', () => ({
   save: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/ExpertRepository', () => ({
+jest.mock('../../../repositories/ExpertRepository', () => ({
   findOne: jest.fn(),
   findOneWithUser: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/AvailabilityRepository', () => ({
+jest.mock('../../../repositories/AvailabilityRepository', () => ({
   findOne: jest.fn(),
   find: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/UserRepository', () => ({
+jest.mock('../../../repositories/UserRepository', () => ({
   findById: jest.fn(),
   save: jest.fn()
 }));
 
-jest.mock('../../../../src/models/Availability', () => ({
+jest.mock('../../../models/Availability', () => ({
   create: jest.fn(),
   findByIdAndDelete: jest.fn(),
   find: jest.fn()
 }));
 
-jest.mock('../../../../src/models/ClientReview', () => ({
+jest.mock('../../../models/ClientReview', () => ({
   create: jest.fn()
 }));
 
-jest.mock('../../../../src/models/Review', () => ({
+jest.mock('../../../models/Review', () => ({
   find: jest.fn().mockReturnValue({
     sort: jest.fn().mockReturnValue({
       limit: jest.fn().mockResolvedValue([])
@@ -40,11 +40,11 @@ jest.mock('../../../../src/models/Review', () => ({
   })
 }));
 
-const ExpertService = require('../../../../src/services/ExpertService');
-const ExpertRepository = require('../../../../src/repositories/ExpertRepository');
-const BookingRepository = require('../../../../src/repositories/BookingRepository');
-const AvailabilityRepository = require('../../../../src/repositories/AvailabilityRepository');
-const Availability = require('../../../../src/models/Availability');
+const ExpertService = require('../../../services/ExpertService');
+const ExpertRepository = require('../../../repositories/ExpertRepository');
+const BookingRepository = require('../../../repositories/BookingRepository');
+const AvailabilityRepository = require('../../../repositories/AvailabilityRepository');
+const Availability = require('../../../models/Availability');
 
 describe('ExpertService Unit Tests', () => {
   beforeEach(() => {

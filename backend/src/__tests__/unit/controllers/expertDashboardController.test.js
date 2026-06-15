@@ -1,11 +1,11 @@
 const httpMocks = require('node-mocks-http');
-const Expert = require('../../../src/models/Expert');
-const Booking = require('../../../src/models/Booking');
-const Availability = require('../../../src/models/Availability');
-const User = require('../../../src/models/User');
-const ClientReview = require('../../../src/models/ClientReview');
-const Review = require('../../../src/models/Review');
-const { blockSlot, unblockSlot, rateClient, getExpertBookings, getExpertProfile, updateExpertProfile } = require('../../../src/controllers/expertDashboardController');
+const Expert = require('../../../models/Expert');
+const Booking = require('../../../models/Booking');
+const Availability = require('../../../models/Availability');
+const User = require('../../../models/User');
+const ClientReview = require('../../../models/ClientReview');
+const Review = require('../../../models/Review');
+const { blockSlot, unblockSlot, rateClient, getExpertBookings, getExpertProfile, updateExpertProfile } = require('../../../controllers/expertDashboardController');
 
 jest.mock('mongoose', () => {
   const originalMongoose = jest.requireActual('mongoose');
@@ -17,12 +17,12 @@ jest.mock('mongoose', () => {
     })
   };
 });
-jest.mock('../../../src/models/Expert');
-jest.mock('../../../src/models/Booking');
-jest.mock('../../../src/models/Availability');
-jest.mock('../../../src/models/User');
-jest.mock('../../../src/models/ClientReview');
-jest.mock('../../../src/models/Review');
+jest.mock('../../../models/Expert');
+jest.mock('../../../models/Booking');
+jest.mock('../../../models/Availability');
+jest.mock('../../../models/User');
+jest.mock('../../../models/ClientReview');
+jest.mock('../../../models/Review');
 
 describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
   let req, res, mockEmit;
@@ -382,7 +382,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
 
     it('Should return 404 if expert not found', async () => {
       Expert.findOne.mockResolvedValue(null);
-      const { getExpertAnalytics } = require('../../../src/controllers/expertDashboardController');
+      const { getExpertAnalytics } = require('../../../controllers/expertDashboardController');
       await getExpertAnalytics(req, res);
       expect(res.statusCode).toBe(404);
     });
@@ -397,7 +397,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockResolvedValue([])
       });
-      const { getExpertAnalytics } = require('../../../src/controllers/expertDashboardController');
+      const { getExpertAnalytics } = require('../../../controllers/expertDashboardController');
       await getExpertAnalytics(req, res);
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res._getData()).analytics.counts.completedCount).toBe(1);
@@ -414,7 +414,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
     });
 
     it('Should return 400 if no file', async () => {
-      const { uploadGalleryImage } = require('../../../src/controllers/expertDashboardController');
+      const { uploadGalleryImage } = require('../../../controllers/expertDashboardController');
       await uploadGalleryImage(req, res);
       expect(res.statusCode).toBe(400);
     });
@@ -423,7 +423,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
       req.file = { filename: 'test.png' };
       const mockExpert = { _id: 'expert1', gallery: [], save: jest.fn() };
       Expert.findOne.mockResolvedValue(mockExpert);
-      const { uploadGalleryImage } = require('../../../src/controllers/expertDashboardController');
+      const { uploadGalleryImage } = require('../../../controllers/expertDashboardController');
       await uploadGalleryImage(req, res);
       expect(res.statusCode).toBe(200);
       expect(mockExpert.gallery).toContain('/uploads/test.png');
@@ -442,7 +442,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
     it('Should return 404 if image not found in gallery', async () => {
       req.params = { filename: 'test.png' };
       Expert.findOne.mockResolvedValue({ _id: 'expert1', gallery: [] });
-      const { deleteGalleryImage } = require('../../../src/controllers/expertDashboardController');
+      const { deleteGalleryImage } = require('../../../controllers/expertDashboardController');
       await deleteGalleryImage(req, res);
       expect(res.statusCode).toBe(404);
     });
@@ -451,7 +451,7 @@ describe('Feature 1.5: Expert Availability Management Unit Tests', () => {
       req.params = { filename: 'test.png' };
       const mockExpert = { _id: 'expert1', gallery: ['/uploads/test.png'], save: jest.fn() };
       Expert.findOne.mockResolvedValue(mockExpert);
-      const { deleteGalleryImage } = require('../../../src/controllers/expertDashboardController');
+      const { deleteGalleryImage } = require('../../../controllers/expertDashboardController');
       await deleteGalleryImage(req, res);
       expect(res.statusCode).toBe(200);
       expect(mockExpert.gallery.length).toBe(0);

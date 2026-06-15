@@ -1,4 +1,4 @@
-const { sendSMS } = require('../../../src/services/smsService');
+const { sendSMS } = require('../../../services/smsService');
 const twilio = require('twilio');
 
 jest.mock('twilio');
@@ -19,7 +19,7 @@ describe('smsService', () => {
     jest.resetModules();
     const twilioMock = require('twilio');
     twilioMock.mockReturnValue({ messages: { create: createMock } });
-    const { sendSMS: sendSMSReloaded } = require('../../../src/services/smsService');
+    const { sendSMS: sendSMSReloaded } = require('../../../services/smsService');
 
     await sendSMSReloaded({ to: '12345', message: 'msg' });
     

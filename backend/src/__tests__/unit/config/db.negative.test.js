@@ -18,12 +18,12 @@ describe('Infrastructure Extinction Paths (DB Config)', () => {
 
   it('NEG-DB-01: Should explicitly invoke process.exit(1) on connection failure', async () => {
     // Delete require cache to reload db.js and force a new connectDB call
-    delete require.cache[require.resolve('../../../src/config/db')];
+    delete require.cache[require.resolve('../../../config/db')];
     
     // Mock mongoose connect to reject immediately
     jest.spyOn(mongoose, 'connect').mockRejectedValue(new Error('Fatal DB Error'));
 
-    const connectDB = require('../../../src/config/db');
+    const connectDB = require('../../../config/db');
 
     await expect(connectDB()).rejects.toThrow('Process.exit called with code 1');
 

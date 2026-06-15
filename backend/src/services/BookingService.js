@@ -619,9 +619,10 @@ class BookingService {
     const eventId = headers['x-razorpay-event-id'];
     if (eventId) {
       try {
-        await ProcessedWebhook.create({ eventId });
+        await ProcessedWebhook.create({ eventId, provider: 'razorpay' });
       } catch (err) {
         if (err.code === 11000) {
+          console.log(`[Webhook Idempotency] Duplicate webhook caught and ignored for event: ${eventId}`);
           return { success: true, ignored: true };
         }
         throw err;

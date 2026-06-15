@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const httpMocks = require('node-mocks-http');
-const { verifyWebhookSignature } = require('../../../src/middleware/webhookMiddleware');
+const { verifyWebhookSignature } = require('../../../middleware/webhookMiddleware');
 
 describe('Feature 1.6: Webhook Middleware Unit Tests', () => {
   let req, res, next;

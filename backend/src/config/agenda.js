@@ -11,10 +11,10 @@ const agenda = new Agenda({
     address: process.env.MONGO_URI || 'mongodb://localhost:27017/skillsync',
     collection: 'agendaJobs'
   },
-  defaultLockLifetime: 600000, // 10 minutes
+  defaultLockLifetime: 10000, // 10 seconds
   processEvery: '30 seconds',
   defaultConcurrency: 5,
-  maxConcurrency: 10
+  maxConcurrency: 20
 });
 
 module.exports = agenda;

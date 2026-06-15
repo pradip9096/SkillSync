@@ -1,4 +1,4 @@
-const { sendEmail } = require('../../../src/services/emailService');
+const { sendEmail } = require('../../../services/emailService');
 const nodemailer = require('nodemailer');
 
 jest.mock('nodemailer');

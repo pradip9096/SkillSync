@@ -1,8 +1,8 @@
 const httpMocks = require('node-mocks-http');
-const { rateExpert, getExperts, getExpertById } = require('../../../src/controllers/expertController');
-const Expert = require('../../../src/models/Expert');
-const Booking = require('../../../src/models/Booking');
-const Review = require('../../../src/models/Review');
+const { rateExpert, getExperts, getExpertById } = require('../../../controllers/expertController');
+const Expert = require('../../../models/Expert');
+const Booking = require('../../../models/Booking');
+const Review = require('../../../models/Review');
 
 jest.mock('mongoose', () => {
   const originalMongoose = jest.requireActual('mongoose');
@@ -14,9 +14,9 @@ jest.mock('mongoose', () => {
     })
   };
 });
-jest.mock('../../../src/models/Expert');
-jest.mock('../../../src/models/Booking');
-jest.mock('../../../src/models/Review');
+jest.mock('../../../models/Expert');
+jest.mock('../../../models/Booking');
+jest.mock('../../../models/Review');
 
 describe('Feature 1.7: Reviews & P2P Feedback Unit Tests', () => {
   describe('rateExpert (Client -> Expert)', () => {

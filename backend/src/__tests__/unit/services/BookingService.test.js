@@ -9,35 +9,35 @@ jest.spyOn(mongoose, 'startSession').mockResolvedValue({
   endSession: jest.fn()
 });
 
-jest.mock('../../../../src/models/ProcessedWebhook', () => ({
+jest.mock('../../../models/ProcessedWebhook', () => ({
   create: jest.fn()
 }));
-jest.mock('../../../../src/models/PaymentLog', () => ({
+jest.mock('../../../models/PaymentLog', () => ({
   create: jest.fn(),
   findOne: jest.fn()
 }));
-jest.mock('../../../../src/models/Notification', () => ({
+jest.mock('../../../models/Notification', () => ({
   create: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/BookingRepository', () => ({
+jest.mock('../../../repositories/BookingRepository', () => ({
   findOne: jest.fn(),
   createInstance: jest.fn(),
   save: jest.fn(),
   findById: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/ExpertRepository', () => ({
+jest.mock('../../../repositories/ExpertRepository', () => ({
   findByIdWithUser: jest.fn(),
   findOne: jest.fn(),
   findById: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/AvailabilityRepository', () => ({
+jest.mock('../../../repositories/AvailabilityRepository', () => ({
   findOne: jest.fn()
 }));
 
-jest.mock('../../../../src/repositories/UserRepository', () => ({
+jest.mock('../../../repositories/UserRepository', () => ({
   save: jest.fn(),
   findById: jest.fn()
 }));
@@ -53,21 +53,21 @@ jest.mock('razorpay', () => {
   }));
 });
 
-jest.mock('../../../../src/config/agenda', () => ({
+jest.mock('../../../config/agenda', () => ({
   schedule: jest.fn(),
   now: jest.fn(),
   _collection: true
 }));
 
-jest.mock('../../../../src/services/reminderScheduler', () => ({
+jest.mock('../../../services/reminderScheduler', () => ({
   scheduleSessionReminders: jest.fn(),
   cancelScheduledReminders: jest.fn()
 }));
 
-const BookingService = require('../../../../src/services/BookingService');
-const BookingRepository = require('../../../../src/repositories/BookingRepository');
-const ExpertRepository = require('../../../../src/repositories/ExpertRepository');
-const AvailabilityRepository = require('../../../../src/repositories/AvailabilityRepository');
+const BookingService = require('../../../services/BookingService');
+const BookingRepository = require('../../../repositories/BookingRepository');
+const ExpertRepository = require('../../../repositories/ExpertRepository');
+const AvailabilityRepository = require('../../../repositories/AvailabilityRepository');
 
 describe('BookingService Unit Tests', () => {
   beforeEach(() => {

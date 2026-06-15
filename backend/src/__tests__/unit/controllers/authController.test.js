@@ -1,15 +1,15 @@
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
-const User = require('../../../src/models/User');
-const Expert = require('../../../src/models/Expert');
-const { registerUser, loginUser, getUserProfile, forgotPassword, resetPassword } = require('../../../src/controllers/authController');
-const emailService = require('../../../src/services/emailService');
+const User = require('../../../models/User');
+const Expert = require('../../../models/Expert');
+const { registerUser, loginUser, getUserProfile, forgotPassword, resetPassword } = require('../../../controllers/authController');
+const emailService = require('../../../services/emailService');
 
-jest.mock('../../../src/models/User');
-jest.mock('../../../src/models/Expert');
+jest.mock('../../../models/User');
+jest.mock('../../../models/Expert');
 jest.mock('jsonwebtoken');
-jest.mock('../../../src/services/emailService');
+jest.mock('../../../services/emailService');
 
 describe('Feature 1.1: Authentication & RBAC Unit Tests', () => {
   let req, res, mockSession;
@@ -244,7 +244,7 @@ describe('Feature 1.2: Password Recovery & Tokens Unit Tests', () => {
         save: jest.fn().mockResolvedValue(true)
       };
       User.findOne.mockResolvedValue(mockUser);
-      const emailService = require('../../../src/services/emailService');
+      const emailService = require('../../../services/emailService');
       emailService.sendEmail.mockRejectedValue(new Error('SMTP connection failed'));
 
       req.body = { email: 'user@test.com' };
@@ -265,7 +265,7 @@ describe('Feature 1.2: Password Recovery & Tokens Unit Tests', () => {
         save: jest.fn().mockResolvedValue(true)
       };
       User.findOne.mockResolvedValue(mockUser);
-      const emailService = require('../../../src/services/emailService');
+      const emailService = require('../../../services/emailService');
       emailService.sendEmail.mockResolvedValue(true);
 
       req.body = { email: 'user@test.com' };

@@ -1,9 +1,9 @@
 const httpMocks = require('node-mocks-http');
 const jwt = require('jsonwebtoken');
-const User = require('../../../src/models/User');
-const { protect, restrictTo } = require('../../../src/middleware/authMiddleware');
+const User = require('../../../models/User');
+const { protect, restrictTo } = require('../../../middleware/authMiddleware');
 
-jest.mock('../../../src/models/User');
+jest.mock('../../../models/User');
 jest.mock('jsonwebtoken');
 
 describe('Feature 1.1: Auth Middleware & RBAC Unit Tests', () => {

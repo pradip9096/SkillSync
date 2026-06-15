@@ -2,27 +2,27 @@ process.env.RAZORPAY_KEY_ID = 'test_key';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
-const Booking = require('../../../src/models/Booking');
-const Expert = require('../../../src/models/Expert');
-const Availability = require('../../../src/models/Availability');
-const agenda = require('../../../src/config/agenda');
+const Booking = require('../../../models/Booking');
+const Expert = require('../../../models/Expert');
+const Availability = require('../../../models/Availability');
+const agenda = require('../../../config/agenda');
 const Razorpay = require('razorpay');
-const User = require('../../../src/models/User');
-const Notification = require('../../../src/models/Notification');
-const PaymentLog = require('../../../src/models/PaymentLog');
-const { createBooking, getBookedSlots, getBookingsByEmail, updateBookingStatus, handleWebhook } = require('../../../src/controllers/bookingController');
+const User = require('../../../models/User');
+const Notification = require('../../../models/Notification');
+const PaymentLog = require('../../../models/PaymentLog');
+const { createBooking, getBookedSlots, getBookingsByEmail, updateBookingStatus, handleWebhook } = require('../../../controllers/bookingController');
 
-jest.mock('../../../src/models/Booking');
-jest.mock('../../../src/models/Expert');
-jest.mock('../../../src/models/Availability');
-jest.mock('../../../src/models/User');
-jest.mock('../../../src/models/Notification');
-jest.mock('../../../src/models/PaymentLog');
-jest.mock('../../../src/services/reminderScheduler', () => ({
+jest.mock('../../../models/Booking');
+jest.mock('../../../models/Expert');
+jest.mock('../../../models/Availability');
+jest.mock('../../../models/User');
+jest.mock('../../../models/Notification');
+jest.mock('../../../models/PaymentLog');
+jest.mock('../../../services/reminderScheduler', () => ({
   scheduleSessionReminders: jest.fn(),
   cancelScheduledReminders: jest.fn()
 }));
-jest.mock('../../../src/config/agenda', () => ({
+jest.mock('../../../config/agenda', () => ({
   _collection: true,
   schedule: jest.fn(),
   now: jest.fn(),

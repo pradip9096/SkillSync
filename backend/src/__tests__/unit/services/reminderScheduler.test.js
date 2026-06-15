@@ -1,8 +1,8 @@
-const { scheduleSessionReminders, cancelScheduledReminders } = require('../../../src/services/reminderScheduler');
-const agenda = require('../../../src/config/agenda');
+const { scheduleSessionReminders, cancelScheduledReminders } = require('../../../services/reminderScheduler');
+const agenda = require('../../../config/agenda');
 const { ObjectId } = require('mongodb');
 
-jest.mock('../../../src/config/agenda', () => ({
+jest.mock('../../../config/agenda', () => ({
   _collection: true,
   define: jest.fn(),
   schedule: jest.fn(),

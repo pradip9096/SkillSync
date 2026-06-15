@@ -8,15 +8,15 @@ const {
   createExpertByAdmin,
   deleteExpertByAdmin,
   resetUserPenalties
-} = require('../../../src/controllers/adminController');
+} = require('../../../controllers/adminController');
 
-const User = require('../../../src/models/User');
-const Expert = require('../../../src/models/Expert');
-const Booking = require('../../../src/models/Booking');
+const User = require('../../../models/User');
+const Expert = require('../../../models/Expert');
+const Booking = require('../../../models/Booking');
 
-jest.mock('../../../src/models/User');
-jest.mock('../../../src/models/Expert');
-jest.mock('../../../src/models/Booking');
+jest.mock('../../../models/User');
+jest.mock('../../../models/Expert');
+jest.mock('../../../models/Booking');
 
 describe('Feature 1.10: Admin & Analytics Dashboards Unit Tests', () => {
   let req, res, mockEmit;

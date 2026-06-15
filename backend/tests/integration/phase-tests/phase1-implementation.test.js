@@ -3,12 +3,12 @@ process.env.RAZORPAY_KEY_ID = 'test-key-id';
 process.env.RAZORPAY_KEY_SECRET = 'test-key-secret';
 
 const request = require('supertest');
-const { app } = require('../../app');
+const { app } = require('../../../src/app');
 const mongoose = require('mongoose');
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
-const User = require('../../models/User');
-const Booking = require('../../models/Booking');
-const Expert = require('../../models/Expert');
+const User = require('../../../src/models/User');
+const Booking = require('../../../src/models/Booking');
+const Expert = require('../../../src/models/Expert');
 const jwt = require('jsonwebtoken');
 
 let mongoServer;
@@ -52,7 +52,7 @@ describe('Phase 1 Implementation Acceptance Tests', () => {
   describe('Correlation IDs (Epic 2.1)', () => {
     it('should return a correlationId on 500-level errors', async () => {
       // Trigger a 500 error by mocking an existing service
-      const bookingService = require('../../services/BookingService');
+      const bookingService = require('../../../src/services/BookingService');
       jest.spyOn(bookingService, 'getBookingsByEmail').mockRejectedValue(new Error('Simulated internal failure'));
 
       // Override NODE_ENV to production to test production error handler

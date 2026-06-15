@@ -3,12 +3,12 @@ process.env.RAZORPAY_KEY_ID = 'test-key-id';
 process.env.RAZORPAY_KEY_SECRET = 'test-key-secret';
 
 const request = require('supertest');
-const { app } = require('../../app');
+const { app } = require('../../../src/app');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const User = require('../../models/User');
-const Booking = require('../../models/Booking');
-const Expert = require('../../models/Expert');
+const User = require('../../../src/models/User');
+const Booking = require('../../../src/models/Booking');
+const Expert = require('../../../src/models/Expert');
 const jwt = require('jsonwebtoken');
 
 let mongoServer;
@@ -151,7 +151,7 @@ describe('Phase 1 Security & Boundaries (TC-004)', () => {
 
   describe('BP-018: JWT Secret Fallback Vulnerability', () => {
     it('should throw error if JWT_SECRET is missing during token generation', () => {
-      const { generateToken } = require('../../controllers/authController');
+      const { generateToken } = require('../../../src/controllers/authController');
       
       // Store original secret
       const originalSecret = process.env.JWT_SECRET;

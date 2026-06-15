@@ -1,6 +1,6 @@
 const request = require('supertest');
 const express = require('express');
-const upload = require('../../../src/middleware/uploadMiddleware');
+const upload = require('../../../middleware/uploadMiddleware');
 const fs = require('fs');
 const path = require('path');
 
@@ -23,7 +23,7 @@ describe('Feature 1.11: Media & File Uploads Unit Tests', () => {
   const dummyFilePath = path.join(__dirname, 'dummy.png');
   const largeFilePath = path.join(__dirname, 'large.png');
   const invalidFilePath = path.join(__dirname, 'invalid.pdf');
-  const uploadDir = path.join(__dirname, '../../../../frontend/public/uploads');
+  const uploadDir = path.join(__dirname, '../../../../../frontend/public/uploads');
 
   beforeAll(() => {
     // Create dummy files for testing

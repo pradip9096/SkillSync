@@ -4,10 +4,10 @@ const {
   markAsRead, 
   markAllAsRead, 
   getUnreadCount 
-} = require('../../../src/controllers/notificationController');
-const Notification = require('../../../src/models/Notification');
+} = require('../../../controllers/notificationController');
+const Notification = require('../../../models/Notification');
 
-jest.mock('../../../src/models/Notification');
+jest.mock('../../../models/Notification');
 
 describe('Feature 1.9: Notification Controller Unit Tests', () => {
   let req, res;

@@ -6,17 +6,17 @@ const {
   markMessagesAsRead, 
   getUnreadCount, 
   getUniqueConversations 
-} = require('../../../src/controllers/messageController');
+} = require('../../../controllers/messageController');
 
-const Message = require('../../../src/models/Message');
-const Booking = require('../../../src/models/Booking');
-const Notification = require('../../../src/models/Notification');
-const Expert = require('../../../src/models/Expert');
+const Message = require('../../../models/Message');
+const Booking = require('../../../models/Booking');
+const Notification = require('../../../models/Notification');
+const Expert = require('../../../models/Expert');
 
-jest.mock('../../../src/models/Message');
-jest.mock('../../../src/models/Booking');
-jest.mock('../../../src/models/Notification');
-jest.mock('../../../src/models/Expert');
+jest.mock('../../../models/Message');
+jest.mock('../../../models/Booking');
+jest.mock('../../../models/Notification');
+jest.mock('../../../models/Expert');
 
 describe('Feature 1.8: Chat Messaging System Unit Tests', () => {
   let req, res, mockEmit;
