@@ -194,4 +194,76 @@ describe('Feature 2.3: Socket.io Real-Time Synchronization', () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(eventFired).toBe(false);
   });
+
+  it('INT-SOCK-03: Should emit slot_released natively when a session is cancelled', async () => {
+    // Manually create a confirmed booking in the DB
+    const booking = await Booking.create({
+      expert: expertProfile._id,
+      user: clientUser._id,
+      userName: 'Client Alice',
+      userEmail: 'alice@client.com',
+      userPhone: '+919876543210',
+      bookingDate: '2027-12-15',
+      slotTime: '14:00',
+      status: 'Pending',
+      razorpayOrderId: 'order_ws_cancel'
+    });
+
+    const eventPromise = new Promise((resolve) => {
+      clientSocket.once('slot_released', (data) => {
+        resolve(data);
+      });
+    });
+
+    // Execute HTTP request to Cancel as the client
+    const response = await request(app)
+      .patch(`/bookings/${booking._id}/status`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ status: 'Cancelled' });
+
+    expect(response.status).toBe(200);
+
+    // Assert that the WebSocket event was received
+    const eventData = await eventPromise;
+    expect(eventData).toBeDefined();
+    expect(eventData.bookingDate).toBe('2027-12-15');
+    expect(eventData.slotTime).toBe('14:00');
+  });
+
+  it('INT-SOCK-04: Should emit new_notification to the specific user when status changes', async () => {
+    // Manually create a confirmed booking in the DB
+    const booking = await Booking.create({
+      expert: expertProfile._id,
+      user: clientUser._id,
+      userName: 'Client Alice',
+      userEmail: 'alice@client.com',
+      userPhone: '+919876543210',
+      bookingDate: '2027-12-16',
+      slotTime: '15:00',
+      status: 'Pending',
+      razorpayOrderId: 'order_ws_notif'
+    });
+
+    // Join the Client's personal notification room (setup in socket implementation)
+    clientSocket.emit('join_user_room', clientUser._id.toString());
+    await new Promise((resolve) => setTimeout(resolve, 50)); // let room join settle
+
+    const notifPromise = new Promise((resolve) => {
+      clientSocket.once('new_notification', (data) => resolve(data));
+    });
+
+    // Cancel the booking which triggers notification to the client
+    const response = await request(app)
+      .patch(`/bookings/${booking._id}/status`)
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ status: 'Cancelled' });
+
+    expect(response.status).toBe(200);
+
+    const eventData = await notifPromise;
+    expect(eventData).toBeDefined();
+    expect(eventData.title).toBe('Booking Cancelled');
+    expect(eventData.type).toBe('BOOKING_UPDATE');
+  });
 });
+
