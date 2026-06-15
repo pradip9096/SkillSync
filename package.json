@@ -23,7 +23,13 @@
   },
   "homepage": "https://github.com/pradip9096/SkillSync#readme",
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5"
+  },
+  "lint-staged": {
+    "*.md": [
+      "bash scripts/lint-mermaid.sh"
+    ]
   }
 }

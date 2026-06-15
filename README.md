@@ -4,21 +4,28 @@
 ![React](https://img.shields.io/badge/React-v19.2-blue.svg)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248.svg)
 ![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-black.svg)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Keep a Changelog v1.1.0](https://img.shields.io/badge/keep%20a%20changelog-v1.1.0-%23E05735)](CHANGELOG.md)
+[![Semantic Versioning 2.0.0](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-SkillSync is a robust, real-time web application where users can seamlessly discover experts by category, view live availability, and confidently book sessions without encountering double-booking conflicts.
+SkillSync is a robust, real-time web application where users can seamlessly discover experts by category, view live availability, and confidently book sessions without encountering double-booking conflicts. Designed with strict adherence to international software engineering standards.
 
 ---
 
 ## 📑 Table of Contents
 
 - [Features](#-features)
+- [Compliance & Standards](#-compliance--standards)
 - [Tech Stack](#-tech-stack)
 - [Architecture & Project Structure](#-architecture--project-structure)
 - [Getting Started](#-getting-started)
 - [Testing & Quality Assurance](#-testing--quality-assurance)
 - [Coding Guidelines](#-coding-guidelines)
+- [Changelog](#-changelog)
+- [Security](#-security)
 - [Contributing](#-contributing)
+- [Code of Conduct](#-code-of-conduct)
 - [License](#-license)
 
 ---
@@ -41,6 +48,19 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Payment Gateway Integration:** Razorpay checkout with client-side signature verification, idempotency, **Two-Phase Commit boundaries**, and automatic slot-release on failure.
 - **API Security Hardening:** **Zod schema validation**, ReDoS sanitization, IP rate limiting, DTO serialization, Express 5.0 NoSQL sanitization wrappers.
 - **Custom UX & Pagination:** Glassmorphic React dialogs replacing native browser prompts, and strict query pagination.
+- **AI/Agent Integration:** Core architecture integrated with the Model Context Protocol (MCP) SDK for advanced AI interaction capabilities.
+
+---
+
+## 🏛️ Compliance & Standards
+
+SkillSync is engineered in strict accordance with recognized international industry standards:
+- **ISO/IEC/IEEE 12207:** Software Life Cycle Processes are documented and adhered to.
+- **IEEE Std 1012:** System Verification and Validation (V&V) procedures govern deployment gates.
+- **ISO/IEC/IEEE 29119-3:** Software Testing Documentation ensures transparent and traceable test execution.
+- **Semantic Versioning 2.0.0:** Strict adherence to `MAJOR.MINOR.PATCH` versioning rules.
+- **Keep a Changelog 1.1.0:** Human-readable, chronologically organized release notes.
+- **Contributor Covenant 2.1:** Fostering an inclusive and harassment-free open-source community.
 
 ---
 
@@ -48,6 +68,7 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 
 ### Frontend Core
 - **React (v19.2) & Vite (v8.0):** Component-driven interface library with an ultra-fast compilation bundler.
+- **React Query (v5) & Hook Form:** Enterprise-grade server-state caching and complex form state validation.
 - **Tailwind CSS (v3.4):** Utility-first styling framework with custom glassmorphism components.
 - **React Router DOM (v7.15) & Lucide React (v1.14):** Declarative routing and premium SVG iconography.
 - **Axios (v1.16) & Socket.io Client (v4.8):** Promise-based HTTP and real-time persistent WebSocket clients.
@@ -57,7 +78,9 @@ SkillSync is a robust, real-time web application where users can seamlessly disc
 - **Mongoose (v9.6) & MongoDB Atlas:** Schema-based ODM layer enforcing ACID transactions (`session.withTransaction()`).
 - **Socket.io (v4.8) & Redis (v6.0):** WebSockets engine with `@socket.io/redis-adapter` for horizontally scaling real-time state.
 - **Agenda.js, Nodemailer, Twilio:** Background job processing and multi-channel notification dispatch.
+- **Pino & Opossum:** High-performance production logging framework and circuit-breaker resilience patterns.
 - **Zod & Helmet:** TypeScript-first schema validation and HTTP header security.
+- **Model Context Protocol (MCP):** Official SDK integration mapping internal operations to AI-agent interfaces.
 
 ---
 
@@ -89,6 +112,8 @@ Real-Time-Expert-Session-Booking-System/
 │   │   └── services/         # Axios API interceptors and Socket connections
 │   └── package.json          # Frontend dependencies
 ├── docs/                     # Engineering documentation and specifications
+├── graphify-out/             # Generated Codebase Knowledge Graph & AST outputs
+├── .github/                  # CI/CD pipelines and automated dependency management
 ├── start.sh                  # Application startup utility script
 └── README.md                 # Project documentation
 ```
@@ -161,7 +186,7 @@ npm test                  # Executes the full V&V test pipeline
 
 | Testing Level | Technology | Target |
 |---|---|---|
-| **Unit Testing** | Jest | Backend Services & Business Logic |
+| **Unit Testing** | Jest (Backend), Vitest (Frontend) | Component Logic, Backend Services & Business Logic |
 | **Integration Testing** | Jest + SuperTest | API Endpoints & Transaction Boundaries |
 | **E2E / System Testing** | Playwright | Full User Journeys |
 | **Performance Testing** | k6 | Load and Stress thresholds |
@@ -173,6 +198,10 @@ SkillSync strictly adheres to international software engineering documentation s
 - **IEEE Std 1012:** Codebase modifications are gated by formal V&V execution reports and anomaly tracking.
 - **Integration Test Sandbox:** Critical API boundaries are subjected to automated `jest` and `supertest` verification using an isolated `mongodb-memory-server` database, ensuring 100% test pass rates before deployment.
 - **Engineering Principle Compliance:** The codebase is systematically audited against a 270-principle framework managing technical debt and Engineering Maturity.
+
+### Continuous Integration & Deployment (CI/CD)
+- **GitHub Actions:** Automated test pipelines execute on all Pull Requests and merges to the main branch.
+- **Dependabot:** Proactive tracking and automated merging of security patches and dependency bumps.
 
 ### Testing Architecture Boundaries
 To enforce maximum isolation and test reliability, the backend adheres to a strict physical boundary split:
@@ -194,11 +223,33 @@ To enforce maximum isolation and test reliability, the backend adheres to a stri
 We welcome contributions from the community! To contribute:
 1. Fork the repository.
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Commit your changes: `git commit -m 'Add some feature'`
+3. Commit your changes strictly following [Conventional Commits](https://www.conventionalcommits.org/).
 4. Push to the branch: `git push origin feature/your-feature-name`
 5. Open a Pull Request.
 
-Please ensure all tests pass and your code adheres to the project's ESLint rules before submitting a PR.
+Please ensure all tests pass, Markdown files validate against Mermaid-CLI, and your code adheres to the project's ESLint rules before submitting a PR.
+
+> [!IMPORTANT]
+> **Pre-commit Gating:** This project strictly enforces code quality and formatting via **Husky** and **Lint-Staged**. Git commits will be automatically intercepted and rejected if they fail ESLint checks or Mermaid syntax validation.
+
+---
+
+## 📜 Changelog
+
+We follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/).
+See the [CHANGELOG.md](CHANGELOG.md) file for a detailed history of features, fixes, and deprecations across all releases.
+
+---
+
+## 🛡️ Security
+
+We take security seriously. If you discover any security-related issues, please do not use the issue tracker. Instead, review our [Security Policy](SECURITY.md) for instructions on how to securely disclose vulnerabilities.
+
+---
+
+## 🤝 Code of Conduct
+
+We are committed to providing a welcoming and inspiring community for all. Participation in this project is strictly governed by the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 

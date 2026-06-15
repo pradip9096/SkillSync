@@ -182,6 +182,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [Distributed State & Database Concurrency](#feature-distributed-state--database-concurrency) | `Complete` | SkillSync | 2026-06-14 |
 | [Process Resilience & System Reliability](#feature-process-resilience--system-reliability) | `Complete` | SkillSync | 2026-06-14 |
 | [Integrated WebRTC Video/Audio Conferencing](#feature-integrated-webrtc-videoaudio-conferencing) | `Draft` | SkillSync | 2026-06-15 |
+| [Agent Tooling & Developer Experience](#feature-agent-tooling--developer-experience) | `Complete` | SkillSync | 2026-06-15 |
 
 ---
 
@@ -239,27 +240,22 @@ Restricts booking privileges exclusively to the `'Client'` role, thereby prevent
 
 ```mermaid
 flowchart TD
-    A([Expert Logged In]) --> B[Opens ExpertListing page]
-    B --> C{Is own card in grid?}
-    C -->|Yes — hidden| D[Own card NOT shown in listing]
-    C -->|Other experts| E[Normal grid displayed]
+    A(["Expert Logged In"]) --> B["Opens ExpertListing page"]
+    B --> C{"Is own card in grid?"}
+    C -->|Yes — hidden| D["Own card NOT shown in listing"]
+    C -->|Other experts| E["Normal grid displayed"]
 
-    A --> F[Navigates directly to /experts/:id]
-    F --> G{Is this own profile?}
-    G -->|Yes| H[Yellow warning banner shown
-'You cannot book your own session']
-    H --> I[All inputs disabled
-Submit = 'Self-Booking Disabled']
-    I --> J([No API call possible])
-    G -->|No — different expert| K[Normal booking flow enabled]
+    A --> F["Navigates directly to /experts/:id"]
+    F --> G{"Is this own profile?"}
+    G -->|Yes| H["Yellow warning banner shown\n'You cannot book your own session'"]
+    H --> I["All inputs disabled\nSubmit = 'Self-Booking Disabled'"]
+    I --> J(["No API call possible"])
+    G -->|No — different expert| K["Normal booking flow enabled"]
 
-    L([Guest or Client]) --> M[Submits POST /bookings
-with expert's own email]
-    M --> N{Email match check
-case-insensitive + trimmed}
-    N -->|Match found| O([400 Bad Request
-'Self-booking is not permitted'])
-    N -->|No match| P([201 Created — booking recorded])
+    L(["Guest or Client"]) --> M["Submits POST /bookings\nwith expert's own email"]
+    M --> N{"Email match check\ncase-insensitive + trimmed"}
+    N -->|Match found| O(["400 Bad Request\n'Self-booking is not permitted'"])
+    N -->|No match| P(["201 Created — booking recorded"])
 ```
 
 ### API Specifications
@@ -384,31 +380,22 @@ relative to the current local IST clock (UTC+5:30).
 
 ```mermaid
 flowchart TD
-    A([Expert]) --> B[Opens Expert Dashboard]
-    B --> C[Selects a date on calendar]
-    C --> D{Which date?}
+    A(["Expert"]) --> B["Opens Expert Dashboard"]
+    B --> C["Selects a date on calendar"]
+    C --> D{"Which date?"}
 
-    D -->|Past date| E[All slots rendered as 'Passed'
-Greyed out — disabled]
-    D -->|Today| F{For each slot
-compare to current IST time}
-    F -->|Slot hour < now| G[Slot shown as 'Passed'
-Disabled — no click]
-    F -->|Slot hour >= now| H[Slot shown as Active
-Clickable — toggleable]
-    D -->|Future date| I[All slots shown as Active
-Fully toggleable]
+    D -->|Past date| E["All slots rendered as 'Passed'\nGreyed out — disabled"]
+    D -->|Today| F{"For each slot\ncompare to current IST time"}
+    F -->|Slot hour < now| G["Slot shown as 'Passed'\nDisabled — no click"]
+    F -->|Slot hour >= now| H["Slot shown as Active\nClickable — toggleable"]
+    D -->|Future date| I["All slots shown as Active\nFully toggleable"]
 
-    G --> J([Expert clicks 'Passed' slot])
-    J --> K([No action — click event blocked
-No API call made])
+    G --> J(["Expert clicks 'Passed' slot"])
+    J --> K(["No action — click event blocked\nNo API call made"])
 
-    L([Expert bypasses UI
-POST /dashboard/block-slot directly]) --> M{Backend IST validation
-slot datetime vs Date.now}
-    M -->|Slot is in the past| N([400 Bad Request
-'Cannot block a past slot'])
-    M -->|Slot is in the future| O([200 OK — slot blocked])
+    L(["Expert bypasses UI\nPOST /dashboard/block-slot directly"]) --> M{"Backend IST validation\nslot datetime vs Date.now"}
+    M -->|Slot is in the past| N(["400 Bad Request\n'Cannot block a past slot'"])
+    M -->|Slot is in the future| O(["200 OK — slot blocked"])
 ```
 
 ### API Specifications
@@ -529,12 +516,14 @@ session as Completed before its scheduled start time.
 
 ### User Interaction Flow
 
-```
-[Client] -> Opens My Bookings page -> [System evaluates Booking status]
-  |-- Confirmed or Pending --> Rate and Review button NOT shown
-  |-- Completed --> System checks isRated flag
-        |-- isRated == true --> Rate and Review button hidden
-        |-- isRated == false --> Rate and Review button visible
+```mermaid
+flowchart TD
+    A(["Client"]) -->|Opens My Bookings page| B["System evaluates Booking status"]
+    B --> C{"Booking Status?"}
+    C -->|Confirmed or Pending| D["Rate and Review button NOT shown"]
+    C -->|Completed| E["System checks isRated flag"]
+    E -->|isRated == true| F["Rate and Review button hidden"]
+    E -->|isRated == false| G["Rate and Review button visible"]
 ```
 
 ### API Specifications
@@ -675,12 +664,14 @@ from users and handling the required country prefix (+91) transparently.
 
 ### User Interaction Flow
 
-```
-[User] -> Submits 10-digit phone number -> [Frontend normalizePhone]
-  |-- Success --> Prepends '+91' -> API receives E.164 format
-  |-- Failure --> Validation error shown, form not submitted
-[User] -> Opens Edit Profile -> [API returns phone]
-  |-- Success --> Frontend strips '+91' -> Displays clean 10 digits
+```mermaid
+flowchart TD
+    A(["User"]) -->|Submits 10-digit phone number| B["Frontend normalizePhone"]
+    B --> C{"Validation status?"}
+    C -->|Success| D["Prepends '+91'\nAPI receives E.164 format"]
+    C -->|Failure| E["Validation error shown\nForm not submitted"]
+    F(["User"]) -->|Opens Edit Profile| G["API returns phone"]
+    G -->|Success| H["Frontend strips '+91'\nDisplays clean 10 digits"]
 ```
 
 ### API Specifications
@@ -800,12 +791,14 @@ Displays all session slot times in a clean, user-friendly 12-hour AM/PM format
 
 ### User Interaction Flow
 
-```
-[User] -> Opens Dashboard/Detail Page -> [System returns 24-hour time]
-  |-- Render Time --> formatTo12Hour applied -> Displays 12-hour format
-[Socket] -> Receives slot_booked event -> [System checks UI state]
-  |-- Slot visible --> formatTo12Hour applied -> Displays 12-hour format
-  |-- Slot hidden --> No action needed
+```mermaid
+flowchart TD
+    A(["User"]) -->|Opens Dashboard/Detail Page| B["System returns 24-hour time"]
+    B -->|Render Time| C["formatTo12Hour applied\nDisplays 12-hour format"]
+    D(["Socket"]) -->|Receives slot_booked event| E["System checks UI state"]
+    E --> F{"Is slot visible?"}
+    F -->|Slot visible| G["formatTo12Hour applied\nDisplays 12-hour format"]
+    F -->|Slot hidden| H["No action needed"]
 ```
 
 ### API Specifications
@@ -929,11 +922,13 @@ to build marketplace credibility and provide quality feedback to experts.
 
 ### User Interaction Flow
 
-```
-[Client] -> Clicks Rate and Review -> [System validates POST /experts/:id/rate]
-  |-- Valid --> Review created, booking.isRated set to true -> Success UI
-  |-- Not Completed --> 400 Bad Request
-  |-- Already Rated --> 400 Bad Request
+```mermaid
+flowchart TD
+    A(["Client"]) -->|Clicks Rate and Review| B["System validates POST /experts/:id/rate"]
+    B --> C{"Validation status?"}
+    C -->|Valid| D["Review created\nbooking.isRated set to true\nSuccess UI"]
+    C -->|Not Completed| E(["400 Bad Request"])
+    C -->|Already Rated| F(["400 Bad Request"])
 ```
 
 ### API Specifications
@@ -1065,13 +1060,16 @@ control for multi-tenant systems. Ensures only authorized roles can access prote
 
 ### User Interaction Flow
 
-```
-[Visitor] -> Submits Auth Form -> [System validates payload]
-  |-- Valid --> JWT generated, stored in localStorage -> Redirect to Dashboard
-  |-- Invalid / Wrong Credentials --> Error shown -> Stays on page
-[User] -> Accesses Protected Route -> [Auth Middleware checks JWT]
-  |-- Valid JWT --> Request proceeds
-  |-- Invalid JWT --> 401 Unauthorized -> Redirect to Login
+```mermaid
+flowchart TD
+    A(["Visitor"]) -->|Submits Auth Form| B["System validates payload"]
+    B --> C{"Credentials valid?"}
+    C -->|Valid| D["JWT generated & stored in localStorage\nRedirect to Dashboard"]
+    C -->|Invalid / Wrong Credentials| E["Error shown\nStays on page"]
+    F(["User"]) -->|Accesses Protected Route| G["Auth Middleware checks JWT"]
+    G --> H{"JWT valid?"}
+    H -->|Valid JWT| I["Request proceeds"]
+    H -->|Invalid JWT| J(["401 Unauthorized\nRedirect to Login"])
 ```
 
 ### API Specifications
@@ -1201,12 +1199,14 @@ Socket.io real-time synchronization.
 
 ### User Interaction Flow
 
-```
-[Client] -> Submits POST /bookings -> [System checks availability]
-  |-- Slot Available --> Booking written -> Socket emits slot_booked -> 201 Created
-  |-- Race Condition --> 400 Bad Request -> UI shows 'Slot already booked'
-[Client B] -> Receives slot_booked event -> [System updates UI]
-  |-- Success --> Slot transitions to 'Booked' and is disabled
+```mermaid
+flowchart TD
+    A(["Client"]) -->|Submits POST /bookings| B["System checks availability"]
+    B --> C{"Availability?"}
+    C -->|Slot Available| D["Booking written\nSocket emits slot_booked\n201 Created"]
+    C -->|Race Condition| E(["400 Bad Request\nUI shows 'Slot already booked'"])
+    F(["Client B"]) -->|Receives slot_booked event| G["System updates UI"]
+    G -->|Success| H["Slot transitions to 'Booked'\nand is disabled"]
 ```
 
 ### API Specifications
@@ -1338,11 +1338,12 @@ time slots on a calendar grid, with guards preventing modification of historical
 
 ### User Interaction Flow
 
-```
-[Expert] -> Clicks Open Slot -> [System processes POST /dashboard/block-slot]
-  |-- Success --> Slot turns 'Blocked'
-[Expert] -> Clicks Blocked Slot -> [System processes POST /dashboard/unblock-slot]
-  |-- Success --> Slot returns to 'Available'
+```mermaid
+flowchart TD
+    A(["Expert"]) -->|Clicks Open Slot| B["System processes POST /dashboard/block-slot"]
+    B -->|Success| C["Slot turns 'Blocked'"]
+    D(["Expert"]) -->|Clicks Blocked Slot| E["System processes POST /dashboard/unblock-slot"]
+    E -->|Success| F["Slot returns to 'Available'"]
 ```
 
 ### API Specifications
@@ -1461,10 +1462,12 @@ conventions, decoupling locale-specific formatting from core business logic.
 
 ### User Interaction Flow
 
-```
-[System] -> Calculates slot eligibility -> [System reads Date.now + applies IST offset]
-  |-- slotTimeMs > now --> Slot is FUTURE -> allowed
-  |-- slotTimeMs <= now --> Slot is PAST -> rejected
+```mermaid
+flowchart TD
+    A(["System"]) -->|Calculates slot eligibility| B["System reads Date.now + applies IST offset"]
+    B --> C{"Comparison"}
+    C -->|slotTimeMs > now| D["Slot is FUTURE\nallowed"]
+    C -->|slotTimeMs <= now| E["Slot is PAST\nrejected"]
 ```
 
 ### API Specifications
@@ -1567,10 +1570,12 @@ Allows all users to upload custom profile pictures, and allows Experts to upload
 
 ### User Interaction Flow
 
-```
-[User] -> Submits Image File -> [Backend validates Type/Size]
-  |-- Valid --> Saves file, updates DB -> 200 OK + returns new URL
-  |-- Invalid Type/Size --> 400 Bad Request -> UI shows error banner
+```mermaid
+flowchart TD
+    A(["User"]) -->|Submits Image File| B["Backend validates Type/Size"]
+    B --> C{"Validation status?"}
+    C -->|Valid| D["Saves file & updates DB\n200 OK + returns new URL"]
+    C -->|Invalid Type/Size| E(["400 Bad Request\nUI shows error banner"])
 ```
 
 ### API Specifications
@@ -1673,11 +1678,13 @@ Adds client-side search controls to the Admin Dashboard management tables so adm
 
 ### User Interaction Flow
 
-```
-[Admin] -> Opens Admin Dashboard tab -> [System fetches table data]
-  |-- Success --> Admin types search text -> matching rows remain visible
-  |-- No matches --> table area shows a no-results message for the active tab
-  |-- Tab switch --> search input clears and the new tab loads unfiltered data
+```mermaid
+flowchart TD
+    A(["Admin"]) -->|Opens Admin Dashboard tab| B["System fetches table data"]
+    B --> C{"Interaction"}
+    C -->|Admin types search text| D["Matching rows remain visible"]
+    C -->|No matches| E["Table area shows a no-results message for the active tab"]
+    C -->|Tab switch| F["Search input clears\nNew tab loads unfiltered data"]
 ```
 
 ### API Specifications
@@ -1788,10 +1795,12 @@ Integrates native MongoDB Replica Set ACID multi-document transactions (`session
 
 ### User Interaction Flow
 
-```
-[User] -> Triggers complex mutation -> [System starts mongoose transaction]
-  |-- All Operations Succeed --> Commit transaction -> 201 Created
-  |-- Any Operation Fails --> Abort transaction, rollback data -> 500/400 Error
+```mermaid
+flowchart TD
+    A(["User"]) -->|Triggers complex mutation| B["System starts mongoose transaction"]
+    B --> C{"Transaction Status"}
+    C -->|All Operations Succeed| D["Commit transaction\n201 Created"]
+    C -->|Any Operation Fails| E(["Abort transaction\nRollback data\n500/400 Error"])
 ```
 
 ### API Specifications
@@ -1881,10 +1890,12 @@ Migrates expert calendar unavailability blocks from the overloaded `Booking` col
 
 ### User Interaction Flow
 
-```
-[Expert] -> Click Slot on Dashboard -> [System creates Availability record]
-  |-- Success --> Slot state changes to "Blocked" (red) in real-time
-  |-- Failure --> Error alert shown, slot state remains unchanged
+```mermaid
+flowchart TD
+    A(["Expert"]) -->|Click Slot on Dashboard| B["System creates Availability record"]
+    B --> C{"Result"}
+    C -->|Success| D["Slot state changes to 'Blocked' (red) in real-time"]
+    C -->|Failure| E["Error alert shown\nSlot state remains unchanged"]
 ```
 
 ### API Specifications
@@ -1976,13 +1987,15 @@ Protects expert schedules by preventing late cancellations within a 2-hour windo
 
 ### User Interaction Flow
 
-```
-[User] -> Clicks "Cancel" on Dashboard -> [System checks current time vs slot time (IST)]
-  |-- > 2 hours remaining --> Booking marked "Cancelled", slot released, no penalties.
-  |-- < 2 hours remaining --> Dialog shows late warning. User confirms.
-        |--> Booking marked "Late Cancellation", slot released.
-        |--> Responsible user's late count + 1.
-        |--> If count reaches 3, user suspended for 7 days (warning banner shown on login/detail).
+```mermaid
+flowchart TD
+    A(["User"]) -->|Clicks 'Cancel' on Dashboard| B["System checks current time vs slot time IST"]
+    B --> C{"Time remaining"}
+    C -->|> 2 hours remaining| D["Booking marked 'Cancelled'\nSlot released\nNo penalties"]
+    C -->|< 2 hours remaining| E["Dialog shows late warning\nUser confirms"]
+    E --> F["Booking marked 'Late Cancellation'\nSlot released"]
+    F --> G["Responsible user's late count + 1"]
+    G --> H["If count reaches 3:\nUser suspended for 7 days\nWarning banner shown on login/detail"]
 ```
 
 ### API Specifications
@@ -2075,14 +2088,15 @@ Establishes a double-sided reputation network by allowing Experts to rate and re
 
 ### User Interaction Flow
 
-```
-[Expert] -> Completed Session List -> Clicks "Rate Client" -> [Rating Modal Opens]
-  |-- Selects star rating (1-5) and types optional comment
-  |-- Submits -> [System verifies authorization and completed status]
-        |--> Creates ClientReview document
-        |--> Updates User (Client) rating rolling average and count
-        |--> Sets Booking.isClientRated = true
-        |--> Frontend displays green "Rated" badge
+```mermaid
+flowchart TD
+    A(["Expert"]) -->|Completed Session List\nClicks 'Rate Client'| B["Rating Modal Opens"]
+    B --> C["Selects star rating 1-5\nTypes optional comment"]
+    C -->|Submits| D["System verifies authorization\nand completed status"]
+    D --> E["Creates ClientReview document"]
+    E --> F["Updates Client rating rolling avg & count"]
+    F --> G["Sets Booking.isClientRated = true"]
+    G --> H["Frontend displays green 'Rated' badge"]
 ```
 
 ### API Specifications
@@ -2169,10 +2183,12 @@ Provides an analytics suite for experts to track commercial performance, schedul
 
 ### User Interaction Flow
 
-```
-[Expert] -> Clicks 'Business Analytics' -> [System GET /expert-dashboard/analytics]
-  |-- Success --> Aggregates data, computes KPIs -> Returns JSON Payload
-  |-- Failure --> Error state shown
+```mermaid
+flowchart TD
+    A(["Expert"]) -->|Clicks 'Business Analytics'| B["System GET /expert-dashboard/analytics"]
+    B --> C{"Response"}
+    C -->|Success| D["Aggregates data\nComputes KPIs\nReturns JSON Payload"]
+    C -->|Failure| E(["Error state shown"])
 ```
 
 ### API Specifications
@@ -2297,14 +2313,14 @@ Integrates an automated scheduling layer via Agenda.js to dispatch immediate boo
   Rationale: Prevents clock skew and timezone drifts across different regions.
 
 ### User Interaction Flow
-* **Success Path:**
-  1. Client completes a booking selection.
-  2. Booking Controller hooks into Agenda to dispatch a confirmation immediately and schedules 24h & 2h reminders.
-  3. Agenda triggers execution at the specified pre-session time.
-  4. Client/Expert receive notifications.
-* **Cancellation Path:**
-  1. Client/Expert cancels booking.
-  2. Controller removes/cancels the scheduled reminder jobs from MongoDB and dispatches a cancellation alert.
+```mermaid
+flowchart TD
+    A(["Client"]) -->|Completes booking selection| B["Booking Controller hooks into Agenda\nto dispatch confirmation immediately\nand schedules 24h & 2h reminders"]
+    B --> C["Agenda triggers execution\nat specified pre-session time"]
+    C --> D["Client/Expert receive notifications"]
+    
+    E(["Client/Expert"]) -->|Cancels booking| F["Controller removes/cancels scheduled reminder jobs\nfrom MongoDB and dispatches cancellation alert"]
+```
 
 ### API Specifications
 - Uses existing creation/cancellation HTTP endpoint hooks to trigger scheduler events.
@@ -2372,14 +2388,16 @@ Adds a secure, self-service "Forgot Password" capability allowing Clients and Ex
   Rationale: Prevents weak credentials creation.
 
 ### User Interaction Flow
-* **Success Path:**
-  1. User clicks "Forgot Password?" on the Login screen and enters their email.
-  2. User receives a password reset email and clicks the button/URL.
-  3. User enters and confirms a new password on the Reset Password page.
-  4. User submits the form, updates the password, is automatically logged in, and gets redirected to their dashboard.
-* **Failure Path:**
-  1. User clicks an invalid or expired reset link.
-  2. Page displays a clear error state (Invalid/expired token) and redirects to Login.
+```mermaid
+flowchart TD
+    A(["User clicks 'Forgot Password?'"]) --> B["Enters email"]
+    B --> C["Receives reset email"]
+    C --> D["Clicks reset link"]
+    D --> E{"Is token valid?"}
+    E -->|Valid| F["Enters & confirms new password"]
+    F --> G["Updates password, auto-logins, redirects"]
+    E -->|Invalid/Expired| H["Displays error state\nRedirects to Login"]
+```
 
 ### API Specifications
 - `POST /auth/forgot-password` (Public): Generates token and sends reset URL.
@@ -2439,10 +2457,12 @@ Provides real-time chat messaging and notification capabilities for Clients and 
   Rationale: Privacy constraint to prevent data leaks.
 
 ### User Interaction Flow
-```
-[User] -> Clicks Messaging in Navbar -> [System Responses with Chat Interface]
-  |-- Success --> User sees message list
-  |-- Failure --> Error fetching messages
+```mermaid
+flowchart TD
+    A(["User"]) -->|Clicks Messaging in Navbar| B["System fetches messages"]
+    B --> C{"Fetch status?"}
+    C -->|Success| D["User sees message list"]
+    C -->|Failure| E["Error fetching messages"]
 ```
 
 ### API Specifications
@@ -2513,11 +2533,17 @@ Clients and Experts
   - *Rationale:* Chat must feel instantaneous to keep users engaged on the platform.
 
 ### User Interaction Flow
-1. User logs in, socket connects and authenticates via JWT.
-2. User receives global `new_notification` or `new_message` events in the background, incrementing their UI badge.
-3. User navigates to Messaging tab, viewing a cleanly grouped list of active conversations.
-4. User selects a chat and sends a message; the message is instantly broadcast to the other user's active UI or badge.
-5. (Failure) User's socket disconnects, so they temporarily fall back to a REST API fetch upon reconnect to sync missed events.
+```mermaid
+flowchart TD
+    A(["User logs in"]) --> B["Socket connects & authenticates via JWT"]
+    B --> C{"Background Events"}
+    C -->|Receives new_notification/message| D["Increments UI badge"]
+    D --> E["User navigates to Messaging tab"]
+    E --> F["Views active conversations"]
+    F --> G["User sends a message"]
+    G --> H["Broadcasts to other user's UI/badge"]
+    B -->|Socket disconnects| I["Falls back to REST API fetch on reconnect"]
+```
 
 ### Error Handling & Edge Cases
 - **Socket Disconnect:** App handles background reconnections via long-polling failover.
@@ -2620,12 +2646,17 @@ Integrates the Razorpay payment gateway to process client payments for booking e
 
 ### User Interaction Flow
 
-```
-[Client] -> Clicks "Book" on Slot -> [System creates Booking (Pending) & Razorpay Order]
-  |-- Success --> Opens Razorpay modal -> Client completes payment -> [System verifies signature & Confirms booking] -> Success screen
-  |-- Dismiss/Cancel Modal --> [System shows warning toast + keeps client on form to retry payment]
-  |-- Verification Failure / Failed Webhook --> [System marks booking as Cancelled & releases slot] -> Error screen/toast
-  |-- Late Payment Conflict (Paid after 5m expiry, slot re-booked) --> Automatically refunds payment & leaves booking Cancelled
+```mermaid
+flowchart TD
+    A(["Client"]) -->|Clicks 'Book'| B["System creates Booking (Pending)\n& Razorpay Order"]
+    B --> C{"Payment status?"}
+    C -->|Success| D["Opens Razorpay modal\nClient completes payment"]
+    D --> E["System verifies signature\n& Confirms booking"]
+    E --> F(["Success screen"])
+    C -->|Dismiss/Cancel Modal| G["System shows warning toast\nKeeps client on form"]
+    C -->|Verification Failure/Failed Webhook| H["System marks booking Cancelled\nReleases slot"]
+    H --> I(["Error screen/toast"])
+    C -->|Late Payment Conflict| J["Automatically refunds payment\nLeaves booking Cancelled"]
 ```
 
 ### API Specifications
@@ -2742,11 +2773,16 @@ Hardens the Razorpay webhook endpoint and Agenda task scheduler against network 
 
 ### User Interaction Flow
 
-```
-[System] -> Receives Webhook -> [Database Check]
-  |-- Success (New) --> Process Payment -> [Status 200]
-  |-- Success (Duplicate) --> Skip Processing -> [Status 200]
-  |-- Failure (DB Error) --> Throw Error -> [Status 500] (Webhook Retries Later)
+```mermaid
+flowchart TD
+    A(["System"]) -->|Receives Webhook| B["Database Check"]
+    B --> C{"Check Result"}
+    C -->|Success New| D["Process Payment"]
+    D --> E(["Status 200"])
+    C -->|Success Duplicate| F["Skip Processing"]
+    F --> G(["Status 200"])
+    C -->|Failure DB Error| H["Throw Error"]
+    H --> I(["Status 500\nWebhook Retries Later"])
 ```
 
 ### API Specifications
@@ -2829,12 +2865,13 @@ Hardens the application's external API boundary against malicious payloads, cred
 
 ### User Interaction Flow
 
-```
-[Attacker] -> POST /auth/login (11th attempt) -> [Rate Limiter]
-  |-- Failure --> 429 Too Many Requests 'Too many login attempts. Please try again after 15 minutes'
-
-[Client] -> POST /bookings (Missing payload fields) -> [Zod Middleware]
-  |-- Failure --> 400 Bad Request + Structured Array of Zod validation error messages
+```mermaid
+flowchart TD
+    A(["Attacker"]) -->|POST /auth/login 11th attempt| B["Rate Limiter"]
+    B -->|Failure| C(["429 Too Many Requests\n'Too many login attempts...'"])
+    
+    D(["Client"]) -->|POST /bookings Missing fields| E["Zod Middleware"]
+    E -->|Failure| F(["400 Bad Request\n+ Structured Array of Zod errors"])
 ```
 
 ### API Specifications
@@ -2921,13 +2958,13 @@ Extracts monolithic business logic from Express controllers into isolated Servic
 
 ```mermaid
 flowchart TD
-    A([Client]) --> B[POST /bookings]
-    B --> C[Controller]
-    C -->|Parses req.body| D[BookingService]
-    D -->|Validates rules| E[BookingRepository]
+    A(["Client"]) --> B["POST /bookings"]
+    B --> C["Controller"]
+    C -->|Parses req.body| D["BookingService"]
+    D -->|Validates rules| E["BookingRepository"]
     E -->|Executes DB Queries| D
     D -->|Returns Domain Result| C
-    C -->|Formats Response| F([HTTP 201])
+    C -->|Formats Response| F(["HTTP 201"])
 ```
 
 ### API Specifications
@@ -3013,14 +3050,14 @@ Hardens the application to support horizontal scaling across multiple instances 
 
 ```mermaid
 flowchart TD
-    A([Client Posts Booking]) --> B[Razorpay Order API Call]
-    B -->|Success| C[Mongoose startSession & withTransaction]
-    C --> D[MongoDB saves Booking]
-    D --> E[Socket.io emits slot_booked via RedisAdapter]
-    E -->|Success| F([HTTP 201])
-    C -->|Fails| G[MongoDB Rolls back Booking]
-    G --> H([HTTP 400])
-    B -->|Fails| I([HTTP 400 - Order Failed])
+    A(["Client Posts Booking"]) --> B["Razorpay Order API Call"]
+    B -->|Success| C["Mongoose startSession & withTransaction"]
+    C --> D["MongoDB saves Booking"]
+    D --> E["Socket.io emits slot_booked via RedisAdapter"]
+    E -->|Success| F(["HTTP 201"])
+    C -->|Fails| G["MongoDB Rolls back Booking"]
+    G --> H(["HTTP 400"])
+    B -->|Fails| I(["HTTP 400 - Order Failed"])
 ```
 
 ### API Specifications
@@ -3111,10 +3148,12 @@ This feature implements robust fault tolerance mechanisms—including graceful s
 
 ### User Interaction Flow
 
-```
-[System Event] -> Unhandled Rejection -> [Application]
-  |-- Success --> Logs error, stops accepting connections, allows existing to drain, exits safely
-  |-- Failure --> Hits 30s timeout, forcefully exits
+```mermaid
+flowchart TD
+    A(["System Event"]) -->|Unhandled Rejection| B["Application"]
+    B --> C{"Shutdown status"}
+    C -->|Success| D["Logs error\nStops accepting connections\nAllows existing to drain\nExits safely"]
+    C -->|Failure| E["Hits 30s timeout\nForcefully exits"]
 ```
 
 ### API Specifications
@@ -3206,11 +3245,14 @@ Enables seamless, browser-based peer-to-peer video and audio conferencing direct
 
 ### User Interaction Flow
 
-```
-[User] -> Clicks "Join Video Session" on MyBookings -> [System Checks Time-Lock & Auth]
-  |-- Success --> User joins WebRTC Room -> Prompts Camera/Mic Permissions -> [Session Starts]
-  |-- Failure (Too Early) --> Shows error "Room opens 5 minutes before start time"
-  |-- Failure (Unauthorized) --> Redirects to Home
+```mermaid
+flowchart TD
+    A(["User"]) -->|Clicks 'Join Video Session'| B["System Checks Time-Lock & Auth"]
+    B --> C{"Check result"}
+    C -->|Success| D["User joins WebRTC Room\nPrompts Camera/Mic Permissions"]
+    D --> E(["Session Starts"])
+    C -->|Failure Too Early| F(["Shows error 'Room opens 5 minutes before start time'"])
+    C -->|Failure Unauthorized| G(["Redirects to Home"])
 ```
 
 ### API Specifications
@@ -3269,3 +3311,97 @@ Enables seamless, browser-based peer-to-peer video and audio conferencing direct
 
 ### Last Updated
 2026-06-15
+
+---
+
+## Feature: Agent Tooling & Developer Experience
+
+### Overview
+Automates developer tooling through Git hooks and provides a safe local Model Context Protocol (MCP) server for agents to introspect the MongoDB database without polluting the Express runtime.
+
+### Functional Requirements
+
+- [MUST HAVE] The repository must enforce code formatting and testing through `pre-commit` and `pre-push` Husky hooks.
+  Rationale: Prevents linting errors or broken test suites from being merged into the primary branch.
+
+- [MUST HAVE] The database must expose a standalone MCP server (`mcp-database-inspector.js`) that safely executes read-only aggregations and queries.
+  Rationale: Empowers autonomous agents with state introspection capabilities without exposing production API endpoints or writing custom temporary Express routes.
+
+- [MUST HAVE] The testing environment must explicitly mock or bypass eagerly connecting dependencies (such as Agenda.js MongoDB connections).
+  Rationale: Prevents test suite hangs, `ECONNREFUSED` connection leaks, and event loop blocking during automated test teardowns.
+
+- [CAN HAVE] A generic CLI to scaffold new modules.
+  Rationale: Future DX improvement.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] The MCP database server must operate purely over standard input/output (STDIO) without opening any network ports.
+  Rationale: Eliminates cross-origin and network attack vectors on the local sandbox.
+
+### User Interaction Flow
+
+```mermaid
+flowchart TD
+    A(["Agent"]) -->|Calls MCP db_query tool| B["MCP Database Inspector"]
+    B -->|Success| C(["Returns raw JSON payload of MongoDB documents"])
+    B -->|Failure| D(["Returns error string\ne.g. invalid query syntax"])
+
+    E(["Developer"]) -->|Runs git push| F["Husky pre-push hook"]
+    F -->|Tests Pass| G(["Push completes successfully"])
+    F -->|Tests Fail| H(["Push aborted with exit code 1"])
+```
+
+### API Specifications
+
+* `STDIO /mcp/db_query`
+  Input: `{ collection: string, query: object, limit: number }`
+  Validation: Must assert MongoDB connection state before executing.
+  Output: JSON Array
+  Auth: N/A (Local Sandbox)
+
+### Edge Cases
+
+- When running the test suite in a CI/CD environment where MongoDB is uninitialized, the test configuration must not attempt to connect Agenda.js to a non-existent database.
+
+### Best Practices
+
+* Always restrict Agent tooling and sandbox scripts to the `backend/scripts/` or `.agents/` directories to prevent contaminating the core monolithic `src/` runtime.
+
+### Acceptance Criteria
+
+* **AC 1.1:** Executing `npm run mcp:db` initializes a process listening on STDIO that parses valid `db_query` MCP protocol messages and returns MongoDB documents.
+* **AC 1.2:** Triggering a `git commit` executes `lint-staged` automatically.
+* **AC 1.3:** Triggering a `git push` executes the backend integration test suite.
+* **AC 1.4:** The integration test suite exits cleanly with code `0` and does not hang on the Agenda connection pool.
+
+### Non-Goals
+
+- This feature does NOT provide write-access or mutation capabilities through the MCP server.
+
+### Dependencies
+
+- Service: `@modelcontextprotocol/sdk` — Provides the STDIO transport layer.
+- Service: `husky` and `lint-staged` — Underpins the local Git hook lifecycle.
+
+### Testing Strategy
+
+- Unit: Test MCP query validation to ensure only read operations are permitted.
+- Integration: Run `npm test` and assert process completion (exit code 0) without event loop hangs.
+- Manual: Perform a `git push` with a failing test and verify the push is aborted.
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-15 | Antigravity AI | Initial spec created covering Phase 8 implementations. |
+
+### Status
+`Complete`
+
+### Last Updated
+2026-06-15
+
