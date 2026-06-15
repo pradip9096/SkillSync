@@ -18,7 +18,7 @@ const Booking = require('../models/Booking');
  * @route   GET /admin/users
  * @access  Private (Admin Only)
  */
-const getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -41,10 +41,7 @@ const getAllUsers = async (req, res) => {
       data: users
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error fetching users'
-    });
+    return next(error);
   }
 };
 
@@ -53,7 +50,7 @@ const getAllUsers = async (req, res) => {
  * @route   GET /admin/bookings
  * @access  Private (Admin Only)
  */
-const getAllBookings = async (req, res) => {
+const getAllBookings = async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -84,10 +81,7 @@ const getAllBookings = async (req, res) => {
       data: bookings
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error fetching bookings'
-    });
+    return next(error);
   }
 };
 
@@ -96,7 +90,7 @@ const getAllBookings = async (req, res) => {
  * @route   PATCH /admin/bookings/:id/status
  * @access  Private (Admin Only)
  */
-const updateBookingStatusByAdmin = async (req, res) => {
+const updateBookingStatusByAdmin = async (req, res, next) => {
   try {
     const { status } = req.body;
     if (!['Confirmed', 'Pending', 'Completed', 'Cancelled', 'Late Cancellation'].includes(status)) {
@@ -144,10 +138,7 @@ const updateBookingStatusByAdmin = async (req, res) => {
       data: booking
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error updating booking status'
-    });
+    return next(error);
   }
 };
 
@@ -156,7 +147,7 @@ const updateBookingStatusByAdmin = async (req, res) => {
  * @route   DELETE /admin/bookings/:id
  * @access  Private (Admin Only)
  */
-const deleteBookingByAdmin = async (req, res) => {
+const deleteBookingByAdmin = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id);
     if (!booking) {
@@ -187,10 +178,7 @@ const deleteBookingByAdmin = async (req, res) => {
       message: 'Booking deleted and slot released successfully'
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error deleting booking'
-    });
+    return next(error);
   }
 };
 
@@ -199,7 +187,7 @@ const deleteBookingByAdmin = async (req, res) => {
  * @route   POST /admin/experts
  * @access  Private (Admin Only)
  */
-const createExpertByAdmin = async (req, res) => {
+const createExpertByAdmin = async (req, res, next) => {
   try {
     const { email, password, name, phone, category, experience, hourlyRate, description } = req.body;
 
@@ -264,10 +252,7 @@ const createExpertByAdmin = async (req, res) => {
         createdExpert = expert;
       });
     } catch (transactionError) {
-      return res.status(500).json({
-        success: false,
-        error: transactionError.message || 'Server error creating expert transaction'
-      });
+    return next(transactionError);
     } finally {
       await session.endSession();
     }
@@ -277,10 +262,7 @@ const createExpertByAdmin = async (req, res) => {
       data: createdExpert
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error creating expert'
-    });
+    return next(error);
   }
 };
 
@@ -289,7 +271,7 @@ const createExpertByAdmin = async (req, res) => {
  * @route   DELETE /admin/experts/:id
  * @access  Private (Admin Only)
  */
-const deleteExpertByAdmin = async (req, res) => {
+const deleteExpertByAdmin = async (req, res, next) => {
   try {
     const expert = await Expert.findById(req.params.id);
     if (!expert) {
@@ -315,10 +297,7 @@ const deleteExpertByAdmin = async (req, res) => {
         await Expert.findByIdAndDelete(req.params.id, { session });
       });
     } catch (transactionError) {
-      return res.status(500).json({
-        success: false,
-        error: transactionError.message || 'Server error executing deletion transaction'
-      });
+    return next(transactionError);
     } finally {
       await session.endSession();
     }
@@ -328,9 +307,7 @@ const deleteExpertByAdmin = async (req, res) => {
       message: 'Expert, associated user account, and bookings deleted successfully'
     });
   } catch (error) {
-    res.status(500).json({
-      error: error.message || 'Server error deleting expert'
-    });
+    return next(error);
   }
 };
 
@@ -339,7 +316,7 @@ const deleteExpertByAdmin = async (req, res) => {
  * @route   POST /admin/users/:id/reset-penalties
  * @access  Private (Admin Only)
  */
-const resetUserPenalties = async (req, res) => {
+const resetUserPenalties = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -359,10 +336,7 @@ const resetUserPenalties = async (req, res) => {
       data: user
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error resetting user penalties'
-    });
+    return next(error);
   }
 };
 

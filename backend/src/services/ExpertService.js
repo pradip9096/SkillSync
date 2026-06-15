@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const BookingRepository = require('../repositories/BookingRepository');
 const ExpertRepository = require('../repositories/ExpertRepository');
 const AvailabilityRepository = require('../repositories/AvailabilityRepository');

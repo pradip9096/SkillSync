@@ -12,6 +12,7 @@ const agenda = new Agenda({
     collection: 'agendaJobs'
   },
   defaultLockLifetime: 600000, // 10 minutes
+  processEvery: '30 seconds',
   defaultConcurrency: 5,
   maxConcurrency: 10
 });

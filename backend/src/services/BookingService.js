@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
-const Razorpay = require('razorpay');
+const { createOrder, refundPayment } = require('../utils/razorpayClient');
 const crypto = require('crypto');
 const agenda = require('../config/agenda');
+const { BOOKING_STATUS, isValidTransition } = require('../constants/bookingStatus');
+const { isValidIndianPhone } = require('../utils/phoneUtils');
 const { formatTime12H } = require('../utils/timeFormatters');
 const { scheduleSessionReminders, cancelScheduledReminders } = require('./reminderScheduler'); // Ensure this points correctly. It's in src/services
 const { serializeBookingDTO } = require('../utils/serializers');
@@ -16,18 +18,21 @@ const ProcessedWebhook = require('../models/ProcessedWebhook');
 const PaymentLog = require('../models/PaymentLog');
 const Notification = require('../models/Notification');
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Razorpay client initialized in utils/razorpayClient.js
 
 class BookingService {
   async createBooking({ payload, authUser, io }) {
     const { expert, userName, userEmail, userPhone, bookingDate, slotTime, notes } = payload;
     
+    if (userPhone && !isValidIndianPhone(userPhone)) {
+      const err = new Error('Please provide a valid Indian phone number');
+      err.statusCode = 400;
+      throw err;
+    }
+    
     if (!expert || !mongoose.Types.ObjectId.isValid(expert)) {
       const err = new Error('Invalid or missing expert identifier');
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
 
@@ -52,20 +57,20 @@ class BookingService {
         hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata'
       });
       const err = new Error(`Your booking privileges are temporarily suspended due to repeated late cancellations. Access will be restored on ${suspendedDateStr} IST.`);
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
     if (authUser && authUser.role !== 'Client') {
       const err = new Error(`${authUser.role === 'Admin' ? 'Administrators' : 'Experts'} are not permitted to book expert sessions. Please use a Client account.`);
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
     const expertProfile = await ExpertRepository.findByIdWithUser(expert);
     if (!expertProfile) {
       const err = new Error('Expert profile not found.');
-      err.status = 404;
+      err.statusCode = 404;
       throw err;
     }
 
@@ -76,7 +81,7 @@ class BookingService {
       if ((authUser && expertUserId === authUser._id.toString()) ||
           (userEmail && userEmail.toLowerCase().trim() === expertEmail.toLowerCase().trim())) {
         const err = new Error('You cannot book a session with yourself.');
-        err.status = 400;
+        err.statusCode = 400;
         throw err;
       }
     }
@@ -86,14 +91,14 @@ class BookingService {
 
     try {
       const amount = Math.round(expertProfile.hourlyRate * 100);
-      order = await razorpay.orders.create({
+      order = await createOrder({
         amount,
         currency: 'INR',
         receipt: bookingId.toString()
       });
     } catch (rzpErr) {
       const err = new Error('Payment gateway error: ' + rzpErr.message);
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
 
@@ -127,7 +132,7 @@ class BookingService {
 
         if (existingBlock) {
           const err = new Error('This time slot is blocked by the expert.');
-          err.status = 400;
+          err.statusCode = 400;
           throw err;
         }
 
@@ -177,13 +182,13 @@ class BookingService {
   async getBookingsByEmail({ email, authUser, page = 1, limit = 20 }) {
     if (!email) {
       const err = new Error('Please provide an email');
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
 
     if (authUser.role !== 'Admin' && authUser.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
       const err = new Error('Not authorized to view bookings for this email address.');
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
@@ -217,7 +222,7 @@ class BookingService {
     const booking = await BookingRepository.findById(bookingId);
     if (!booking) {
       const err = new Error('Booking not found');
-      err.status = 404;
+      err.statusCode = 404;
       throw err;
     }
 
@@ -233,11 +238,20 @@ class BookingService {
 
     if (!isAdmin && !isClientOwner && !isExpertOwner) {
       const err = new Error('Not authorized to modify the status of this booking.');
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
     let normalizedStatus = String(status || '').trim();
+
+    if (!isValidTransition(booking.status, normalizedStatus)) {
+      // Special override for admins fixing stuck statuses if necessary, otherwise reject
+      if (!isAdmin) {
+        const err = new Error(`Invalid status transition from ${booking.status} to ${normalizedStatus}`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
     
     if (normalizedStatus === 'Completed') {
       const nowMs = Date.now();
@@ -246,13 +260,13 @@ class BookingService {
 
       if (Number.isNaN(sessionMs)) {
         const err = new Error('Invalid booking date or slot time. Cannot verify session end time.');
-        err.status = 400;
+        err.statusCode = 400;
         throw err;
       }
 
       if (nowMs < sessionMs + 60 * 60 * 1000) {
         const err = new Error(`Time-lock violation: This session is scheduled for ${booking.bookingDate} ${booking.slotTime} IST and cannot be completed yet until the hour has passed.`);
-        err.status = 400;
+        err.statusCode = 400;
         throw err;
       }
     }
@@ -264,13 +278,13 @@ class BookingService {
 
       if (Number.isNaN(sessionMs)) {
         const err = new Error('Invalid booking date or slot time. Cannot verify cancellation policy.');
-        err.status = 400;
+        err.statusCode = 400;
         throw err;
       }
 
       if (nowMs >= sessionMs) {
         const err = new Error('Cannot cancel a session that has already passed.');
-        err.status = 400;
+        err.statusCode = 400;
         throw err;
       }
 
@@ -280,7 +294,7 @@ class BookingService {
       if (isWithinTwoHours) {
         if (normalizedStatus === 'Cancelled') {
           const err = new Error('Cancellations within 2 hours of the scheduled time must be processed as late cancellations. Please confirm to cancel late.');
-          err.status = 400;
+          err.statusCode = 400;
           throw err;
         }
       } else {
@@ -307,7 +321,7 @@ class BookingService {
       
       if (paymentRecord) {
         try {
-          const refund = await razorpay.payments.refund(paymentRecord.razorpayPaymentId, {
+          const refund = await refundPayment(paymentRecord.razorpayPaymentId, {
             amount: paymentRecord.amount,
             notes: { reason: 'Client cancelled session outside penalty window.' }
           });
@@ -325,7 +339,7 @@ class BookingService {
         } catch (rzpRefundErr) {
           console.error('[Refund Error]', rzpRefundErr.message);
           const err = new Error('Failed to process refund. Cancellation aborted. Please contact support.');
-          err.status = 502;
+          err.statusCode = 502;
           throw err;
         }
       }
@@ -429,7 +443,7 @@ class BookingService {
 
     if (!booking) {
       const err = new Error('Booking not found');
-      err.status = 404;
+      err.statusCode = 404;
       throw err;
     }
 
@@ -439,7 +453,7 @@ class BookingService {
 
     if (!isAdmin && !isClientOwner) {
       const err = new Error('Not authorized to rate this session.');
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
@@ -484,7 +498,7 @@ class BookingService {
         await log.save();
 
         try {
-          await razorpay.payments.refund(razorpayPaymentId, {
+          await refundPayment(razorpayPaymentId, {
             amount: Math.round(booking.expert.hourlyRate * 100),
             notes: { reason: 'Automatic refund: Slot was booked by another user during late payment.' }
           });
@@ -558,20 +572,20 @@ class BookingService {
 
     if (!bookingId || !razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
       const err = new Error('Missing payment verification details');
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
 
     const booking = await BookingRepository.findByIdWithExpert(bookingId);
     if (!booking) {
       const err = new Error('Booking not found');
-      err.status = 404;
+      err.statusCode = 404;
       throw err;
     }
 
     if (booking.user && authUser && booking.user.toString() !== authUser._id.toString()) {
       const err = new Error('Unauthorized to verify this booking');
-      err.status = 403;
+      err.statusCode = 403;
       throw err;
     }
 
@@ -584,7 +598,7 @@ class BookingService {
     
     if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) {
       const err = new Error('Invalid payment signature. Verification failed.');
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
 
@@ -594,7 +608,7 @@ class BookingService {
 
     if (result.conflict) {
       const err = new Error('This time slot was already booked by another user because the payment window expired. Your payment has been automatically refunded.');
-      err.status = 409;
+      err.statusCode = 409;
       throw err;
     }
 
@@ -623,7 +637,7 @@ class BookingService {
       const booking = await BookingRepository.findOne({ razorpayOrderId });
       if (!booking) {
         const err = new Error('Associated booking not found');
-        err.status = 404; // Return something that won't retry too aggressively if not found
+        err.statusCode = 404; // Return something that won't retry too aggressively if not found
         throw err;
       }
 

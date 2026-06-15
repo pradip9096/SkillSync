@@ -1,6 +1,6 @@
 const bookingService = require('../services/BookingService');
 
-const createBooking = async (req, res) => {
+const createBooking = async (req, res, next) => {
   try {
     const io = req.app.get('io');
     const result = await bookingService.createBooking({
@@ -10,15 +10,11 @@ const createBooking = async (req, res) => {
     });
     res.status(201).json({ success: true, ...result });
   } catch (error) {
-    console.error('Error in createBooking:', error);
-    res.status(error.status || (error.code === 11000 ? 400 : 500)).json({
-      success: false,
-      error: error.message || 'Booking creation failed.'
-    });
+    next(error);
   }
 };
 
-const getBookingsByEmail = async (req, res) => {
+const getBookingsByEmail = async (req, res, next) => {
   try {
     const { email, page, limit } = req.query;
     const result = await bookingService.getBookingsByEmail({
@@ -29,12 +25,11 @@ const getBookingsByEmail = async (req, res) => {
     });
     res.status(200).json({ success: true, ...result });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Server Error' });
+    next(error);
   }
 };
 
-const updateBookingStatus = async (req, res) => {
+const updateBookingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
     const io = req.app.get('io');
@@ -46,23 +41,21 @@ const updateBookingStatus = async (req, res) => {
     });
     res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Server Error' });
+    next(error);
   }
 };
 
-const getBookedSlots = async (req, res) => {
+const getBookedSlots = async (req, res, next) => {
   try {
     const { expertId, date } = req.params;
     const result = await bookingService.getBookedSlots({ expertId, date });
     res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Server Error' });
+    next(error);
   }
 };
 
-const markAsRated = async (req, res) => {
+const markAsRated = async (req, res, next) => {
   try {
     const result = await bookingService.markAsRated({
       bookingId: req.params.id,
@@ -70,12 +63,11 @@ const markAsRated = async (req, res) => {
     });
     res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Server Error' });
+    next(error);
   }
 };
 
-const verifyPayment = async (req, res) => {
+const verifyPayment = async (req, res, next) => {
   try {
     const io = req.app.get('io');
     const result = await bookingService.verifyPayment({
@@ -85,12 +77,11 @@ const verifyPayment = async (req, res) => {
     });
     res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('Error in verifyPayment:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Server Error' });
+    next(error);
   }
 };
 
-const handleWebhook = async (req, res) => {
+const handleWebhook = async (req, res, next) => {
   try {
     const io = req.app.get('io');
     const result = await bookingService.handleWebhook({
@@ -104,8 +95,7 @@ const handleWebhook = async (req, res) => {
     }
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error processing Razorpay Webhook event:', error);
-    res.status(error.status || 500).json({ success: false, error: error.message || 'Internal Server Error' });
+    next(error);
   }
 };
 

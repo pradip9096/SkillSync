@@ -9,6 +9,9 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Expert = require('../models/Expert');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const emailService = require('../services/emailService');
+const { isValidIndianPhone } = require('../utils/phoneUtils');
 
 /**
  * Helper: Generates a JWT token for a user.
@@ -31,7 +34,7 @@ const generateToken = (id) => {
  * @route   POST /auth/register
  * @access  Public
  */
-const registerUser = async (req, res) => {
+const registerUser = async (req, res, next) => {
   try {
     const { email, password, role, name, phone, category, experience, hourlyRate, description } = req.body;
 
@@ -64,10 +67,10 @@ const registerUser = async (req, res) => {
       }
 
       // Phone format validation
-      if (!/^\+91[6-9][0-9]{9}$/.test(phone)) {
+      if (!isValidIndianPhone(phone)) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number must be a valid 10-digit Indian mobile number starting with +91 followed by 10 digits (6-9)'
+          error: 'Please provide a valid Indian phone number starting with +91 (e.g., +919876543210)'
         });
       }
 
@@ -160,10 +163,7 @@ const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error during registration'
-    });
+    return next(error);
   }
 };
 
@@ -172,7 +172,7 @@ const registerUser = async (req, res) => {
  * @route   POST /auth/login
  * @access  Public
  */
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -214,10 +214,7 @@ const loginUser = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error during authentication'
-    });
+    return next(error);
   }
 };
 
@@ -226,7 +223,7 @@ const loginUser = async (req, res) => {
  * @route   GET /auth/profile
  * @access  Private
  */
-const getUserProfile = async (req, res) => {
+const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
@@ -240,10 +237,7 @@ const getUserProfile = async (req, res) => {
       user
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error retrieving profile'
-    });
+    return next(error);
   }
 };
 
@@ -252,7 +246,7 @@ const getUserProfile = async (req, res) => {
  * @route   PUT /auth/profile
  * @access  Private
  */
-const updateUserProfile = async (req, res) => {
+const updateUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
 
@@ -273,10 +267,10 @@ const updateUserProfile = async (req, res) => {
 
     if (req.body.phone !== undefined) {
       const phone = req.body.phone;
-      if (phone && !/^\+91[6-9][0-9]{9}$/.test(phone)) {
+      if (phone && !isValidIndianPhone(phone)) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number must be a valid 10-digit Indian mobile number starting with +91 followed by 10 digits (6-9)'
+          error: 'Please provide a valid Indian phone number'
         });
       }
       user.phone = phone;
@@ -319,10 +313,7 @@ const updateUserProfile = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error updating profile'
-    });
+    return next(error);
   }
 };
 
@@ -331,7 +322,7 @@ const updateUserProfile = async (req, res) => {
  * @route   PUT /auth/profile/image
  * @access  Private
  */
-const uploadProfileImage = async (req, res) => {
+const uploadProfileImage = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Please upload an image file' });
@@ -365,22 +356,16 @@ const uploadProfileImage = async (req, res) => {
       profileImage: imagePath
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Server error uploading image'
-    });
+    return next(error);
   }
 };
-
-const crypto = require('crypto');
-const emailService = require('../services/emailService');
 
 /**
  * @desc    Request password reset link
  * @route   POST /auth/forgot-password
  * @access  Public
  */
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
@@ -438,11 +423,10 @@ const forgotPassword = async (req, res) => {
       user.resetPasswordToken = null;
       user.resetPasswordExpire = null;
       await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ success: false, error: 'Email could not be sent. Please try again later.' });
+    return next(err);
     }
   } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    return next(error);
   }
 };
 
@@ -451,7 +435,7 @@ const forgotPassword = async (req, res) => {
  * @route   PUT /auth/reset-password/:token
  * @access  Public
  */
-const resetPassword = async (req, res) => {
+const resetPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
 
@@ -493,8 +477,7 @@ const resetPassword = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    return next(error);
   }
 };
 

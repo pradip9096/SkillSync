@@ -22,20 +22,16 @@ const { Server } = require('socket.io');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
+const logger = require('./config/logger');
+const pinoHttp = require('pino-http');
+const errorHandler = require('./middleware/errorHandler');
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Assert critical environment variables
-if (!process.env.JWT_SECRET) {
-  console.error('CRITICAL ERROR: JWT_SECRET environment variable is not defined.');
-  process.exit(1);
-}
-
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  console.error('CRITICAL ERROR: Razorpay credentials (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET) are not defined in the environment.');
-  process.exit(1);
-}
+const { checkEnvVariables } = require('./config/config');
+checkEnvVariables();
 
 /** 
  * @type {express.Application} 
@@ -78,9 +74,9 @@ if (process.env.REDIS_URI) {
 
   Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
     io.adapter(createAdapter(pubClient, subClient));
-    console.log('Redis adapter attached to Socket.io');
+    logger.info('Redis adapter attached to Socket.io');
   }).catch((err) => {
-    console.error('Redis connection failed:', err);
+    logger.error({ err }, 'Redis connection failed');
   });
 }
 
@@ -107,7 +103,7 @@ io.use((socket, next) => {
  * Manages client connections and room-based communication for real-time slot updates.
  */
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  logger.info(`A user connected: ${socket.id}`);
 
   /**
    * join_expert_room event
@@ -118,7 +114,7 @@ io.on('connection', (socket) => {
    */
   socket.on('join_expert_room', (expertId) => {
     socket.join(expertId);
-    console.log(`User joined room for expert: ${expertId}`);
+    logger.info(`User joined room for expert: ${expertId}`);
   });
 
   /**
@@ -139,10 +135,10 @@ io.on('connection', (socket) => {
 
       if (isClient || isExpert) {
         socket.join(`booking_${bookingId}`);
-        console.log(`User joined chat room for booking: ${bookingId}`);
+        logger.info(`User joined chat room for booking: ${bookingId}`);
       }
     } catch (error) {
-      console.error('Error joining booking room:', error);
+      logger.error({ error }, 'Error joining booking room');
     }
   });
 
@@ -152,7 +148,7 @@ io.on('connection', (socket) => {
    */
   socket.on('leave_booking_room', (bookingId) => {
     socket.leave(`booking_${bookingId}`);
-    console.log(`User left chat room for booking: ${bookingId}`);
+    logger.info(`User left chat room for booking: ${bookingId}`);
   });
 
   /**
@@ -162,7 +158,7 @@ io.on('connection', (socket) => {
   socket.on('join_user_room', (userId) => {
     if (socket.userId === userId) {
       socket.join(`user_${userId}`);
-      console.log(`User joined global room: ${userId}`);
+      logger.info(`User joined global room: ${userId}`);
     }
   });
 
@@ -179,7 +175,7 @@ io.on('connection', (socket) => {
 
   // Handle client disconnection
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    logger.info('User disconnected');
   });
 });
 
@@ -197,6 +193,14 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+const crypto = require('crypto');
+// Global Request Logging (Epic 2.2)
+app.use(pinoHttp({ 
+  logger, 
+  autoLogging: true,
+  genReqId: (req) => req.headers['x-correlation-id'] || crypto.randomUUID()
+}));
 
 // Middleware for CORS - strict origin
 app.use(cors({
@@ -235,7 +239,7 @@ const expertDashboardRoutes = require('./routes/expertDashboardRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
-// Defining the base paths for the respective routes
+// Mount Routers (Legacy - Deprecated)
 app.use('/experts', expertRoutes);
 app.use('/bookings', bookingRoutes);
 app.use('/auth', authRoutes);
@@ -244,10 +248,22 @@ app.use('/expert-dashboard', expertDashboardRoutes);
 app.use('/messages', messageRoutes);
 app.use('/notifications', notificationRoutes);
 
+// Mount Routers (v1 API - Epic 1.3)
+app.use('/api/v1/experts', expertRoutes);
+app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/expert-dashboard', expertDashboardRoutes);
+app.use('/api/v1/messages', messageRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+
 if (process.env.NODE_ENV !== 'production') {
   const testRoutes = require('./routes/testRoutes');
   app.use('/api/test', testRoutes);
 }
+
+// Global Error Handler Middleware
+app.use(errorHandler);
 
 /** 
  * @type {number|string} 
@@ -275,14 +291,14 @@ const startServer = async () => {
     agenda.io = io; // Attach io for background jobs
     require('./services/reminderScheduler'); // Registers job definitions
     await agenda.start();
-    console.log('Agenda scheduler started.');
+    logger.info('Agenda scheduler started.');
 
     server.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
   } catch (error) {
     // Log any errors that occur during startup and exit the process
-    console.error('Failed to start server:', error);
+    logger.fatal({ error }, 'Failed to start server');
     process.exit(1);
   }
 };
@@ -303,9 +319,8 @@ module.exports = { app, server };
  * @side_effects Logs error to console, closes server, exits process
  */
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close the server and exit the process with a failure code
-  server.close(() => process.exit(1));
+  logger.error({ err }, 'Unhandled Rejection. Shutting down gracefully...');
+  gracefulShutdown('unhandledRejection');
 });
 
 /**
@@ -313,31 +328,40 @@ process.on('unhandledRejection', (err, promise) => {
  * Captures OS termination signals to safely shut down Agenda, the HTTP server, and Mongoose.
  */
 const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  logger.info(`\n${signal} received. Starting graceful shutdown...`);
+
+  // Force exit after 30 seconds
+  const forceExitTimeout = setTimeout(() => {
+    logger.error('Graceful shutdown timed out after 30 seconds. Forcing exit.');
+    process.exit(1);
+  }, 30000);
+
   try {
     const agenda = require('./config/agenda');
     const mongoose = require('mongoose');
 
     // 1. Stop Agenda from accepting new jobs and wait for active jobs to yield/finish
-    console.log('Stopping Agenda...');
+    logger.info('Stopping Agenda...');
     await agenda.stop();
-    console.log('Agenda stopped.');
+    logger.info('Agenda stopped.');
 
     // 2. Close the HTTP server
-    console.log('Closing HTTP server...');
+    logger.info('Closing HTTP server...');
     server.close(async () => {
-      console.log('HTTP server closed.');
+      logger.info('HTTP server closed.');
 
       // 3. Disconnect Mongoose
-      console.log('Disconnecting from MongoDB...');
+      logger.info('Disconnecting from MongoDB...');
       await mongoose.connection.close();
-      console.log('MongoDB disconnected.');
+      logger.info('MongoDB disconnected.');
 
+      clearTimeout(forceExitTimeout);
       // Exit process successfully
       process.exit(0);
     });
   } catch (error) {
-    console.error('Error during graceful shutdown:', error);
+    logger.error({ error }, 'Error during graceful shutdown');
+    clearTimeout(forceExitTimeout);
     process.exit(1);
   }
 };

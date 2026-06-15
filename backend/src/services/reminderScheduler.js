@@ -4,15 +4,7 @@ const Booking = require('../models/Booking');
 const PaymentLog = require('../models/PaymentLog');
 const emailService = require('./emailService');
 const smsService = require('./smsService');
-const Razorpay = require('razorpay');
-
-let razorpay;
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-  razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-  });
-}
+const { fetchPayments, refundPayment } = require('../utils/razorpayClient');
 
 const sendEmail = (args) => emailService.sendEmail(args);
 const sendSMS = (args) => smsService.sendSMS(args);
@@ -47,14 +39,13 @@ agenda.define('cancel-abandoned-booking', async (job) => {
     if (!booking) return;
 
     if (booking.status === 'Pending') {
-      // Check if there was actually a captured payment that we missed the webhook for
-      if (razorpay && booking.razorpayOrderId) {
-        const payments = await razorpay.orders.fetchPayments(booking.razorpayOrderId);
+      if (booking.razorpayOrderId) {
+        const payments = await fetchPayments(booking.razorpayOrderId);
         const capturedPayment = payments.items.find(p => p.status === 'captured');
         
         if (capturedPayment) {
           console.log(`[Scheduler] Abandoned booking ${bookingId} has captured payment ${capturedPayment.id}. Refunding...`);
-          await razorpay.payments.refund(capturedPayment.id, {
+          await refundPayment(capturedPayment.id, {
             speed: 'optimum'
           });
           

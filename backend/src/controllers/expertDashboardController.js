@@ -1,6 +1,6 @@
 const expertService = require('../services/ExpertService');
 
-const getExpertBookings = async (req, res) => {
+const getExpertBookings = async (req, res, next) => {
   try {
     const result = await expertService.getExpertBookings({
       authUser: req.user,
@@ -13,7 +13,7 @@ const getExpertBookings = async (req, res) => {
   }
 };
 
-const getExpertProfile = async (req, res) => {
+const getExpertProfile = async (req, res, next) => {
   try {
     const expert = await expertService.getExpertProfile({ authUser: req.user });
     res.status(200).json({ success: true, data: expert });
@@ -22,7 +22,7 @@ const getExpertProfile = async (req, res) => {
   }
 };
 
-const updateExpertProfile = async (req, res) => {
+const updateExpertProfile = async (req, res, next) => {
   try {
     const updatedExpert = await expertService.updateExpertProfile({ authUser: req.user, payload: req.body });
     res.status(200).json({ success: true, data: updatedExpert });
@@ -31,7 +31,7 @@ const updateExpertProfile = async (req, res) => {
   }
 };
 
-const blockSlot = async (req, res) => {
+const blockSlot = async (req, res, next) => {
   try {
     const io = req.app.get('io');
     const block = await expertService.blockSlot({ authUser: req.user, payload: req.body, io });
@@ -41,7 +41,7 @@ const blockSlot = async (req, res) => {
   }
 };
 
-const unblockSlot = async (req, res) => {
+const unblockSlot = async (req, res, next) => {
   try {
     const io = req.app.get('io');
     const result = await expertService.unblockSlot({ authUser: req.user, payload: req.body, io });
@@ -51,7 +51,7 @@ const unblockSlot = async (req, res) => {
   }
 };
 
-const uploadGalleryImage = async (req, res) => {
+const uploadGalleryImage = async (req, res, next) => {
   try {
     const gallery = await expertService.uploadGalleryImage({ authUser: req.user, file: req.file });
     res.status(200).json({ success: true, gallery });
@@ -60,7 +60,7 @@ const uploadGalleryImage = async (req, res) => {
   }
 };
 
-const deleteGalleryImage = async (req, res) => {
+const deleteGalleryImage = async (req, res, next) => {
   try {
     const gallery = await expertService.deleteGalleryImage({ authUser: req.user, filename: req.params.filename });
     res.status(200).json({ success: true, gallery });
@@ -69,7 +69,7 @@ const deleteGalleryImage = async (req, res) => {
   }
 };
 
-const rateClient = async (req, res) => {
+const rateClient = async (req, res, next) => {
   try {
     const result = await expertService.rateClient({ authUser: req.user, bookingId: req.params.id, payload: req.body });
     res.status(200).json({ success: true, data: result.clientUser, review: result.review });
@@ -78,7 +78,7 @@ const rateClient = async (req, res) => {
   }
 };
 
-const getExpertAnalytics = async (req, res) => {
+const getExpertAnalytics = async (req, res, next) => {
   try {
     const analytics = await expertService.getExpertAnalytics({ authUser: req.user });
     res.status(200).json({ success: true, analytics });

@@ -38,5 +38,7 @@ const messageSchema = new mongoose.Schema(
 messageSchema.index({ receiver: 1, read: 1 });
 // Index to quickly sort messages within a booking thread
 messageSchema.index({ bookingId: 1, createdAt: 1 });
+// Index to quickly fetch conversations between two users
+messageSchema.index({ sender: 1, receiver: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);

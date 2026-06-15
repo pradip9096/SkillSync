@@ -16,7 +16,7 @@ const Booking = require('../models/Booking');
  * @returns {Promise<void>} Sends a 200 response with the list of experts, total count, and pagination metadata, or a 500 response on failure.
  * Side effects: Reads from the Expert collection and counts documents matching the query.
  */
-const getExperts = async (req, res) => {
+const getExperts = async (req, res, next) => {
   try {
     // Extract query parameters with default values for pagination
     const { page = 1, limit = 10, search, category } = req.query;
@@ -62,11 +62,7 @@ const getExperts = async (req, res) => {
       data: experts
     });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server Error'
-    });
+    return next(error);
   }
 };
 
@@ -77,7 +73,7 @@ const getExperts = async (req, res) => {
  * @returns {Promise<void>} Sends a 200 response with the expert data, or a 404/500 response on failure.
  * Side effects: Reads a single document from the Expert collection.
  */
-const getExpertById = async (req, res) => {
+const getExpertById = async (req, res, next) => {
   try {
     const expert = await Expert.findById(req.params.id);
 
@@ -98,11 +94,7 @@ const getExpertById = async (req, res) => {
       reviews
     });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server Error'
-    });
+    return next(error);
   }
 };
 
@@ -113,7 +105,7 @@ const getExpertById = async (req, res) => {
  * @returns {Promise<void>} Sends a 200 response with the updated expert data, or a 404/500 response on failure.
  * Side effects: Updates the rating and numReviews fields of an Expert document in the database.
  */
-const rateExpert = async (req, res) => {
+const rateExpert = async (req, res, next) => {
   try {
     const { rating, comment, bookingId } = req.body;
     const expertId = req.params.id;
@@ -197,8 +189,7 @@ const rateExpert = async (req, res) => {
       review: newReview
     });
   } catch (error) {
-    console.error('API Error in rateExpert:', error);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    return next(error);
   }
 };
 

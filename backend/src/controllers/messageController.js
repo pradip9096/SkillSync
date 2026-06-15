@@ -1,12 +1,13 @@
 const Message = require('../models/Message');
 const Booking = require('../models/Booking');
 const mongoose = require('mongoose');
+const sanitizeHtml = require('sanitize-html');
 
 /**
  * Fetch all messages for a specific booking.
  * Secures access to only the client or expert involved in the booking.
  */
-exports.getMessagesByBooking = async (req, res) => {
+exports.getMessagesByBooking = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
     const { before, limit = 50 } = req.query;
@@ -53,8 +54,7 @@ exports.getMessagesByBooking = async (req, res) => {
 
     res.status(200).json(messages);
   } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return next(error);
   }
 };
 
@@ -62,7 +62,7 @@ exports.getMessagesByBooking = async (req, res) => {
  * Send a new message.
  * Emits a real-time event if socket is available.
  */
-exports.sendMessage = async (req, res) => {
+exports.sendMessage = async (req, res, next) => {
   try {
     const { bookingId, receiverId, content } = req.body;
 
@@ -91,11 +91,20 @@ exports.sendMessage = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to send messages for this booking' });
     }
 
+    if (!bookingId || !receiverId || !content) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const sanitizedContent = sanitizeHtml(content, {
+      allowedTags: [], // Strip all HTML tags
+      allowedAttributes: {}
+    });
+
     const message = await Message.create({
       bookingId,
       sender: req.user._id,
       receiver: receiverId,
-      content
+      content: sanitizedContent
     });
 
     // Real-time broadcast
@@ -123,15 +132,14 @@ exports.sendMessage = async (req, res) => {
 
     res.status(201).json(message);
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return next(error);
   }
 };
 
 /**
  * Mark all messages in a booking as read for the current user.
  */
-exports.markMessagesAsRead = async (req, res) => {
+exports.markMessagesAsRead = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
     
@@ -167,28 +175,26 @@ exports.markMessagesAsRead = async (req, res) => {
 
     res.status(200).json({ message: 'Messages marked as read' });
   } catch (error) {
-    console.error('Error marking messages as read:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return next(error);
   }
 };
 
 /**
  * Get total unread message count for the current user.
  */
-exports.getUnreadCount = async (req, res) => {
+exports.getUnreadCount = async (req, res, next) => {
   try {
     const count = await Message.countDocuments({ receiver: req.user._id, read: false });
     res.status(200).json({ count });
   } catch (error) {
-    console.error('Error fetching unread message count:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return next(error);
   }
 };
 
 /**
  * Fetch unique conversations for the current user, grouped by the other participant.
  */
-exports.getUniqueConversations = async (req, res) => {
+exports.getUniqueConversations = async (req, res, next) => {
   try {
     const userId = req.user._id;
     let bookings = [];
@@ -264,7 +270,6 @@ exports.getUniqueConversations = async (req, res) => {
 
     res.status(200).json(sortedConversations);
   } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return next(error);
   }
 };
