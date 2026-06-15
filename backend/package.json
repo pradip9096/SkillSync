@@ -8,13 +8,15 @@
     "dev": "nodemon src/app.js",
     "test": "jest --runInBand --setupFilesAfterEnv ./tests/jest.setup.js",
     "test:unit": "jest src/__tests__",
-    "test:integration": "jest tests/integration --runInBand --setupFilesAfterEnv ./tests/jest.setup.js"
+    "test:integration": "jest tests/integration --runInBand --setupFilesAfterEnv ./tests/jest.setup.js",
+    "mcp:db": "node scripts/mcp-database-inspector.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "agenda": "^4.4.0",
     "bcryptjs": "^3.0.3",

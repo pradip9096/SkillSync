@@ -13,10 +13,17 @@ Changelog policy, workflow, and SOP are maintained in
 ### Added
 
 - Added formal Implementation Plan (DOC-IMP-004) and Verification & Validation Report (DOC-VV-004) governing the Test Directory Remediation.
+- Added standalone Model Context Protocol (MCP) Database Inspector server to safely execute read-only queries against the local MongoDB cluster.
+- Added Husky pre-push hooks and lint-staged pre-commit hooks to automate local test suite execution and formatting.
+- Added the Master Verification and Validation (V&V) Report covering Phases 8, 9, and 10 of the implementation roadmap.
 
 ### Changed
 
 - Changed backend testing architecture to enforce strict colocation boundaries, migrating unit tests into `src/__tests__/unit/` and integration suites to `tests/integration/`.
+
+### Fixed
+
+- Fixed Jest test suite event-loop hangs and `ECONNREFUSED` errors by strictly isolating Agenda.js MongoDB connections from the testing environment.
 
 ## [1.7.0] - 2026-06-15
 
