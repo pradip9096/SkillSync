@@ -181,6 +181,7 @@ A partially filled section is `Draft` regardless of the Status field value.
 | [3-Tier Backend Architecture & Services Extraction](#feature-3-tier-backend-architecture--services-extraction) | `Complete` | SkillSync | 2026-06-14 |
 | [Distributed State & Database Concurrency](#feature-distributed-state--database-concurrency) | `Complete` | SkillSync | 2026-06-14 |
 | [Process Resilience & System Reliability](#feature-process-resilience--system-reliability) | `Complete` | SkillSync | 2026-06-14 |
+| [Integrated WebRTC Video/Audio Conferencing](#feature-integrated-webrtc-videoaudio-conferencing) | `Draft` | SkillSync | 2026-06-15 |
 
 ---
 
@@ -3167,6 +3168,104 @@ This feature implements robust fault tolerance mechanisms—including graceful s
 
 ### Status
 `Complete`
+
+### Last Updated
+2026-06-15
+
+---
+
+## Feature: Integrated WebRTC Video/Audio Conferencing
+
+### Overview
+Enables seamless, browser-based peer-to-peer video and audio conferencing directly within the platform, allowing Clients and Experts to conduct their scheduled sessions without relying on external meeting links.
+
+### Functional Requirements
+
+- [MUST HAVE] The system must generate a unique, secure video room link for each confirmed booking.
+  Rationale: Ensures that video sessions are strictly tied to a specific booking and authenticated participants.
+
+- [MUST HAVE] The video room must only become accessible to the Client and Expert 5 minutes prior to the scheduled session start time.
+  Rationale: Prevents premature joining and enforces the schedule boundaries.
+
+- [SHOULD HAVE] The interface must include basic meeting controls: toggle mute, toggle camera, and leave session.
+  Rationale: Standard user expectations for any video conferencing tool.
+
+- [COULD HAVE] Screen sharing capabilities for the Expert to present material.
+  Rationale: Enhances the educational or consulting value of the session.
+
+- [CAN HAVE] Automated session recording and cloud storage for later playback.
+  Rationale: Could be offered as a premium feature in a future iteration.
+
+### Non-Functional Requirements
+
+- [MUST HAVE] Video streams must be strictly peer-to-peer (P2P) using WebRTC, falling back to a TURN server only when NAT traversal fails.
+  Rationale: Minimizes server bandwidth costs and ensures low-latency communication.
+
+- [MUST HAVE] End-to-end encryption (DTLS/SRTP) must be enforced on all WebRTC media streams.
+  Rationale: Protects user privacy and sensitive consultation discussions.
+
+### User Interaction Flow
+
+```
+[User] -> Clicks "Join Video Session" on MyBookings -> [System Checks Time-Lock & Auth]
+  |-- Success --> User joins WebRTC Room -> Prompts Camera/Mic Permissions -> [Session Starts]
+  |-- Failure (Too Early) --> Shows error "Room opens 5 minutes before start time"
+  |-- Failure (Unauthorized) --> Redirects to Home
+```
+
+### API Specifications
+
+* `GET /api/v1/bookings/:id/video-token`
+  Input: `bookingId` in URL path
+  Validation: User must be authenticated and a participant (Client or Expert) of the specific booking. Current time must be >= session start time minus 5 minutes.
+  Output: `{ token: string, roomId: string, stunTurnServers: Array }`
+  Auth: Client or Expert role required
+
+### Edge Cases
+
+- When a participant's network drops, the WebRTC connection must attempt to seamlessly reconnect using ICE restarts without kicking the user out of the UI.
+- When the scheduled window concludes, the room must gracefully terminate and disconnect participants.
+
+### Best Practices
+
+* Use an abstraction library like `simple-peer` or `livekit-client` to manage WebRTC cross-browser inconsistencies.
+* Ensure a reliable TURN server (like Twilio Network Traversal) is configured to handle strict enterprise firewalls.
+
+### Acceptance Criteria
+
+* **AC 7.1:** A Client attempting to fetch the video token for a session scheduled 10 minutes in the future receives a `403 Forbidden` response indicating the room is not yet open.
+* **AC 7.2:** Both Client and Expert can successfully join the same WebRTC room and transmit bi-directional audio and video streams.
+* **AC 7.3:** A third party (e.g., another client) attempting to join the video room using the same booking ID is rejected by the authorization middleware.
+
+### Non-Goals
+
+- This feature does NOT include multi-party group conferencing (limited to 1-on-1).
+- This feature does NOT include in-video chat (existing messaging panel handles chat).
+
+### Dependencies
+
+- Feature: [User Authentication & RBAC](#feature-user-authentication--rbac) — required to restrict room access.
+- Feature: [Real-Time Booking & Scheduling Engine](#feature-real-time-booking--scheduling-engine) — required to validate time-locks.
+- Service: Twilio TURN/STUN infrastructure for NAT traversal.
+
+### Testing Strategy
+
+- Unit: Test the time-lock validation logic for video room entry.
+- Integration: `GET /api/v1/bookings/:id/video-token` asserts 403 (too early), 403 (wrong user), and 200 (valid access).
+- Manual: Open two separate browser contexts (one as Client, one as Expert), join the room, and verify audio/video transmission and ICE connection states.
+
+### Known Bugs / Stability Risks
+
+*None identified.*
+
+### Spec Change Log
+
+| Date | Author | Summary |
+|---|---|---|
+| 2026-06-15 | Antigravity AI | Initial spec created for Phase 4 WebRTC integration. |
+
+### Status
+`Draft`
 
 ### Last Updated
 2026-06-15
