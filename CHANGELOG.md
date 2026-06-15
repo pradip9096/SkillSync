@@ -10,6 +10,14 @@ Changelog policy, workflow, and SOP are maintained in
 
 ## [Unreleased]
 
+### Added
+
+- Added formal Implementation Plan (DOC-IMP-004) and Verification & Validation Report (DOC-VV-004) governing the Test Directory Remediation.
+
+### Changed
+
+- Changed backend testing architecture to enforce strict colocation boundaries, migrating unit tests into `src/__tests__/unit/` and integration suites to `tests/integration/`.
+
 ## [1.7.0] - 2026-06-15
 
 ### Added
