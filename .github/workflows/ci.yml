@@ -66,7 +66,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=skillsync
+            -Dsonar.projectKey=pradip9096_SkillSync
             -Dsonar.organization=pradip9096
             -Dsonar.sources=backend/src,frontend/src
             -Dsonar.tests=backend/src/__tests__
