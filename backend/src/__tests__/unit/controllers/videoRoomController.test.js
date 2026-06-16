@@ -1,8 +1,8 @@
-const { getVideoToken } = require('../../../../src/controllers/videoRoomController');
-const Booking = require('../../../../src/models/Booking');
+const { getVideoToken } = require('../../../controllers/videoRoomController');
+const Booking = require('../../../models/Booking');
 const httpMocks = require('node-mocks-http');
 
-jest.mock('../../../../src/models/Booking');
+jest.mock('../../../models/Booking');
 
 const mockVideoRoomService = {
   generateNetworkToken: jest.fn()
