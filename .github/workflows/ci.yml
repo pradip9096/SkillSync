@@ -30,9 +30,6 @@ jobs:
       - name: Install Frontend Dependencies
         run: cd frontend && npm ci
 
-      - name: Run Backend Lint
-        run: cd backend && npm run lint || true # Modify if you have lint script
-
       - name: Run Frontend Lint
         run: cd frontend && npm run lint
 
@@ -89,7 +86,7 @@ jobs:
       - name: Install Dependencies
         run: cd backend && npm install
       - name: Start Backend
-        run: cd backend && PORT=5001 MONGO_URI=mongodb://localhost:27017/expert-booking npm run dev &
+        run: cd backend && PORT=5001 MONGO_URI=mongodb://localhost:27017/expert-booking JWT_SECRET=ci-test-secret RAZORPAY_KEY_ID=ci-key-id RAZORPAY_KEY_SECRET=ci-key-secret FRONTEND_URL=http://localhost:5173 npm run dev &
       - name: Wait for Backend
         run: sleep 10
       - name: Run k6 Load Test
