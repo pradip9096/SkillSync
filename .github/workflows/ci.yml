@@ -88,7 +88,10 @@ jobs:
       - name: Start Backend
         run: cd backend && PORT=5001 MONGO_URI=mongodb://localhost:27017/expert-booking JWT_SECRET=ci-test-secret RAZORPAY_KEY_ID=ci-key-id RAZORPAY_KEY_SECRET=ci-key-secret FRONTEND_URL=http://localhost:5173 npm run dev &
       - name: Wait for Backend
-        run: sleep 10
+        run: |
+          for i in $(seq 1 20); do
+            nc -z localhost 5001 && echo "Backend ready" && break || sleep 2
+          done
       - name: Install k6
         run: |
           sudo gpg -k
