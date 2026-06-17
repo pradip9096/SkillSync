@@ -119,8 +119,8 @@ class BookingService {
         }, { session });
         
         if (existingBooking) {
-          const err = new Error('This time slot is already booked.');
-          err.code = 11000;
+          const err = new Error('This time slot is already booked. Please select a different time slot.');
+          err.statusCode = 409;
           throw err;
         }
 
