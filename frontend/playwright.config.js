@@ -11,6 +11,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5175',
     trace: 'on-first-retry',
+    video: 'retain-on-failure',
     // TASK 4.2: Inject synthetic hardware virtualization to bypass headless server constraints
     launchOptions: {
       args: [
