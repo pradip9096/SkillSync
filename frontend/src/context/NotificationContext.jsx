@@ -12,6 +12,7 @@ export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [isSocketConnected, setIsSocketConnected] = useState(socket.connected);
 
   const fetchTimeoutRef = useRef(null);
 
@@ -74,6 +75,12 @@ export const NotificationProvider = ({ children }) => {
      
     fetchCounts();
 
+    const handleConnect = () => setIsSocketConnected(true);
+    const handleDisconnect = () => setIsSocketConnected(false);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
     if (user) {
       const joinUserRoom = () => socket.emit('join_user_room', user._id);
       joinUserRoom();
@@ -89,11 +96,18 @@ export const NotificationProvider = ({ children }) => {
       socket.on('new_notification', handleNewNotif);
 
       return () => {
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
         socket.off('connect', joinUserRoom);
         socket.off('new_message', handleNewMessage);
         socket.off('new_notification', handleNewNotif);
       };
     }
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -101,6 +115,7 @@ export const NotificationProvider = ({ children }) => {
     <NotificationContext.Provider value={{ 
       unreadMessages, 
       unreadNotifications, 
+      isSocketConnected,
       fetchCounts,
       markNotifAsReadGlobally,
       markAllNotifsAsReadGlobally,
