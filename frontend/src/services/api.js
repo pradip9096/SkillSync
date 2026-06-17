@@ -151,6 +151,13 @@ export const updateBookingStatus = (id, status) => API.patch(`/bookings/${id}/st
 export const rateExpert = (expertId, rating, comment, bookingId) => API.post(`/experts/${expertId}/rate`, { rating, comment, bookingId });
 
 /**
+ * Fetch Twilio STUN/TURN credentials for WebRTC connections.
+ * @param {string} bookingId - The booking ID.
+ * @returns {Promise<import('axios').AxiosResponse>}
+ */
+export const fetchVideoToken = (bookingId) => API.get(`/bookings/${bookingId}/video-token`);
+
+/**
  * Mark a booking as having been rated.
  * 
  * Purpose: Updates a booking record to indicate that the user has already provided a rating.

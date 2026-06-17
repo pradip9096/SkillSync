@@ -20,6 +20,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { validateParams } = require('../middleware/validationMiddleware');
 const { verifyWebhookSignature } = require('../middleware/webhookMiddleware');
+const { getVideoToken } = require('../controllers/videoRoomController');
 
 const bookingRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -79,4 +80,12 @@ router.patch('/:id/rate', protect, validateParams(['id']), markAsRated);
  */
 router.get('/booked-slots/:expertId/:date', validateParams(['expertId']), getBookedSlots);
 
+/**
+ * Route: GET /:id/video-token
+ * Purpose: Provision Twilio STUN/TURN credentials for a specific session.
+ * Access: Private (Requires authentication & specific participant auth).
+ */
+router.get('/:id/video-token', protect, validateParams(['id']), getVideoToken);
+
 module.exports = router;
+
