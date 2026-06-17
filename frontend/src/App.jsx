@@ -30,6 +30,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Messaging = lazy(() => import('./pages/Messaging'));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const VideoRoomPage = lazy(() => import('./pages/VideoRoomPage'));
 
 /**
  * Main App Component.
@@ -114,6 +115,13 @@ function App() {
                 <Route path="/expert-dashboard" element={
                   <ProtectedRoute allowedRoles={['Expert']}>
                     <ExpertDashboard />
+                  </ProtectedRoute>
+                } />
+
+                {/* Video Room */}
+                <Route path="/video-session/:id" element={
+                  <ProtectedRoute allowedRoles={['Client', 'Expert']}>
+                    <VideoRoomPage />
                   </ProtectedRoute>
                 } />
               </Routes>
