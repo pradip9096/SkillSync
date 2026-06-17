@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import Peer from 'simple-peer';
 import socket from '../services/socket';
 import { fetchVideoToken } from '../services/api';
 
 const WebRTCContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWebRTC = () => useContext(WebRTCContext);
 
 export const WebRTCProvider = ({ children }) => {

@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VideoSession from '../components/VideoRoom/VideoSession';
 import { WebRTCProvider } from '../contexts/WebRTCContext';
 import { useAuth } from '../context/AuthContext';
-import { fetchVideoToken } from '../services/api'; // just to test basic connectivity early if needed
 import API from '../services/api';
 
 const VideoRoomPage = () => {
