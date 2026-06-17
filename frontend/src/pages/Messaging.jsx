@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchConversations, fetchMessages, sendMessage } from '../services/api';
 import socket from '../services/socket';
-import { Send, User, MessageSquare } from 'lucide-react';
+import { Send, User, MessageSquare, Loader2 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 
 const Messaging = () => {
   const { user } = useAuth();
-  const { markChatAsReadGlobally } = useNotification();
+  const { markChatAsReadGlobally, isSocketConnected } = useNotification();
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -255,8 +255,17 @@ const Messaging = () => {
   let lastDateString = null;
 
   return (
-    <div className="w-full max-w-[98%] xl:max-w-[1500px] mx-auto px-2 py-2 sm:px-4 sm:py-4 md:py-6 flex flex-col sm:flex-row gap-2 sm:gap-4 md:gap-6 h-[calc(100vh-120px)] overflow-hidden">
-      {/* Conversations List */}
+    <div className="w-full max-w-[98%] xl:max-w-[1500px] mx-auto px-2 py-2 sm:px-4 sm:py-4 md:py-6 flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+      {/* Global Connection Warning */}
+      {!isSocketConnected && (
+        <div className="bg-amber-100 text-amber-800 px-4 py-2 text-sm flex items-center justify-center rounded-lg mb-2 shadow-sm animate-pulse">
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Reconnecting to real-time server... You may need to refresh if this persists.
+        </div>
+      )}
+      
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 md:gap-6 flex-1 overflow-hidden">
+        {/* Conversations List */}
       <div className={`w-full sm:w-[280px] md:w-[320px] lg:w-[360px] flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${showSidebarOnMobile ? 'flex' : 'hidden sm:flex'}`}>
         <h2 className="p-4 border-b border-gray-100 font-bold text-lg text-gray-800 flex-shrink-0">Your Conversations</h2>
         <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
@@ -395,6 +404,7 @@ const Messaging = () => {
             <p>Select a conversation to start chatting</p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

@@ -26,7 +26,8 @@ export default defineConfig([
         { name: 'Audio', message: 'Use window.Audio if using native constructor.' },
         { name: 'Image', message: 'Use window.Image if using native constructor.' },
         { name: 'Notification', message: 'Use window.Notification if using native Notification API.' }
-      ]
+      ],
+      'no-use-before-define': ['error', { functions: false, classes: false, variables: true }]
     }
   },
 ])

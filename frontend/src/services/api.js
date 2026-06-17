@@ -10,13 +10,15 @@
 
 import axios from 'axios';
 
+import config from '../config/env';
+
 /**
  * Axios instance with a predefined base URL.
  * All requests made through this instance will be prefixed with this URL.
  * @type {import('axios').AxiosInstance}
  */
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: config.API_URL,
 });
 
 // Request interceptor to automatically attach JWT token to Authorization headers
@@ -149,6 +151,13 @@ export const updateBookingStatus = (id, status) => API.patch(`/bookings/${id}/st
  * Side effects: Performs a POST network request.
  */
 export const rateExpert = (expertId, rating, comment, bookingId) => API.post(`/experts/${expertId}/rate`, { rating, comment, bookingId });
+
+/**
+ * Fetch Twilio STUN/TURN credentials for WebRTC connections.
+ * @param {string} bookingId - The booking ID.
+ * @returns {Promise<import('axios').AxiosResponse>}
+ */
+export const fetchVideoToken = (bookingId) => API.get(`/bookings/${bookingId}/video-token`);
 
 /**
  * Mark a booking as having been rated.
