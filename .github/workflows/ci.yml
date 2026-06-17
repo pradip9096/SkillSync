@@ -69,6 +69,7 @@ jobs:
             -Dsonar.projectKey=pradip9096_SkillSync
             -Dsonar.organization=pradip9096
             -Dsonar.sources=backend/src,frontend/src
+            -Dsonar.exclusions=backend/src/__tests__/**
             -Dsonar.tests=backend/src/__tests__
 
   load-test:
