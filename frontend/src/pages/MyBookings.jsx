@@ -14,6 +14,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchBookingsByEmail, updateBookingStatus, rateExpert, verifyPayment } from '../services/api';
+import config from '../config/env';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Search, Calendar, Clock, User, CheckCircle2, AlertCircle, Loader2, History, XCircle, CheckCircle, Star, Sparkles } from 'lucide-react';
 
@@ -124,7 +125,7 @@ const MyBookings = () => {
       const amount = Math.round(hourlyRate * 100);
 
       const options = {
-        key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: keyId || config.RAZORPAY_KEY_ID,
         amount: amount,
         currency: 'INR',
         name: 'SkillSync',
