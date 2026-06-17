@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useWebRTC } from '../../contexts/WebRTCContext';
 import useUserMedia from '../../hooks/useUserMedia';
 import MediaControls from './MediaControls';
