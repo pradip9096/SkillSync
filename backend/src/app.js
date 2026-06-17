@@ -83,12 +83,21 @@ if (process.env.REDIS_URI) {
 // Make io accessible to our routers/controllers
 app.set('io', io);
 
+// Dependency Injection Registration
+const videoRoomService = require('./services/videoRoomService');
+app.locals.videoRoomService = videoRoomService;
+
 // Socket.io JWT Authentication Middleware
 io.use((socket, next) => {
+  if (app.locals.socketAuthenticator) {
+    return app.locals.socketAuthenticator(socket, next);
+  }
+
   const token = socket.handshake.auth?.token;
   if (!token) {
     return next(new Error('Authentication error: Token missing'));
   }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.userId = decoded.id;
@@ -171,6 +180,15 @@ io.on('connection', (socket) => {
 
   socket.on('stop_typing', (bookingId) => {
     socket.to(`booking_${bookingId}`).emit('stop_typing', socket.userId);
+  });
+
+  /**
+   * webrtc_signal event
+   * Relays WebRTC signaling data between peers in a booking room.
+   */
+  socket.on('webrtc_signal', (data) => {
+    // Relays the 'signal' payload directly to the other party in the room
+    socket.to(`booking_${data.bookingId}`).emit('webrtc_signal', data.signal);
   });
 
   // Handle client disconnection
@@ -283,7 +301,7 @@ const PORT = process.env.PORT || 5000;
  */
 const startServer = async () => {
   try {
-    // Attempt to connect to the database before starting the server
+    // Connect to the database before starting the server
     await connectDB();
 
     // Start Agenda scheduler

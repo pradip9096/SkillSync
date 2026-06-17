@@ -11,6 +11,7 @@
 
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import config from '../config/env';
 import { connectSocket, disconnectSocket } from '../services/socket';
 
 /**
@@ -34,13 +35,13 @@ const isTokenValid = (token) => {
 // Create the Context object
 const AuthContext = createContext(null);
 
+const API_URL = `${config.API_URL}/auth`;
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/auth` : 'http://localhost:5000/auth';
 
   // Initialize: Load user details if token exists AND is not expired
   useEffect(() => {

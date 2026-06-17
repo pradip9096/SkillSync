@@ -23,10 +23,10 @@ import { useAuth } from '../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle, X, ChevronRight } from 'lucide-react';
 
 const bookingSchema = z.object({
-  userName: z.string().min(1, 'Name is required'),
+  userName: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be under 50 characters'),
   userEmail: z.string().email('Invalid email address'),
-  userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number'),
-  notes: z.string().max(200).optional(),
+  userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian mobile number (e.g. 9876543210)'),
+  notes: z.string().max(500).optional(),
 });
 
 /**
@@ -48,11 +48,12 @@ const ExpertDetail = () => {
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    return istNow.toISOString().split('T')[0]; 
+    return istNow.toISOString().split('T')[0];
   });
   const [selectedSlot, setSelectedSlot] = useState('');
   const [success, setSuccess] = useState(false);
   const [bookingError, setBookingError] = useState(null);
+  const [sdkBlocked, setSdkBlocked] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(bookingSchema),
@@ -64,29 +65,8 @@ const ExpertDetail = () => {
     }
   });
 
-  const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
-  const isAdmin = !!(user && user.role === 'Admin');
-  const isExpert = !!(user && user.role === 'Expert');
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > currentTime);
-  const isBookingDisabled = isOwnProfile || isAdmin || isExpert || isSuspended;
 
-  useEffect(() => {
-    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
-    return () => window.clearInterval(timerId);
-  }, []);
 
-  // Keyboard handler: Escape closes lightbox, arrows navigate
-  useEffect(() => {
-    if (lightboxIdx === null) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowLeft') lightboxPrev();
-      if (e.key === 'ArrowRight') lightboxNext();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [lightboxIdx, closeLightbox, lightboxPrev, lightboxNext]);
 
   // React Hook Form handles default values via its config object
 
@@ -134,6 +114,18 @@ const ExpertDetail = () => {
   const expert = expertRes?.data;
   const reviews = expertRes?.reviews || [];
 
+  const isOwnProfile = !!(user && expert && (expert.user === user._id || expert.user?._id === user._id));
+  const isAdmin = !!(user && user.role === 'Admin');
+  const isExpert = !!(user && user.role === 'Expert');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const isSuspended = !!(user && user.suspendedUntil && new Date(user.suspendedUntil).getTime() > currentTime);
+  const isBookingDisabled = isOwnProfile || isAdmin || isExpert || isSuspended;
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
+
   // Lightbox state
   const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed, number = open at that index
   const openLightbox = (idx) => setLightboxIdx(idx);
@@ -146,6 +138,18 @@ const ExpertDetail = () => {
     if (!expert?.gallery) return;
     setLightboxIdx(i => (i + 1) % expert.gallery.length);
   }, [expert]);
+
+  // Keyboard handler: Escape closes lightbox, arrows navigate
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') lightboxPrev();
+      if (e.key === 'ArrowRight') lightboxNext();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxIdx, closeLightbox, lightboxPrev, lightboxNext]);
 
   // React Query: Fetch Booked Slots
   const { data: bookedSlotsRes, isLoading: loadingSlots } = useQuery({
@@ -192,36 +196,27 @@ const ExpertDetail = () => {
     };
   }, [id, selectedDate, queryClient]);
 
+  // Pre-flight: probe Razorpay SDK availability on mount so the adblocker
+  // warning is shown before the user attempts to book, not after failure.
+  useEffect(() => {
+    if (window.Razorpay) return;
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => setSdkBlocked(false);
+    script.onerror = () => setSdkBlocked(true);
+    document.body.appendChild(script);
+  }, []);
+
   /**
    * Handles the booking form submission.
    * 
    * Purpose: Validates selection, formats data, and sends the booking request to the server.
    * @param {React.FormEvent} e - Form submission event.
    */
-  /**
-   * Dynamically load the Razorpay Checkout script.
-   */
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   // React Query Mutation for Booking
   const bookingMutation = useMutation({
     mutationFn: async (data) => {
-      let phoneClean = data.userPhone.replace(/\D/g, '');
-      if (phoneClean && !phoneClean.startsWith('+91')) {
-        phoneClean = '+91' + phoneClean;
-      }
+      const phoneClean = '+91' + data.userPhone.replace(/\D/g, '');
       const payload = {
         expert: id,
         bookingDate: selectedDate,
@@ -289,14 +284,13 @@ const ExpertDetail = () => {
     }
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = (data) => {
     if (!selectedSlot) return;
-    setBookingError(null);
-    const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded) {
-      setBookingError('Failed to load payment gateway SDK.');
+    if (sdkBlocked) {
+      setBookingError('Payment gateway could not be loaded. Please disable your adblocker or Brave Shields and refresh the page.');
       return;
     }
+    setBookingError(null);
     bookingMutation.mutate(data);
   };
   
@@ -531,6 +525,24 @@ const ExpertDetail = () => {
             </div>
           </div>
 
+          {/* Proactive adblocker warning — shown as soon as SDK probe fails */}
+          {sdkBlocked && (
+            <div className="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-2xl shadow-sm animate-fade-in">
+              <div className="flex gap-3">
+                <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-base font-black text-amber-800">Payment Gateway Blocked</h3>
+                  <p className="text-amber-700 font-semibold mt-1 text-sm">
+                    The Razorpay checkout could not be loaded. This is typically caused by Brave Shields or a browser adblocker blocking Razorpay's fraud-detection dependencies (<code>sardine.ai</code>, <code>lumberjack</code>).
+                  </p>
+                  <p className="text-amber-700 font-semibold mt-2 text-sm">
+                    To complete your booking, please disable Brave Shields (click the orange lion icon in the address bar) or pause your adblocker, then refresh the page.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section: Guest Information Form */}
           {!user ? (
             <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 text-center space-y-6 animate-slide-up">
@@ -555,17 +567,10 @@ const ExpertDetail = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-10 space-y-10">
-              {bookingError && (
-                <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex flex-col gap-2 animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
-                    <p className="font-bold text-sm">{bookingError}</p>
-                  </div>
-                  {(bookingError.toLowerCase().includes('payment') || bookingError.toLowerCase().includes('sdk') || bookingError.toLowerCase().includes('failed') || bookingError.toLowerCase().includes('cancelled')) && (
-                    <div className="mt-1 pl-9 border-t border-red-100/60 pt-2 text-xs text-red-600/80 font-medium">
-                      💡 <strong>Brave / Adblocker Tip:</strong> If the checkout modal does not open, hangs, or fails, please turn off Brave Shields (by clicking the orange lion icon in the address bar) or temporarily pause your adblocker. Privacy-oriented extensions block Razorpay's critical security and fraud detection dependencies (like <code>sardine.ai</code> and <code>lumberjack</code>), which blocks checkout completion.
-                    </div>
-                  )}
+              {bookingError && !isSubmitting && (
+                <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
+                  <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+                  <p className="font-bold text-sm">{bookingError}</p>
                 </div>
               )}
               <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
