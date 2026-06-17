@@ -17,19 +17,23 @@ const errorHandler = (err, req, res, next) => {
     stack: err.stack,
   });
 
-  // Mongoose error mappings
+  // Mongoose / MongoDB driver error mappings.
+  // Use else-if so only one branch fires; the first match wins.
   if (err.name === 'CastError') {
     err.statusCode = 400;
     err.message = `Invalid ${err.path}: ${err.value}.`;
-  }
-  if (err.name === 'ValidationError') {
+  } else if (err.name === 'ValidationError') {
     err.statusCode = 422;
     const errors = Object.values(err.errors).map(el => el.message);
     err.message = `Invalid input data. ${errors.join('. ')}`;
-  }
-  if (err.code === 11000) {
+  } else if (err.code === 11000) {
     err.statusCode = 409;
-    err.message = 'Duplicate field value entered.';
+    // Preserve a domain-level message already set by the service layer;
+    // only fall back to the generic text for raw MongoDB driver errors
+    // whose message starts with the internal "E11000 duplicate key" prefix.
+    if (!err.message || err.message.startsWith('E11000')) {
+      err.message = 'This time slot is already booked.';
+    }
   }
 
   // Send response
