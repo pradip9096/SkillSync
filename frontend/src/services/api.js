@@ -10,13 +10,15 @@
 
 import axios from 'axios';
 
+import config from '../config/env';
+
 /**
  * Axios instance with a predefined base URL.
  * All requests made through this instance will be prefixed with this URL.
  * @type {import('axios').AxiosInstance}
  */
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: config.API_URL,
 });
 
 // Request interceptor to automatically attach JWT token to Authorization headers

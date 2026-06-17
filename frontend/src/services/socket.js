@@ -9,6 +9,7 @@
  */
 
 import { io } from 'socket.io-client';
+import config from '../config/env';
 
 /**
  * Initialize the Socket.io client.
@@ -20,8 +21,7 @@ import { io } from 'socket.io-client';
  * - 'upgrade: false' ensures it stays on the websocket transport.
  * @type {import('socket.io-client').Socket}
  */
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
-const socket = io(SOCKET_URL, {
+const socket = io(config.SOCKET_URL, {
   transports: ['polling', 'websocket'],
   upgrade: true,
   autoConnect: false,
