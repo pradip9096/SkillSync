@@ -1,11 +1,48 @@
+/**
+ * @file messageController.js
+ * @description Express route handler functions for the in-session messaging feature.
+ * Handles message retrieval (with cursor-based pagination), message sending with HTML
+ * sanitization, bulk read-status updates, unread count, and unique conversation listing.
+ *
+ * Inputs and outputs:
+ *   - All handlers are exported as properties of `module.exports` and receive `(req, res, next)`.
+ *   - Exports: `{ getMessagesByBooking, sendMessage, markMessagesAsRead, getUnreadCount,
+ *     getUniqueConversations }`.
+ *
+ * Side effects:
+ *   - Reads and writes the `Message`, `Booking`, and `Notification` MongoDB collections.
+ *   - `sendMessage` emits `new_message` to the booking room and the receiver's global room,
+ *     and emits `new_notification` to the receiver's global room via Socket.io.
+ *   - HTML content is stripped by `sanitize-html` before persistence to prevent stored XSS.
+ *
+ * Dependencies:
+ *   - `mongoose` — ObjectId validation.
+ *   - `sanitize-html` — XSS prevention: strips all HTML tags from message content.
+ *   - `../models/Message` — Mongoose Message model.
+ *   - `../models/Booking` — Mongoose Booking model (used for authorization checks).
+ *   - `../models/Notification` — Lazily required inside `sendMessage`.
+ */
+
 const Message = require('../models/Message');
 const Booking = require('../models/Booking');
 const mongoose = require('mongoose');
 const sanitizeHtml = require('sanitize-html');
 
 /**
- * Fetch all messages for a specific booking.
- * Secures access to only the client or expert involved in the booking.
+ * Returns paginated message history for a booking, scoped to all sessions between the
+ * same client–expert pair (not just the single booking). Uses cursor-based pagination
+ * via `before` (a message `_id`) to support infinite-scroll chat UIs.
+ * This function is async. It awaits `Booking.findById`, `Booking.find`, and `Message.find`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.bookingId` is the booking ID;
+ *   optional query: `before` (cursor `_id`), `limit` (default 50).
+ * @param {import('express').Response} res - Express response. Returns 200 with a chronological message array.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {403} If the authenticated user is not the client or expert for this booking.
+ * @throws {404} If the booking does not exist.
+ * @route GET /messages/:bookingId
  */
 exports.getMessagesByBooking = async (req, res, next) => {
   try {
@@ -59,8 +96,22 @@ exports.getMessagesByBooking = async (req, res, next) => {
 };
 
 /**
- * Send a new message.
- * Emits a real-time event if socket is available.
+ * Creates a new message after verifying the sender is a participant in the booking.
+ * Strips all HTML from `content` via `sanitize-html` before saving, then emits
+ * `new_message` to the booking room and receiver's global room, and creates a
+ * `Notification` document for the receiver.
+ * This function is async. It awaits `Booking.findById`, `Message.create`, and
+ * `Notification.create`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Required body: `bookingId`, `receiverId`, `content`.
+ * @param {import('express').Response} res - Express response. Returns 201 with the new message document.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If any required field is missing, IDs are invalid, or content exceeds 5000 characters.
+ * @throws {403} If the authenticated user is not a participant in the booking.
+ * @throws {404} If the booking does not exist.
+ * @route POST /messages
  */
 exports.sendMessage = async (req, res, next) => {
   try {
@@ -137,7 +188,18 @@ exports.sendMessage = async (req, res, next) => {
 };
 
 /**
- * Mark all messages in a booking as read for the current user.
+ * Bulk-marks all unread messages addressed to the authenticated user across the entire
+ * client–expert session history (not just the single booking) as `read: true`.
+ * This function is async. It awaits `Booking.findById`, `Booking.find`, and `Message.updateMany`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.bookingId` is the booking ID.
+ * @param {import('express').Response} res - Express response. Returns 200 `{ message: 'Messages marked as read' }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {403} If the authenticated user is not a participant in the booking.
+ * @throws {404} If the booking does not exist.
+ * @route PATCH /messages/:bookingId/read
  */
 exports.markMessagesAsRead = async (req, res, next) => {
   try {
@@ -180,7 +242,16 @@ exports.markMessagesAsRead = async (req, res, next) => {
 };
 
 /**
- * Get total unread message count for the current user.
+ * Returns the total number of unread messages addressed to the authenticated user.
+ * Used by the frontend to render the unread badge in the navbar.
+ * This function is async. It awaits `Message.countDocuments`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.user._id` from `authMiddleware.protect`.
+ * @param {import('express').Response} res - Express response. Returns 200 `{ count }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @route GET /messages/unread/count
  */
 exports.getUnreadCount = async (req, res, next) => {
   try {
@@ -192,7 +263,18 @@ exports.getUnreadCount = async (req, res, next) => {
 };
 
 /**
- * Fetch unique conversations for the current user, grouped by the other participant.
+ * Returns a deduplicated list of conversations for the authenticated user, one entry per
+ * unique counterpart (client or expert), ordered by most recent activity. Uses a MongoDB
+ * aggregation on the Message collection to find the last message per booking, then merges
+ * with booking data for participant info.
+ * This function is async. It awaits `Expert.findOne`, `Booking.find`, and `Message.aggregate`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.user` (with `role`) from `authMiddleware.protect`.
+ * @param {import('express').Response} res - Express response. Returns 200 with a sorted conversation array.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @route GET /messages/conversations
  */
 exports.getUniqueConversations = async (req, res, next) => {
   try {

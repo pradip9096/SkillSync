@@ -1,15 +1,36 @@
 /**
- * Purpose: Security middlewares to verify JWT tokens and restrict route access based on roles.
- * Inputs: Express request, response, and next function.
- * Outputs: Calls next() if successful, otherwise returns 401 (Unauthorized) or 403 (Forbidden) response.
- * Side Effects: Attaches user credentials object to request object.
+ * @file authMiddleware.js
+ * @description Express middleware for JWT-based authentication and Role-Based Access Control (RBAC).
+ * `protect` must be applied to all private routes. `restrictTo` is composed on top of `protect`
+ * to limit access to specific user roles.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ protect, restrictTo }`.
+ *
+ * Side effects:
+ *   - `protect` reads the `User` MongoDB collection to hydrate `req.user`.
+ *   - `protect` attaches the full user object (without password) to `req.user` on success.
+ *
+ * Dependencies:
+ *   - `jsonwebtoken` — JWT signature verification.
+ *   - `../models/User` — Mongoose User model for post-verification user lookup.
  */
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 /**
- * Middleware: Verifies the JWT token and attaches the authenticated user to the request.
+ * Extracts and verifies the Bearer JWT from the `Authorization` header, then looks up the
+ * corresponding user in the database and attaches the document to `req.user` (password excluded).
+ * This function is async. It awaits `User.findById` with `.select('-password')`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Must include
+ *   `Authorization: Bearer <token>` header.
+ * @param {import('express').Response} res - Express response.
+ * @param {import('express').NextFunction} next - Called with no arguments on success.
+ * @returns {Promise<void>}
+ * @throws {401} If the header is missing, the token is expired/invalid, or the user no longer exists.
  */
 const protect = async (req, res, next) => {
   let token;
@@ -62,8 +83,12 @@ const protect = async (req, res, next) => {
 };
 
 /**
- * Middleware: Restricts route access to specific roles.
- * @param {...string} roles - List of allowed roles.
+ * Returns an Express middleware that restricts access to the specified roles.
+ * Must be used after `protect`, which populates `req.user`. Returns a 401 if
+ * `req.user` is absent and a 403 if the role is not in the allowed list.
+ *
+ * @param {...string} roles - One or more role strings that are permitted (e.g. `'Admin'`, `'Expert'`).
+ * @returns {import('express').RequestHandler} Middleware function that enforces the role restriction.
  */
 const restrictTo = (...roles) => {
   return (req, res, next) => {

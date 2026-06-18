@@ -1,8 +1,23 @@
 /**
- * Purpose: Handlers for expert-related API requests.
- * Inputs: Express request objects containing query parameters (for filtering and pagination), expert identifiers (ID), and rating values.
- * Outputs: Express response objects with JSON data representing a list of experts, detailed expert profiles, or updated rating status.
- * Side Effects: Reads expert data from the database and updates expert rating metrics (average rating and review count) in the Expert collection.
+ * @file expertController.js
+ * @description Express route handler functions for the public expert catalogue. Provides
+ * paginated expert listing with search and category filters, single expert detail retrieval
+ * with reviews, and post-session expert rating with rolling average update.
+ *
+ * Inputs and outputs:
+ *   - All handlers receive `(req, res, next)` from Express and write a JSON response.
+ *   - Exports: `{ getExperts, getExpertById, rateExpert }`.
+ *
+ * Side effects:
+ *   - Reads `Expert`, `Review`, and `Booking` MongoDB collections.
+ *   - `rateExpert` writes a new `Review` document and updates `Expert.rating` and
+ *     `Expert.numReviews` atomically via `session.withTransaction`.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB transaction sessions (required lazily inside `rateExpert`).
+ *   - `../models/Expert` — Mongoose Expert model.
+ *   - `../models/Review` — Mongoose Review model.
+ *   - `../models/Booking` — Mongoose Booking model.
  */
 
 const Expert = require('../models/Expert');
@@ -10,11 +25,18 @@ const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 
 /**
- * Purpose: Get all experts with optional filtering by name/category and pagination.
- * @param {Object} req - Express request object containing query parameters for page, limit, search, and category.
- * @param {Object} res - Express response object.
- * @returns {Promise<void>} Sends a 200 response with the list of experts, total count, and pagination metadata, or a 500 response on failure.
- * Side effects: Reads from the Expert collection and counts documents matching the query.
+ * Returns a paginated list of experts, optionally filtered by name search and/or category.
+ * The `search` term is sanitized and applied as a case-insensitive regex on `Expert.name`.
+ * This function is async. It awaits `Expert.find` and `Expert.countDocuments`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Query params: `page` (default 1),
+ *   `limit` (default 10, max 100), `search` (partial name match), `category`.
+ * @param {import('express').Response} res - Express response. Returns 200
+ *   `{ success, count, total, pages, data }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @route GET /experts
  */
 const getExperts = async (req, res, next) => {
   try {
@@ -67,11 +89,16 @@ const getExperts = async (req, res, next) => {
 };
 
 /**
- * Purpose: Get detailed information for a single expert by their unique ID.
- * @param {Object} req - Express request object containing the expert ID in params.
- * @param {Object} res - Express response object.
- * @returns {Promise<void>} Sends a 200 response with the expert data, or a 404/500 response on failure.
- * Side effects: Reads a single document from the Expert collection.
+ * Returns a single expert's full profile and all associated reviews.
+ * This function is async. It awaits `Expert.findById` and `Review.find`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the Expert document ID.
+ * @param {import('express').Response} res - Express response. Returns 200 `{ success, data, reviews }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {404} If no expert exists with the given ID.
+ * @route GET /experts/:id
  */
 const getExpertById = async (req, res, next) => {
   try {
@@ -99,11 +126,25 @@ const getExpertById = async (req, res, next) => {
 };
 
 /**
- * Purpose: Submit a numerical rating for an expert and update their rolling average rating.
- * @param {Object} req - Express request object containing the numerical rating in the body and expert ID in params.
- * @param {Object} res - Express response object.
- * @returns {Promise<void>} Sends a 200 response with the updated expert data, or a 404/500 response on failure.
- * Side effects: Updates the rating and numReviews fields of an Expert document in the database.
+ * Submits a rating and optional comment for a completed session. Atomically creates a
+ * `Review` document, updates the expert's rolling average rating (`Expert.rating`,
+ * `Expert.numReviews`), and marks the booking as rated — all inside a single MongoDB
+ * transaction to prevent partial updates. Enforces: session must be Completed, the caller
+ * must own the booking, and the booking must not already be rated.
+ * This function is async. It awaits `Expert.findById`, `Booking.findById`,
+ * `session.withTransaction`, `Review.create`, `expert.save`, and `booking.save`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the Expert ID;
+ *   body requires `rating` (number 1–5) and `bookingId`; optional `comment` (string).
+ * @param {import('express').Response} res - Express response. Returns 200 `{ success, data, review }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `rating` or `bookingId` are missing, booking expert mismatch, session not completed,
+ *   or session already rated.
+ * @throws {401} If the authenticated user does not own the booking.
+ * @throws {404} If the expert or booking is not found.
+ * @route POST /experts/:id/rate
  */
 const rateExpert = async (req, res, next) => {
   try {

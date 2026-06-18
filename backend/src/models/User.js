@@ -1,8 +1,19 @@
 /**
- * Purpose: Mongoose schema and model for Users (credentials and profiles).
- * Inputs: None.
- * Outputs: Mongoose model for the 'User' collection.
- * Side Effects: Hashes passwords on save/modification.
+ * @file User.js
+ * @description Mongoose model for the `users` collection. Stores login credentials,
+ * role assignments, profile data, and booking-penalty state (late cancellation strikes
+ * and suspension timestamps). Passwords are hashed automatically by a pre-save hook.
+ *
+ * Inputs and outputs:
+ *   - Exports: the `User` Mongoose model.
+ *
+ * Side effects:
+ *   - `pre('save')`: hashes the password with bcrypt (salt rounds = 10) whenever
+ *     the `password` field is modified.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB ODM.
+ *   - `bcryptjs` — Password hashing and comparison.
  */
 
 const mongoose = require('mongoose');
@@ -88,7 +99,11 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Encrypt password using bcrypt before saving
+/**
+ * Hashes the password with bcrypt before persisting whenever the `password` field has
+ * been modified. Uses a salt factor of 10. No-ops on saves that do not touch the password
+ * (e.g. profile field updates) to avoid unnecessary re-hashing.
+ */
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
     return;
@@ -97,7 +112,14 @@ userSchema.pre('save', async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
+/**
+ * Compares a plain-text password attempt against the stored bcrypt hash.
+ * This function is async. It awaits `bcrypt.compare`.
+ *
+ * @async
+ * @param {string} enteredPassword - The plain-text password provided during login.
+ * @returns {Promise<boolean>} `true` if the password matches; `false` otherwise.
+ */
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

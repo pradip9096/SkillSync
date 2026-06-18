@@ -1,3 +1,31 @@
+/**
+ * @file reminderScheduler.js
+ * @description Agenda.js job definitions and orchestration helpers for all time-sensitive
+ * notifications in the booking lifecycle. Defines five job types:
+ *   - `cancel-abandoned-booking` — refunds and cancels unpaid pending bookings.
+ *   - `send-booking-confirmation` — email + SMS to client and expert on payment confirmation.
+ *   - `send-booking-cancellation` — email + SMS to both parties on cancellation.
+ *   - `send-session-reminder` — unified 24-hour and 2-hour pre-session reminder job.
+ * Exports two orchestration helpers: `scheduleSessionReminders` and `cancelScheduledReminders`.
+ *
+ * Side effects:
+ *   - Defines Agenda job handlers at module load time (side-effectful `agenda.define` calls).
+ *   - `cancel-abandoned-booking` may call the Razorpay refund API and write to `PaymentLog`.
+ *   - All job handlers send email via `emailService` and SMS via `smsService` (non-fatal on SMS).
+ *   - `cancel-abandoned-booking` emits `slot_released` to a Socket.io room via `agenda.io`
+ *     (attached to the Agenda instance by `app.js`).
+ *   - `scheduleSessionReminders` and `cancelScheduledReminders` read/write the MongoDB
+ *     `agendaJobs` collection and persist job IDs back onto the `Booking` document.
+ *
+ * Dependencies:
+ *   - `mongodb` — `ObjectId` for Agenda job cancellation by ID.
+ *   - `../config/agenda` — shared Agenda instance.
+ *   - `../models/Booking`, `../models/PaymentLog` — Mongoose models.
+ *   - `./emailService`, `./smsService` — notification transports.
+ *   - `../utils/razorpayClient` — `fetchPayments` and `refundPayment` for abandoned bookings.
+ *   - `../utils/timeFormatters` — `formatTime12H` for human-readable time in notification copy.
+ */
+
 const { ObjectId } = require('mongodb');
 const agenda = require('../config/agenda');
 const Booking = require('../models/Booking');
@@ -9,6 +37,13 @@ const { fetchPayments, refundPayment } = require('../utils/razorpayClient');
 const sendEmail = (args) => emailService.sendEmail(args);
 const sendSMS = (args) => smsService.sendSMS(args);
 
+/**
+ * Sends an SMS and swallows any error so a failed SMS does not abort an Agenda job.
+ *
+ * @async
+ * @param {{ to: string, message: string }} args - Destination phone and message body.
+ * @returns {Promise<void>}
+ */
 const safeSendSMS = async (args) => {
   try {
     await sendSMS(args);
@@ -18,7 +53,12 @@ const safeSendSMS = async (args) => {
 };
 
 /**
- * Helper to convert YYYY-MM-DD and HH:mm in IST (+05:30) to a JavaScript Date object.
+ * Converts a `YYYY-MM-DD` date string and `HH:mm` 24-hour time string in IST (+05:30)
+ * to a JavaScript `Date` object in UTC.
+ *
+ * @param {string} bookingDate - Session date in `YYYY-MM-DD` format.
+ * @param {string} slotTime - Session start time in `HH:mm` (24-hour) format.
+ * @returns {Date|null} The parsed `Date` object, or `null` if the input is not a valid date.
  */
 const parseISTSessionTime = (bookingDate, slotTime) => {
   const session = new Date(`${bookingDate}T${slotTime}:00+05:30`);
@@ -278,8 +318,15 @@ agenda.define('send-session-reminder', async (job) => {
 // ==========================================
 
 /**
- * Calculates pre-session trigger times and schedules reminders via Agenda.
- * Sets the resulting job IDs on the booking.
+ * Schedules a 24-hour and a 2-hour pre-session reminder for the given booking.
+ * Skips reminders whose trigger time has already passed. Persists the resulting
+ * Agenda job IDs (`agenda24hJobId`, `agenda2hJobId`) on the booking document.
+ * This function is async. It awaits `agenda.schedule` and `booking.save`.
+ *
+ * @async
+ * @param {object} booking - A Mongoose `Booking` document with `bookingDate`, `slotTime`,
+ *   `_id`, `agenda24hJobId`, and `agenda2hJobId` fields.
+ * @returns {Promise<void>} Resolves once reminders are scheduled and the booking is saved.
  */
 const scheduleSessionReminders = async (booking) => {
   if (!agenda || !agenda._collection) {
@@ -325,7 +372,14 @@ const scheduleSessionReminders = async (booking) => {
 };
 
 /**
- * Cancels pending Agenda scheduled jobs for a specific booking.
+ * Cancels pending Agenda reminder jobs for a booking using the stored job IDs.
+ * Errors on individual job cancellations are logged but do not halt processing.
+ * This function is async. It awaits `agenda.cancel` for each job ID present.
+ *
+ * @async
+ * @param {object} booking - A Mongoose `Booking` document with optional `agenda24hJobId`
+ *   and `agenda2hJobId` string fields.
+ * @returns {Promise<void>} Resolves once all available jobs have been cancelled.
  */
 const cancelScheduledReminders = async (booking) => {
   if (!agenda || !agenda._collection) {

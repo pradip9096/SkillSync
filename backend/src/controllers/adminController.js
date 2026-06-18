@@ -1,11 +1,26 @@
 /**
  * @file adminController.js
- * @description Administrative controllers to manage system-wide users, experts, and bookings.
- * 
- * Purpose: Provides backend logic for the Admin Panel. All actions are restricted to Admin role.
- * Inputs: Express request and response objects.
- * Outputs: JSON database payloads.
- * Side Effects: Reads/writes database collections (User, Expert, Booking).
+ * @description Express route handler functions for the Admin Panel. Provides privileged
+ * operations restricted to users with the `Admin` role: listing all users and bookings,
+ * force-updating booking status (bypassing the time-lock), deleting bookings and experts,
+ * creating expert accounts, and resetting late-cancellation penalty strikes.
+ *
+ * Inputs and outputs:
+ *   - All handlers receive `(req, res, next)` from Express and write a JSON response.
+ *   - Exports: `{ getAllUsers, getAllBookings, updateBookingStatusByAdmin, deleteBookingByAdmin,
+ *     createExpertByAdmin, deleteExpertByAdmin, resetUserPenalties }`.
+ *
+ * Side effects:
+ *   - Reads and writes the `User`, `Expert`, and `Booking` MongoDB collections.
+ *   - Emits `slot_released` Socket.io events when a booking is cancelled or deleted, so
+ *     connected clients update slot availability without a page refresh.
+ *   - Mutually-exclusive multi-document writes use `session.withTransaction()` for atomicity.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB transaction sessions.
+ *   - `../models/User` — Mongoose User model.
+ *   - `../models/Expert` — Mongoose Expert model.
+ *   - `../models/Booking` — Mongoose Booking model.
  */
 
 const mongoose = require('mongoose');
@@ -14,9 +29,15 @@ const Expert = require('../models/Expert');
 const Booking = require('../models/Booking');
 
 /**
- * @desc    Get all registered users
- * @route   GET /admin/users
- * @access  Private (Admin Only)
+ * Returns a paginated list of all registered users, excluding password hashes.
+ * This function is async. It awaits a paginated `User.find` and `User.countDocuments`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Accepts `page` and `limit` query params.
+ * @param {import('express').Response} res - Express response. Returns `{ success, count, total, pages, data }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @route GET /admin/users
  */
 const getAllUsers = async (req, res, next) => {
   try {
@@ -46,9 +67,16 @@ const getAllUsers = async (req, res, next) => {
 };
 
 /**
- * @desc    Get all bookings in the system
- * @route   GET /admin/bookings
- * @access  Private (Admin Only)
+ * Returns a paginated list of all bookings in the system, populated with client and expert details.
+ * This function is async. It awaits a paginated `Booking.find` with nested populates and
+ * `Booking.countDocuments`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Accepts `page` and `limit` query params.
+ * @param {import('express').Response} res - Express response. Returns `{ success, count, total, pages, data }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @route GET /admin/bookings
  */
 const getAllBookings = async (req, res, next) => {
   try {
@@ -86,9 +114,21 @@ const getAllBookings = async (req, res, next) => {
 };
 
 /**
- * @desc    Force update any booking status (Admin bypasses standard time lock constraint if needed)
- * @route   PATCH /admin/bookings/:id/status
- * @access  Private (Admin Only)
+ * Force-updates a booking's status, bypassing the normal time-lock that prevents clients
+ * from cancelling within 2 hours of the session. Sets `bypassTimeLock = true` on the document
+ * before saving so the Booking pre-save hook skips the time guard. Emits a `slot_released`
+ * Socket.io event when transitioning to a cancelled state.
+ * This function is async. It awaits `Booking.findById` and `booking.save`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the booking ID;
+ *   `req.body.status` must be one of: `Confirmed`, `Pending`, `Completed`, `Cancelled`, `Late Cancellation`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, data }` with the updated booking.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `status` is not a valid value.
+ * @throws {404} If the booking does not exist.
+ * @route PATCH /admin/bookings/:id/status
  */
 const updateBookingStatusByAdmin = async (req, res, next) => {
   try {
@@ -143,9 +183,17 @@ const updateBookingStatusByAdmin = async (req, res, next) => {
 };
 
 /**
- * @desc    Delete/Cancel a booking completely
- * @route   DELETE /admin/bookings/:id
- * @access  Private (Admin Only)
+ * Permanently deletes a booking document and emits a `slot_released` Socket.io event
+ * so connected clients free the slot immediately without a page refresh.
+ * This function is async. It awaits `Booking.findById` and `Booking.findByIdAndDelete`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the booking ID.
+ * @param {import('express').Response} res - Express response. Returns `{ success, message }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {404} If the booking does not exist.
+ * @route DELETE /admin/bookings/:id
  */
 const deleteBookingByAdmin = async (req, res, next) => {
   try {
@@ -183,9 +231,20 @@ const deleteBookingByAdmin = async (req, res, next) => {
 };
 
 /**
- * @desc    Create a new Expert account and profile
- * @route   POST /admin/experts
- * @access  Private (Admin Only)
+ * Creates a new Expert account: atomically creates a `User` credential document
+ * and an `Expert` profile document inside a single MongoDB transaction.
+ * This function is async. It awaits `User.findOne`, `session.withTransaction`,
+ * and the transactional `User.create` / `Expert.create` calls.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Required body fields:
+ *   `email`, `password`, `name`, `phone` (+91 format), `category`, `experience`, `hourlyRate`.
+ *   Optional: `description`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, data }` with the new Expert.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If any required field is missing, phone format is invalid, hourlyRate < 100, or email already exists.
+ * @route POST /admin/experts
  */
 const createExpertByAdmin = async (req, res, next) => {
   try {
@@ -267,9 +326,17 @@ const createExpertByAdmin = async (req, res, next) => {
 };
 
 /**
- * @desc    Delete an Expert profile and associated User account
- * @route   DELETE /admin/experts/:id
- * @access  Private (Admin Only)
+ * Permanently deletes an Expert profile, the linked User credential document, and all
+ * associated Booking documents in a single atomic MongoDB transaction.
+ * This function is async. It awaits `Expert.findById` and `session.withTransaction`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the Expert document ID.
+ * @param {import('express').Response} res - Express response. Returns `{ success, message }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {404} If the expert does not exist.
+ * @route DELETE /admin/experts/:id
  */
 const deleteExpertByAdmin = async (req, res, next) => {
   try {
@@ -312,9 +379,17 @@ const deleteExpertByAdmin = async (req, res, next) => {
 };
 
 /**
- * @desc    Reset a user's strikes and lift booking suspensions
- * @route   POST /admin/users/:id/reset-penalties
- * @access  Private (Admin Only)
+ * Clears a user's late-cancellation strike count and removes any active booking suspension,
+ * allowing the user to make new bookings immediately.
+ * This function is async. It awaits `User.findById` and `user.save`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.id` is the User document ID.
+ * @param {import('express').Response} res - Express response. Returns `{ success, message, data }` with the updated user.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {404} If the user does not exist.
+ * @route POST /admin/users/:id/reset-penalties
  */
 const resetUserPenalties = async (req, res, next) => {
   try {

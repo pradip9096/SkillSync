@@ -1,3 +1,19 @@
+/**
+ * @file messageRoutes.js
+ * @description Express router for the in-session messaging API. All routes require JWT
+ * authentication via `protect`. The `POST /` (send message) route additionally applies a
+ * per-IP rate limiter (60 req/min) to prevent chat abuse.
+ *
+ * Inputs and outputs:
+ *   - Exports: an Express `Router` instance mounted at `/messages` (and `/api/v1/messages`).
+ *
+ * Dependencies:
+ *   - `express-rate-limit` — Request rate limiting on the send-message route.
+ *   - `../controllers/messageController` — Handler functions.
+ *   - `../middleware/authMiddleware` — JWT authentication.
+ *   - `../middleware/validationMiddleware` — ObjectId parameter validation.
+ */
+
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');

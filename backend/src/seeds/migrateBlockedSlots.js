@@ -1,9 +1,26 @@
 /**
- * Purpose: One-time database migration script to port expert calendar block placeholders
- *          from the Booking collection to the new Availability collection.
- * Inputs: Database connection string via process.env.MONGO_URI.
- * Outputs: None (logs status and exits).
- * Side Effects: Connects to MongoDB, inserts documents into Availability, and deletes documents from Booking.
+ * @file migrateBlockedSlots.js
+ * @description One-time migration script. Ports expert calendar block placeholders that were
+ * stored in the `Booking` collection (with `notes: 'Blocked by Expert'`) to the dedicated
+ * `Availability` collection introduced in the v2 schema. Attempts an ACID transaction first;
+ * falls back to sequential batch operations if running against a standalone (non-replica-set)
+ * MongoDB instance.
+ *
+ * Inputs and outputs:
+ *   - Run directly: `node src/seeds/migrateBlockedSlots.js`
+ *   - Reads `process.env.MONGO_URI` for the connection string.
+ *   - Exits with code 0 on success; code 1 on error.
+ *
+ * Side effects:
+ *   - Connects to MongoDB.
+ *   - Inserts documents into the `availabilities` collection.
+ *   - Deletes migrated documents from the `bookings` collection.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB connection and transactions.
+ *   - `dotenv` — Loads `.env` from `backend/.env`.
+ *   - `../models/Booking` — Source collection.
+ *   - `../models/Availability` — Destination collection.
  */
 
 const mongoose = require('mongoose');
@@ -15,6 +32,16 @@ const Availability = require('../models/Availability');
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+/**
+ * Connects to MongoDB and migrates all legacy `Booking` documents with
+ * `notes: 'Blocked by Expert'` to the `Availability` collection.
+ * Uses a replica-set transaction when available; falls back to sequential upserts.
+ * This function is async. It awaits `mongoose.connect`, `Booking.find`,
+ * `session.withTransaction`, and multiple `Availability.create` / `Booking.deleteOne` calls.
+ *
+ * @async
+ * @returns {Promise<void>} Calls `process.exit(0)` on success; `process.exit(1)` on error.
+ */
 const runMigration = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/skillsync';

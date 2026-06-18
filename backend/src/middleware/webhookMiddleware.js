@@ -1,12 +1,39 @@
 /**
- * Purpose: Middleware to verify incoming Razorpay webhook signatures using SHA-256 HMAC timing-safe validation.
- * Inputs: Express request and response objects, and next middleware callback.
- * Outputs: Calls next() on success, returns 400/500 JSON response on failure.
- * Side Effects: Verifies headers using crypto library.
+ * @file webhookMiddleware.js
+ * @description Express middleware that authenticates inbound Razorpay webhook requests
+ * using HMAC-SHA256 signature verification. Must be applied before any webhook route handler
+ * to ensure that only genuine Razorpay events are processed.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ verifyWebhookSignature }`.
+ *
+ * Side effects:
+ *   - Reads `process.env.RAZORPAY_WEBHOOK_SECRET` for the shared secret.
+ *   - Reads `req.rawBody` (set by Express's JSON `verify` callback in `app.js`) or falls
+ *     back to `JSON.stringify(req.body)` for the HMAC computation.
+ *
+ * Dependencies:
+ *   - `crypto` — HMAC-SHA256 digest and timing-safe buffer comparison.
  */
 
 const crypto = require('crypto');
 
+/**
+ * Verifies the `x-razorpay-signature` header against an HMAC-SHA256 digest of the raw
+ * request body using the `RAZORPAY_WEBHOOK_SECRET`. Uses `crypto.timingSafeEqual` for
+ * the final comparison to prevent timing-oracle attacks that could allow an attacker to
+ * enumerate the secret byte-by-byte by measuring response latency. A length guard runs
+ * before `timingSafeEqual` because that function throws on mismatched buffer lengths.
+ *
+ * @param {import('express').Request} req - Express request. `req.rawBody` must contain the
+ *   original payload bytes (set by the JSON body-parser's `verify` callback in `app.js`).
+ * @param {import('express').Response} res - Express response.
+ * @param {import('express').NextFunction} next - Called with no arguments if the signature is valid.
+ * @returns {void}
+ * @throws {500} (response, not thrown) If `RAZORPAY_WEBHOOK_SECRET` is not configured — fails
+ *   closed to prevent processing unsigned events.
+ * @throws {400} (response, not thrown) If the signature header is absent, or the HMAC does not match.
+ */
 const verifyWebhookSignature = (req, res, next) => {
   const signature = req.headers['x-razorpay-signature'];
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;

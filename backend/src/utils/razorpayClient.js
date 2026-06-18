@@ -1,3 +1,23 @@
+/**
+ * @file razorpayClient.js
+ * @description Razorpay API wrapper with Opossum circuit breakers. Exposes three
+ * operations — `createOrder`, `fetchPayments`, `refundPayment` — each wrapped in
+ * its own circuit breaker to prevent cascading failures when the Razorpay API is
+ * unavailable. All fallbacks re-throw so callers can respond with an appropriate error.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ razorpay, createOrder, fetchPayments, refundPayment }`.
+ *
+ * Side effects:
+ *   - Instantiates a `Razorpay` client at module load time when credentials are present.
+ *   - Each circuit breaker opens after ≥50% error rate and resets after 30 s.
+ *
+ * Dependencies:
+ *   - `razorpay` — official Razorpay Node.js SDK.
+ *   - `opossum` — circuit breaker library.
+ *   - `../config/logger` — shared Pino logger.
+ */
+
 const Razorpay = require('razorpay');
 const CircuitBreaker = require('opossum');
 const logger = require('../config/logger');
@@ -11,6 +31,7 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
   });
 }
 
+/** @type {import('opossum').Options} Circuit breaker thresholds for all Razorpay API calls. */
 const breakerOptions = {
   timeout: 10000, // 10 seconds
   errorThresholdPercentage: 50,

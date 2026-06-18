@@ -1,8 +1,11 @@
 /**
- * Purpose: Mongoose schema and model for Client Reviews by Experts.
- * Inputs: None.
- * Outputs: Mongoose model for the 'ClientReview' collection.
- * Side Effects: None.
+ * @file ClientReview.js
+ * @description Mongoose schema and model for expert-written reviews of clients.
+ * Tracks star ratings and optional comments that an expert submits after a completed
+ * session. A unique index on `booking` enforces one review per session per expert.
+ *
+ * Inputs and outputs:
+ *   - Exports: the `ClientReview` Mongoose model.
  */
 
 const mongoose = require('mongoose');

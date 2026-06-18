@@ -1,4 +1,14 @@
 /**
+ * @file timeFormatters.js
+ * @description Utility functions for formatting time values into human-readable strings.
+ * All notification, email, and SMS copy must use these formatters rather than raw
+ * database time strings.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ formatTime12H }`.
+ */
+
+/**
  * Standard utility for formatting 24-hour time strings into 12-hour AM/PM format.
  *
  * AS PER MASTER_SPEC.md:

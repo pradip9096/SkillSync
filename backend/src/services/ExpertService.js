@@ -1,3 +1,31 @@
+/**
+ * @file ExpertService.js
+ * @description Service layer for all expert-facing dashboard operations. Handles booking
+ * lookups, profile management, slot blocking/unblocking, gallery image uploads, client
+ * rating, and analytics aggregation. All methods are async and run within the context
+ * of a single authenticated expert user.
+ *
+ * Inputs and outputs:
+ *   - Exports: a singleton `ExpertService` instance.
+ *
+ * Side effects:
+ *   - Reads and writes to the `Expert`, `Booking`, `Availability`, `ClientReview`,
+ *     `Review`, and `User` MongoDB collections.
+ *   - `uploadGalleryImage` and `deleteGalleryImage` read/write image files on disk
+ *     at `frontend/public/uploads/`.
+ *   - `blockSlot` and `unblockSlot` emit `slot_booked` / `slot_released` Socket.io
+ *     events to the expert's room when an `io` instance is provided.
+ *   - `rateClient` uses a MongoDB ACID transaction (`session.withTransaction`).
+ *
+ * Dependencies:
+ *   - `mongoose` — session/transaction support.
+ *   - `../repositories/*` — all four repository singletons.
+ *   - `../models/Availability` — direct model access for `create` and `findByIdAndDelete`.
+ *   - `../models/ClientReview` — direct model access for `create` inside transactions.
+ *   - `../models/Review` — read-only access for analytics.
+ *   - `fs`, `path` — Node.js built-ins for gallery image file management.
+ */
+
 const mongoose = require('mongoose');
 const BookingRepository = require('../repositories/BookingRepository');
 const ExpertRepository = require('../repositories/ExpertRepository');
@@ -12,7 +40,26 @@ const Review = require('../models/Review');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Service class encapsulating all expert dashboard business logic.
+ * Exported as a singleton — do not instantiate directly.
+ */
 class ExpertService {
+  /**
+   * Returns a paginated list of bookings assigned to the authenticated expert.
+   * Bookings are sorted newest-first. This function is async. It awaits
+   * `ExpertRepository.findOne`, `BookingRepository.find`, and
+   * `BookingRepository.countDocuments`.
+   *
+   * @async
+   * @param {{ authUser: object, page?: number, limit?: number }} args
+   *   - `authUser`: The authenticated user document (must have `_id`).
+   *   - `page`: 1-based page index (default `1`).
+   *   - `limit`: Results per page, clamped to [1, 100] (default `20`).
+   * @returns {Promise<{ count: number, total: number, pages: number, data: object[] }>}
+   *   Paginated result with the booking array and metadata.
+   * @throws {Error} 404 if no expert profile is found for `authUser`.
+   */
   async getExpertBookings({ authUser, page = 1, limit = 20 }) {
     const expert = await ExpertRepository.findOne({ user: authUser._id });
     if (!expert) {
@@ -43,6 +90,16 @@ class ExpertService {
     };
   }
 
+  /**
+   * Returns the authenticated expert's full profile document, populated with the
+   * linked user account (name, email, phone). This function is async. It awaits
+   * `ExpertRepository.findOneWithUser`.
+   *
+   * @async
+   * @param {{ authUser: object }} args - `authUser`: The authenticated user document.
+   * @returns {Promise<object>} The populated expert document.
+   * @throws {Error} 404 if no expert profile is found for `authUser`.
+   */
   async getExpertProfile({ authUser }) {
     const expert = await ExpertRepository.findOneWithUser({ user: authUser._id });
     if (!expert) {
@@ -53,6 +110,21 @@ class ExpertService {
     return expert;
   }
 
+  /**
+   * Applies a partial update to the authenticated expert's profile. Only the fields
+   * present in `payload` are changed. `hourlyRate` must be at least ₹100. Description
+   * is capped at 5000 characters. This function is async. It awaits
+   * `ExpertRepository.findOne` and `expert.save`.
+   *
+   * @async
+   * @param {{ authUser: object, payload: object }} args
+   *   - `authUser`: The authenticated user document.
+   *   - `payload`: Partial profile fields (`experience`, `hourlyRate`, `description`,
+   *     `profileImage`).
+   * @returns {Promise<object>} The updated expert document.
+   * @throws {Error} 404 if no expert profile is found.
+   * @throws {Error} 400 if `hourlyRate` is below ₹100 or `description` exceeds 5000 chars.
+   */
   async updateExpertProfile({ authUser, payload }) {
     const expert = await ExpertRepository.findOne({ user: authUser._id });
     if (!expert) {
@@ -94,6 +166,22 @@ class ExpertService {
     return expert;
   }
 
+  /**
+   * Marks a future time slot as blocked (unavailable) for booking. Rejects past slots,
+   * slots with existing active bookings, or slots already blocked via `Availability`.
+   * Emits `slot_booked` to the expert's Socket.io room on success.
+   * This function is async. It awaits repository lookups and `Availability.create`.
+   *
+   * @async
+   * @param {{ authUser: object, payload: { bookingDate: string, slotTime: string }, io?: object }} args
+   *   - `authUser`: The authenticated user document.
+   *   - `payload.bookingDate`: Date string in `YYYY-MM-DD` format.
+   *   - `payload.slotTime`: 24-hour time string in `HH:mm` format.
+   *   - `io`: Optional Socket.io server instance for real-time notifications.
+   * @returns {Promise<object>} The newly created `Availability` block document.
+   * @throws {Error} 400 if fields are missing, slot is in the past, or already booked/blocked.
+   * @throws {Error} 404 if no expert profile is found for `authUser`.
+   */
   async blockSlot({ authUser, payload, io }) {
     const { bookingDate, slotTime } = payload;
     if (!bookingDate || !slotTime) {
@@ -158,6 +246,21 @@ class ExpertService {
     return block;
   }
 
+  /**
+   * Removes an existing `Availability` block record, making the slot available again.
+   * Emits `slot_released` to the expert's Socket.io room on success.
+   * This function is async. It awaits repository lookups and `Availability.findByIdAndDelete`.
+   *
+   * @async
+   * @param {{ authUser: object, payload: { bookingDate: string, slotTime: string }, io?: object }} args
+   *   - `authUser`: The authenticated user document.
+   *   - `payload.bookingDate`: Date string in `YYYY-MM-DD` format.
+   *   - `payload.slotTime`: 24-hour time string in `HH:mm` format.
+   *   - `io`: Optional Socket.io server instance for real-time notifications.
+   * @returns {Promise<{ message: string }>} Success confirmation message.
+   * @throws {Error} 400 if fields are missing.
+   * @throws {Error} 404 if no expert profile or block record is found.
+   */
   async unblockSlot({ authUser, payload, io }) {
     const { bookingDate, slotTime } = payload;
     if (!bookingDate || !slotTime) {
@@ -200,6 +303,19 @@ class ExpertService {
     return { message: 'Slot unblocked successfully' };
   }
 
+  /**
+   * Appends a new image to the expert's gallery array (max 5 images). If the gallery is
+   * already at capacity, the uploaded file is deleted from disk before throwing.
+   * This function is async. It awaits `ExpertRepository.findOne` and `expert.save`.
+   *
+   * @async
+   * @param {{ authUser: object, file?: object }} args
+   *   - `authUser`: The authenticated user document.
+   *   - `file`: Multer file object (`file.filename` used to build the image path).
+   * @returns {Promise<string[]>} The updated gallery array of image path strings.
+   * @throws {Error} 400 if no file is provided or the gallery limit of 5 is exceeded.
+   * @throws {Error} 404 if no expert profile is found.
+   */
   async uploadGalleryImage({ authUser, file }) {
     if (!file) {
       const err = new Error('Please upload an image file');
@@ -231,6 +347,19 @@ class ExpertService {
     return expert.gallery;
   }
 
+  /**
+   * Removes an image from the expert's gallery array and deletes the corresponding file
+   * from `frontend/public/uploads/` if it exists on disk.
+   * This function is async. It awaits `ExpertRepository.findOne` and `expert.save`.
+   *
+   * @async
+   * @param {{ authUser: object, filename: string }} args
+   *   - `authUser`: The authenticated user document.
+   *   - `filename`: The filename portion of the image (e.g. `photo.jpg`), without the
+   *     `/uploads/` prefix.
+   * @returns {Promise<string[]>} The updated gallery array after removal.
+   * @throws {Error} 404 if no expert profile is found or the image is not in the gallery.
+   */
   async deleteGalleryImage({ authUser, filename }) {
     const expert = await ExpertRepository.findOne({ user: authUser._id });
     if (!expert) {
@@ -257,6 +386,24 @@ class ExpertService {
     return expert.gallery;
   }
 
+  /**
+   * Submits a 1–5 star rating for the client of a completed booking. Idempotency is
+   * enforced via `booking.isClientRated`. The review creation and the rolling average
+   * update on the user document are wrapped in a MongoDB ACID transaction.
+   * This function is async. It awaits repository lookups and `session.withTransaction`.
+   *
+   * @async
+   * @param {{ authUser: object, bookingId: string, payload: { rating: number|string, comment?: string } }} args
+   *   - `authUser`: The authenticated expert user document.
+   *   - `bookingId`: The MongoDB ObjectId string of the booking to rate.
+   *   - `payload.rating`: Numeric rating 1–5 (accepts string, coerced with `Number()`).
+   *   - `payload.comment`: Optional free-text review comment.
+   * @returns {Promise<{ clientUser: object, review: object }>} The updated client user and the
+   *   new `ClientReview` document.
+   * @throws {Error} 400 if rating is missing, out of range, session is not completed, or already rated.
+   * @throws {Error} 401 if the booking does not belong to this expert.
+   * @throws {Error} 404 if expert profile, booking, or client account is not found.
+   */
   async rateClient({ authUser, bookingId, payload }) {
     const { rating, comment } = payload;
     if (!rating) {
@@ -349,6 +496,20 @@ class ExpertService {
     return { clientUser, review: clientReview };
   }
 
+  /**
+   * Aggregates and returns a comprehensive analytics snapshot for the authenticated expert.
+   * Computes booking counts by status, monthly revenue trends, weekday and hourly
+   * session distributions, total earnings (INR), utilization rate, and the 5 most
+   * recent client reviews. This function is async. It awaits `ExpertRepository.findOne`,
+   * `BookingRepository.find`, `AvailabilityRepository.find`, and `Review.find`.
+   *
+   * @async
+   * @param {{ authUser: object }} args - `authUser`: The authenticated user document.
+   * @returns {Promise<object>} Analytics object containing `expertId`, `hourlyRate`,
+   *   `rating`, `numReviews`, `counts`, `totalEarnings`, `utilizationRate`,
+   *   `monthlyTrends`, `weeklyTrends`, `hourlyTrends`, and `recentReviews`.
+   * @throws {Error} 404 if no expert profile is found.
+   */
   async getExpertAnalytics({ authUser }) {
     const expert = await ExpertRepository.findOne({ user: authUser._id });
     if (!expert) {

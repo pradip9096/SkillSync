@@ -1,8 +1,16 @@
 /**
- * Purpose: Mongoose schema and model for expert calendar availability blocks.
- * Inputs: None (defines the structure for availability data).
- * Outputs: Mongoose model for the 'Availability' collection.
- * Side Effects: Defines a compound unique index to prevent duplicate blocks for the same expert, date, and time slot.
+ * @file Availability.js
+ * @description Mongoose schema and model for expert calendar availability blocks.
+ * An `Availability` document represents a slot that an expert has manually blocked —
+ * it is not a booking, but it prevents new bookings from being created for the same
+ * expert/date/time combination. Used alongside the `Booking` compound index for
+ * two-layer conflict prevention.
+ *
+ * Inputs and outputs:
+ *   - Exports: the `Availability` Mongoose model.
+ *
+ * Side effects:
+ *   - Defines a compound unique index `{ expert, bookingDate, slotTime }` in MongoDB.
  */
 
 const mongoose = require('mongoose');

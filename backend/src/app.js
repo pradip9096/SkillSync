@@ -3,13 +3,38 @@
 
 /**
  * @file app.js
- * @description Main entry point for the Real-Time Expert Session Booking System backend.
- * This file initializes the Express application, sets up Socket.io for real-time updates,
- * connects to the database, and defines the API routes.
- * 
- * @inputs Environment variables (PORT, MONGO_URI, NODE_ENV)
- * @outputs Running HTTP and WebSocket server
- * @side_effects Database connection, file system logs, network socket listeners
+ * @description Main entry point for the SkillSync backend. Initializes Express, applies
+ * security middleware (Helmet, CORS, mongo-sanitize), configures Pino request logging,
+ * mounts all API routers, wires Socket.io for real-time slot and messaging events, and
+ * exports `startServer`/`gracefulShutdown` for process lifecycle management.
+ *
+ * Inputs and outputs:
+ *   - Reads environment variables: PORT, MONGO_URI, JWT_SECRET, FRONTEND_URL, REDIS_URI, NODE_ENV.
+ *   - Exports: `{ app, server }` — used by integration tests and the E2E test server.
+ *
+ * Side effects:
+ *   - Connects to MongoDB via `connectDB`.
+ *   - Optionally attaches a Redis pub/sub adapter to Socket.io when REDIS_URI is set.
+ *   - Registers and starts the Agenda background scheduler.
+ *   - Binds an HTTP server to PORT (default 5000) when run as the main module.
+ *   - Registers `SIGTERM`/`SIGINT` handlers and `unhandledRejection` listener for graceful shutdown.
+ *   - Writes structured JSON logs via Pino.
+ *
+ * Dependencies:
+ *   - `express` — HTTP framework.
+ *   - `socket.io` — WebSocket server for real-time events.
+ *   - `jsonwebtoken` — JWT verification on the Socket.io handshake.
+ *   - `helmet` — Security-related HTTP headers.
+ *   - `express-mongo-sanitize` — NoSQL injection prevention.
+ *   - `pino-http` — Request-level structured logging.
+ *   - `@socket.io/redis-adapter` — Horizontal scaling via Redis pub/sub (optional).
+ *   - `./config/db` — MongoDB connection factory.
+ *   - `./config/logger` — Shared Pino logger instance.
+ *   - `./config/agenda` — Agenda.js scheduler instance.
+ *   - `./services/reminderScheduler` — Registers Agenda job definitions.
+ *   - `./services/videoRoomService` — Injected into `app.locals` for DI.
+ *   - `./middleware/errorHandler` — Global Express error handler.
+ *   - Route modules under `./routes/`.
  */
 
 
@@ -245,6 +270,18 @@ app.use(express.json({
  */
 app.get('/', (req, res) => {
   res.send('API is running...');
+});
+
+// Health check — unauthenticated, production-safe (REQ-REL-02)
+app.get('/api/health', (req, res) => {
+  const mongoose = require('mongoose');
+  const healthy = mongoose.connection.readyState === 1;
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
+    db: healthy ? 'connected' : 'disconnected',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Mount Routers

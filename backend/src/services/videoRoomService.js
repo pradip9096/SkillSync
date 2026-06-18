@@ -1,15 +1,30 @@
 /**
- * Purpose: Service layer for WebRTC Video Room operations.
- * Inputs: Twilio credentials from environment variables.
- * Outputs: Network Traversal Service tokens (STUN/TURN).
- * Side Effects: Performs outbound API calls to Twilio.
+ * @file videoRoomService.js
+ * @description Service layer for WebRTC peer-to-peer video session support. Fetches
+ * ephemeral ICE/STUN/TURN credentials from the Twilio Network Traversal Service so the
+ * frontend WebRTC client can establish direct peer connections across NAT/firewalls.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ generateNetworkToken }`.
+ *
+ * Side effects:
+ *   - Makes an outbound HTTPS call to the Twilio NTS API.
+ *
+ * Dependencies:
+ *   - `twilio` — Twilio REST client.
  */
 
 const twilio = require('twilio');
 
 /**
- * Generates an ephemeral Network Traversal Service token (STUN/TURN) via Twilio.
- * @returns {Promise<Object>} An object containing the iceServers array.
+ * Fetches ephemeral Twilio Network Traversal Service (NTS) credentials with a 60-minute TTL.
+ * Returns an `iceServers` array suitable for direct use in a browser `RTCPeerConnection` config.
+ * This function is async. It awaits `client.tokens.create`.
+ *
+ * @async
+ * @returns {Promise<{ iceServers: object[] }>} ICE server config object.
+ * @throws {Error} If `TWILIO_ACCOUNT_SID` or `TWILIO_AUTH_TOKEN` are not set, or if the
+ *   Twilio API call fails.
  */
 const generateNetworkToken = async () => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;

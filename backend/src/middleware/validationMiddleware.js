@@ -6,10 +6,12 @@
 const mongoose = require('mongoose');
 
 /**
- * Middleware: Validates that specified request parameters are valid MongoDB ObjectIds.
- * Returns a 400 Bad Request if any specified parameter is present but invalid.
- * 
- * @param {string[]} paramNames - List of request parameters to validate (e.g. ['id', 'bookingId'])
+ * Returns an Express middleware that validates the specified route parameters as MongoDB ObjectIds.
+ * Only validates parameters that are actually present on `req.params`; missing params are skipped.
+ * Responds with 400 if any present parameter is not a valid ObjectId string.
+ *
+ * @param {string[]} [paramNames=['id']] - Route parameter names to validate (e.g. `['id', 'bookingId']`).
+ * @returns {import('express').RequestHandler} Middleware function.
  */
 exports.validateParams = (paramNames = ['id']) => {
   return (req, res, next) => {

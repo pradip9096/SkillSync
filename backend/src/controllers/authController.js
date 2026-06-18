@@ -1,8 +1,28 @@
 /**
- * Purpose: Request handlers for User Registration and Authentication (JWT generation).
- * Inputs: Express request and response objects.
- * Outputs: JSON responses containing token and authenticated user profile.
- * Side Effects: Reads/writes User schema, generates JWT tokens.
+ * @file authController.js
+ * @description Express route handler functions for user registration, authentication, and
+ * profile management. Handles JWT token issuance, bcrypt password comparison, transactional
+ * dual-document creation for Expert accounts, and the full forgot/reset-password flow.
+ *
+ * Inputs and outputs:
+ *   - All handlers receive `(req, res, next)` from Express and write a JSON response.
+ *   - Exports: `{ generateToken, registerUser, loginUser, getUserProfile, updateUserProfile,
+ *     uploadProfileImage, forgotPassword, resetPassword }`.
+ *
+ * Side effects:
+ *   - Reads and writes the `User` and `Expert` MongoDB collections.
+ *   - Transactional writes (registration, profile update, image upload) use `session.withTransaction`.
+ *   - Sends a password-reset email via `emailService.sendEmail` in `forgotPassword`.
+ *   - Stores a hashed reset token and expiry on the User document.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB transaction sessions.
+ *   - `jsonwebtoken` — JWT signing and verification.
+ *   - `crypto` — CSPRNG token generation and SHA-256 hashing for reset tokens.
+ *   - `../models/User` — Mongoose User model.
+ *   - `../models/Expert` — Mongoose Expert model.
+ *   - `../services/emailService` — SMTP/Ethereal email dispatch.
+ *   - `../utils/phoneUtils` — Indian phone number format validator.
  */
 
 const mongoose = require('mongoose');
@@ -14,9 +34,12 @@ const emailService = require('../services/emailService');
 const { isValidIndianPhone } = require('../utils/phoneUtils');
 
 /**
- * Helper: Generates a JWT token for a user.
- * @param {string} id - Mongoose User ObjectId.
- * @returns {string} Signed JWT token.
+ * Generates a signed JWT token for the given user ID.
+ * Throws immediately if `JWT_SECRET` is not set, preventing silent insecure token creation.
+ *
+ * @param {string} id - Mongoose `_id` of the User document.
+ * @returns {string} Signed JWT string valid for 7 days.
+ * @throws {Error} If `process.env.JWT_SECRET` is undefined.
  */
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -30,9 +53,22 @@ const generateToken = (id) => {
 };
 
 /**
- * @desc    Register a new user
- * @route   POST /auth/register
- * @access  Public
+ * Registers a new Client or Expert user. For Expert registrations, atomically creates
+ * both a `User` credential document and an `Expert` profile inside a single MongoDB
+ * transaction. Admin registration via this endpoint is blocked.
+ * This function is async. It awaits `User.findOne`, `session.withTransaction`,
+ * transactional `User.create`, and optionally `Expert.create`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Required body: `email`, `password`.
+ *   For `role: 'Expert'`: also `name`, `phone` (+91), `category`, `experience`, `hourlyRate`,
+ *   `description`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, token, user, expert }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If required fields are missing, phone/category/experience/hourlyRate validation fails,
+ *   email already exists, or `role` is `Admin`.
+ * @route POST /auth/register
  */
 const registerUser = async (req, res, next) => {
   try {
@@ -168,9 +204,17 @@ const registerUser = async (req, res, next) => {
 };
 
 /**
- * @desc    Authenticate user and get token
- * @route   POST /auth/login
- * @access  Public
+ * Authenticates a user with email and password, returning a signed JWT on success.
+ * This function is async. It awaits `User.findOne` and `user.matchPassword` (bcrypt compare).
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Required body: `email`, `password`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, token, user }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `email` or `password` are not provided.
+ * @throws {401} If the email does not exist or the password does not match (same message to prevent enumeration).
+ * @route POST /auth/login
  */
 const loginUser = async (req, res, next) => {
   try {
@@ -219,9 +263,16 @@ const loginUser = async (req, res, next) => {
 };
 
 /**
- * @desc    Get user profile
- * @route   GET /auth/profile
- * @access  Private
+ * Returns the authenticated user's profile document, excluding the password hash.
+ * This function is async. It awaits `User.findById` with `.select('-password')`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.user._id` is set by `authMiddleware.protect`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, user }`.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {404} If the user document no longer exists in the database.
+ * @route GET /auth/profile
  */
 const getUserProfile = async (req, res, next) => {
   try {
@@ -242,9 +293,20 @@ const getUserProfile = async (req, res, next) => {
 };
 
 /**
- * @desc    Update user profile
- * @route   PUT /auth/profile
- * @access  Private
+ * Updates the authenticated user's `name`, `phone`, and/or `password`. For Expert users,
+ * syncs the `name` field on the linked Expert profile inside the same transaction.
+ * This function is async. It awaits `User.findById`, `session.withTransaction`,
+ * `user.save`, and optionally `Expert.findOneAndUpdate`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Optional body fields: `name`, `phone`, `password`.
+ *   `req.user._id` is set by `authMiddleware.protect`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, user }` with updated fields.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `name` exceeds 100 characters, `phone` format is invalid, or `password` < 6 characters.
+ * @throws {404} If the user document no longer exists.
+ * @route PUT /auth/profile
  */
 const updateUserProfile = async (req, res, next) => {
   try {
@@ -318,9 +380,20 @@ const updateUserProfile = async (req, res, next) => {
 };
 
 /**
- * @desc    Upload profile picture
- * @route   PUT /auth/profile/image
- * @access  Private
+ * Stores the uploaded profile image path on the User document and, for Expert users,
+ * syncs it to the Expert profile inside an ACID transaction.
+ * This function is async. It awaits `User.findById`, `session.withTransaction`,
+ * `user.save`, and optionally `Expert.findOneAndUpdate`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.file` is set by the Multer upload middleware;
+ *   `req.user._id` is set by `authMiddleware.protect`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, profileImage }` with the new path.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If no file was included in the request.
+ * @throws {404} If the user document no longer exists.
+ * @route PUT /auth/profile/image
  */
 const uploadProfileImage = async (req, res, next) => {
   try {
@@ -361,9 +434,19 @@ const uploadProfileImage = async (req, res, next) => {
 };
 
 /**
- * @desc    Request password reset link
- * @route   POST /auth/forgot-password
- * @access  Public
+ * Initiates the password-reset flow: generates a 20-byte CSPRNG token, stores its
+ * SHA-256 hash on the User document with a 10-minute expiry, and emails a reset link.
+ * Returns a generic success message even when the email is not found to prevent user enumeration.
+ * This function is async. It awaits `User.findOne`, `user.save`, and `emailService.sendEmail`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. Required body: `email`.
+ * @param {import('express').Response} res - Express response. Returns `{ success, message }` regardless
+ *   of whether the email exists.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `email` is not provided in the request body.
+ * @route POST /auth/forgot-password
  */
 const forgotPassword = async (req, res, next) => {
   try {
@@ -431,9 +514,19 @@ const forgotPassword = async (req, res, next) => {
 };
 
 /**
- * @desc    Reset password
- * @route   PUT /auth/reset-password/:token
- * @access  Public
+ * Completes the password-reset flow: validates the URL token against the stored SHA-256 hash
+ * and expiry, updates the password (pre-save hook re-hashes it), clears the reset fields,
+ * and returns a new JWT so the user is logged in immediately.
+ * This function is async. It awaits `User.findOne` and `user.save`.
+ *
+ * @async
+ * @param {import('express').Request} req - Express request. `req.params.token` is the plain-text reset token
+ *   from the email link; `req.body.password` is the new password (min 6 characters).
+ * @param {import('express').Response} res - Express response. Returns `{ success, token, user }` with a new JWT.
+ * @param {import('express').NextFunction} next - Forwards unexpected errors to the global error handler.
+ * @returns {Promise<void>}
+ * @throws {400} If `password` is missing or < 6 characters, or if the token is invalid or expired.
+ * @route PUT /auth/reset-password/:token
  */
 const resetPassword = async (req, res, next) => {
   try {

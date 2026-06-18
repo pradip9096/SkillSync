@@ -1,4 +1,14 @@
 /**
+ * @file serializers.js
+ * @description Data transfer object (DTO) serializers for outbound API responses.
+ * Strips internal or sensitive fields from Mongoose documents before they are
+ * sent to the client.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ serializeBookingDTO }`.
+ */
+
+/**
  * Serializes a booking document to strip out sensitive fields before sending it to the client.
  * Specifically removes the RAZORPAY_KEY_ID or any other internal backend fields.
  * 

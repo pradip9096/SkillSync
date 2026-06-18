@@ -1,8 +1,12 @@
 /**
- * Purpose: Defines the API endpoints for booking-related operations, mapping HTTP methods and paths to controller functions.
- * Inputs: Express router and booking controller handlers.
- * Outputs: Configured Express router object.
- * Side Effects: Registers routes with the Express application.
+ * @file bookingRoutes.js
+ * @description Express router for all booking lifecycle endpoints. A rate limiter
+ * (5 req / 1 min per IP) guards the `POST /` create endpoint to prevent spam.
+ * The `/webhook` route is public but passes through `verifyWebhookSignature` middleware
+ * for HMAC-SHA256 validation before reaching the handler.
+ *
+ * Inputs and outputs:
+ *   - Exports: an Express `Router` instance mounted at `/api/bookings` in `app.js`.
  */
 
 const express = require('express');

@@ -1,8 +1,11 @@
 /**
- * Purpose: Defines the API endpoints for expert-related operations, mapping HTTP methods and paths to controller functions.
- * Inputs: Express router and expert controller handlers.
- * Outputs: Configured Express router object.
- * Side Effects: Registers routes with the Express application.
+ * @file expertRoutes.js
+ * @description Express router for public expert discovery and rating endpoints.
+ * `GET /` and `GET /:id` are fully public. `POST /:id/rate` requires authentication
+ * to associate the review with a verified user account.
+ *
+ * Inputs and outputs:
+ *   - Exports: an Express `Router` instance mounted at `/api/experts` in `app.js`.
  */
 
 const express = require('express');
