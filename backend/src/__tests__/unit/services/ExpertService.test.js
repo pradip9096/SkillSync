@@ -1,3 +1,11 @@
+/**
+ * @file ExpertService.test.js
+ * @description Unit tests for expert profile and availability management logic in `services/ExpertService.js`.
+ * Covers profile retrieval and updates, slot blocking and unblocking, gallery image upload
+ * and deletion, client rating with rolling average, and analytics computation.
+ * All repositories, Mongoose models, and filesystem operations are fully mocked.
+ */
+
 // Mocks
 jest.mock('../../../repositories/BookingRepository', () => ({
   find: jest.fn(),

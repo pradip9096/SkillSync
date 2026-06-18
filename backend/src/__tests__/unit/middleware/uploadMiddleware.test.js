@@ -1,3 +1,12 @@
+/**
+ * @file uploadMiddleware.test.js
+ * @description Unit tests for the Multer file upload middleware in `uploadMiddleware.js`.
+ * Verifies file type validation (jpeg, jpg, png, webp only), 5 MB size limit enforcement,
+ * and unique filename generation. Uses Supertest to make multipart upload requests
+ * against an in-process Express test server.
+ * @side_effects Creates and deletes temporary image files in the uploads directory during tests.
+ */
+
 const request = require('supertest');
 const express = require('express');
 const upload = require('../../../middleware/uploadMiddleware');

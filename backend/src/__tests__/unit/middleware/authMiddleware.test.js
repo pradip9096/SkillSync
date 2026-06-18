@@ -1,3 +1,11 @@
+/**
+ * @file authMiddleware.test.js
+ * @description Unit tests for the JWT authentication middleware in `authMiddleware.js`.
+ * Covers Bearer token extraction, JWT signature verification, user lookup from the database,
+ * rejection of missing or invalid tokens, and role-based access restriction via `restrictTo`.
+ * The User model and jsonwebtoken are fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
 const jwt = require('jsonwebtoken');
 const User = require('../../../models/User');

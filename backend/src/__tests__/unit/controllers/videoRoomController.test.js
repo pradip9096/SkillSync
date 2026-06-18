@@ -1,3 +1,11 @@
+/**
+ * @file videoRoomController.test.js
+ * @description Unit tests for the WebRTC video token provisioning controller in `videoRoomController.js`.
+ * Verifies time-lock enforcement (access blocked before 5 minutes prior to session start),
+ * participant authorization (client and expert only), and token generation via the injected
+ * videoRoomService dependency. The Booking model is fully mocked.
+ */
+
 const { getVideoToken } = require('../../../controllers/videoRoomController');
 const Booking = require('../../../models/Booking');
 const httpMocks = require('node-mocks-http');

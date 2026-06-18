@@ -1,3 +1,10 @@
+/**
+ * @file db.negative.test.js
+ * @description Tests the MongoDB connection failure path in `config/db.js`.
+ * Verifies that `connectDB` calls `process.exit(1)` when the database
+ * connection is rejected, ensuring the server does not start in a degraded state.
+ */
+
 const mongoose = require('mongoose');
 
 describe('Infrastructure Extinction Paths (DB Config)', () => {

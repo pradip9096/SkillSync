@@ -1,3 +1,11 @@
+/**
+ * @file reminderScheduler.test.js
+ * @description Unit tests for the Agenda-based scheduled reminder orchestration helpers
+ * in `services/reminderScheduler.js`. Covers scheduling 24-hour and 2-hour pre-session
+ * reminders, skipping past trigger times, and cancelling previously scheduled jobs by
+ * their stored Agenda job IDs. The Agenda instance and MongoDB ObjectId are fully mocked.
+ */
+
 const { scheduleSessionReminders, cancelScheduledReminders } = require('../../../services/reminderScheduler');
 const agenda = require('../../../config/agenda');
 const { ObjectId } = require('mongodb');

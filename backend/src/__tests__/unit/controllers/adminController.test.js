@@ -1,3 +1,11 @@
+/**
+ * @file adminController.test.js
+ * @description Unit tests for admin panel controller functions in `adminController.js`.
+ * Covers user listing and penalty management, booking listing and force-status updates,
+ * and expert creation and deletion — all restricted to the Admin role. All Mongoose models
+ * and sessions are fully mocked for isolation.
+ */
+
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
 const {

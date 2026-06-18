@@ -1,3 +1,11 @@
+/**
+ * @file emailService.test.js
+ * @description Unit tests for the email dispatch service in `services/emailService.js`.
+ * Verifies the SMTP transport path when SMTP_HOST is configured, and the Ethereal Mail
+ * fallback path used in development mode when SMTP is not available.
+ * The nodemailer module is fully mocked.
+ */
+
 const { sendEmail } = require('../../../services/emailService');
 const nodemailer = require('nodemailer');
 

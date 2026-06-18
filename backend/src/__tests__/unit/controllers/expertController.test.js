@@ -1,3 +1,11 @@
+/**
+ * @file expertController.test.js
+ * @description Unit tests for expert listing and rating controller functions in `expertController.js`.
+ * Covers paginated expert listing, name and category search filtering, single expert retrieval,
+ * and expert rating submission with rolling average update. Expert, Booking, and Review models
+ * are fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
 const { rateExpert, getExperts, getExpertById } = require('../../../controllers/expertController');
 const Expert = require('../../../models/Expert');
