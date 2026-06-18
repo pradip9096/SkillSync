@@ -18,7 +18,7 @@ let mongoServer;
 
 describe('Feature 2.4: Webhook State Mutations Integration', () => {
   let expertProfile, clientUser, pendingBookingId;
-  const RAZORPAY_ORDER_ID = 'order_webhook_123';
+  const RAZORPAY_ORDER_ID = 'order_webhook123abc';
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
@@ -127,7 +127,7 @@ describe('Feature 2.4: Webhook State Mutations Integration', () => {
         payment: {
           entity: {
             order_id: RAZORPAY_ORDER_ID,
-            id: 'pay_capture_123'
+            id: 'pay_capture123abc'
           }
         }
       }
@@ -154,7 +154,7 @@ describe('Feature 2.4: Webhook State Mutations Integration', () => {
         payment: {
           entity: {
             order_id: RAZORPAY_ORDER_ID,
-            id: 'pay_fail_123'
+            id: 'pay_fail123abc'
           }
         }
       }

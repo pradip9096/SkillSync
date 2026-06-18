@@ -204,7 +204,7 @@ const handleWebhook = async (req, res, next) => {
       return res.status(200).json({ success: false, error: result.error }); // Return 200 for known errors to avoid retries if we intentionally drop it, except 500
     }
     if (result.alreadyProcessed) {
-      return res.status(400).json({ success: false, error: 'Payment already processed for this order' });
+      return res.status(200).json({ success: true, alreadyProcessed: true });
     }
     return res.status(200).json(result);
   } catch (error) {
