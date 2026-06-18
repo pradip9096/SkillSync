@@ -15,23 +15,15 @@ Changelog policy, workflow, and SOP are maintained in
 - Added WebRTC peer-to-peer video session feature to enable live video calls.
 - Added a real-time socket connection status indicator to the messaging UI.
 - Added an unauthenticated, production-safe `/api/health` endpoint for uptime and database connection monitoring.
-- Added `CLAUDE.md` to provide project guidance and operational context for AI assistants.
-- Added an E2E test server with Dependency Injection mocks for structured Playwright testing.
-- Added isolated test data seeding route (`/api/test/seed-payment-e2e`) for the Payment Gateway E2E test suite.
-- Added a dedicated `payments` project in the Playwright configuration with specialized npm scripts to securely run the Payment Gateway E2E test suite.
-- Added end-to-end test specifications for the live Razorpay payment gateway integration.
-- Added formal Implementation Plan (DOC-IMP-004) and Verification & Validation Report (DOC-VV-004) governing the Test Directory Remediation.
-- Added standalone Model Context Protocol (MCP) Database Inspector server to safely execute read-only queries against the local MongoDB cluster.
-- Added Husky pre-push hooks and lint-staged pre-commit hooks to automate local test suite execution and formatting.
-- Added the Master Verification and Validation (V&V) Report covering Phases 8, 9, and 10 of the implementation roadmap.
+- Added Husky pre-push and pre-commit hooks with lint-staged automation to enforce formatting and test execution before push.
+- Added comprehensive NFR UI test coverage gap analysis documenting 38 automated test scenarios across nine quality dimensions: Performance, Compatibility, Responsive Design, Accessibility, Usability, Reliability, Security, Visual Regression, and Load & Scalability.
 
 ### Changed
 
 - Changed environment variable management by centralizing configuration into a single validated module.
-- Changed messaging smoke tests into structured Playwright specifications.
 - Changed Playwright video recording configuration to retain artifacts only on test failure.
-- Changed documentation layout by archiving stale SDLC remediation reports.
 - Changed backend testing architecture to enforce strict colocation boundaries, migrating unit tests into `src/__tests__/unit/` and integration suites to `tests/integration/`.
+- Corrected E2E and NFR test coverage gap analyses against source code to remove invalid assumptions, reframe implemented security defenses as regression verification tests, and document a newly identified Socket.io room subscription authorization gap.
 
 ### Fixed
 
@@ -112,9 +104,15 @@ Changelog policy, workflow, and SOP are maintained in
 - Fixed Brave/Adblocker payment freezes by adding explicit UI warning/troubleshooting tips in the error box regarding blocked sardine.ai and lumberjack scripts.
 - Fixed payment idempotency race conditions by gracefully catching MongoDB `11000` duplicate key errors on the `PaymentLog` model during concurrent webhook and client pings.
 
+### Removed
+
+- Removed hardcoded fallback Razorpay credentials from the booking creation flow,
+  requiring explicit environment variable configuration in all deployment environments.
+
 ### Security
 
-- Fixed `Booking` schema default status from `Confirmed` to `Pending` to ensure programmatically created bookings cannot bypass the payment flow.
+- Enforced `Pending` as the default `Booking` schema status to prevent programmatically
+  created bookings from bypassing the payment authorization flow.
 - Secured backend API with `helmet` for HTTP headers and `express-mongo-sanitize` for NoSQL injection prevention.
 - Secured backend from denial-of-service via massive payloads by enforcing a `10kb` limit on `express.json()`.
 - Secured HTTP and Socket.io endpoints by replacing wildcard CORS with strict frontend origin configurations.
@@ -123,7 +121,6 @@ Changelog policy, workflow, and SOP are maintained in
 - Secured the `/auth/forgot-password` endpoint against user enumeration attacks by returning a uniform generic response.
 - Secured the public `/booked-slots` endpoint by stripping Personal Identifiable Information (PII) like names and notes from the response.
 - Secured active sessions by reducing JWT token lifespan from 30 days to 7 days.
-- Removed hardcoded fallback Razorpay secrets from the booking creation flow.
 
 ## [1.4.0] - 2026-05-31
 
@@ -149,7 +146,6 @@ Changelog policy, workflow, and SOP are maintained in
 ### Changed
 
 - Expanded the layout of the messaging panel to improve usability and spacing.
-- Updated codebase documentation (README.md, ROADMAP.md, and MASTER_SPEC.md) to align with implemented system features.
 - Changed booking models to store `razorpayOrderId` and return expert `hourlyRate` for client checkout retry flows.
 
 ### Fixed
@@ -173,11 +169,8 @@ Changelog policy, workflow, and SOP are maintained in
 
 - Changed frontend dialog interactions in `MyBookings` and `ExpertDetail` by replacing native browser alerts and confirmations with custom, state-driven themed React modals.
 - Enabled pagination support for Admin lists (all users and bookings) and user booking history queries to improve database scale-breaking behavior.
-
-### Fixed
-
-- Enforced strict character length validation limits on user-supplied strings including name, profile descriptions, and image URLs.
-- Removed redundant inline token decoding logic in the booking controller, aligning authorization boundaries with standard route middleware.
+- Enforced strict character length validation on user-supplied strings including name, profile descriptions, and image URLs.
+- Removed redundant inline token decoding from the booking controller, consolidating authorization within standard route middleware.
 
 ### Security
 
@@ -223,18 +216,15 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Added
 
-- Added [docs/CHANGELOG_POLICY.md](docs/CHANGELOG_POLICY.md) to define changelog process,
-  workflow, SOP, requirements, constraints, and writing guidelines.
-
-### Changed
-
-- Refactored this changelog to align with Keep a Changelog structure and SemVer release
-  headings, keeping release history separate from changelog policy.
+- Added changelog policy document defining the changelog process, workflow, SOP,
+  requirements, constraints, and writing guidelines.
 
 ### Fixed
 
 - Fixed Admin Booking Manager search so admins can find bookings by client email from
   either the booking's denormalized `userEmail` field or populated client `user.email`.
+- Fixed changelog document structure to conform with Keep a Changelog 1.1.0 format and
+  SemVer release headings.
 
 ## [1.0.0] - 2026-05-27
 
