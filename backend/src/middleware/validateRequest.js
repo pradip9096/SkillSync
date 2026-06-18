@@ -1,8 +1,24 @@
+/**
+ * @file validateRequest.js
+ * @description Factory middleware for request body validation using Zod schemas.
+ * Apply on individual routes to enforce input constraints before the handler runs.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ validateRequest }`.
+ *
+ * Dependencies:
+ *   - `zod` — Schema definition and parsing.
+ */
+
 const { z, ZodError } = require('zod');
 
 /**
- * Middleware to validate request body against a Zod schema.
- * @param {z.ZodSchema} schema - The Zod schema to validate against.
+ * Returns an Express middleware that validates `req.body` against the given Zod schema.
+ * On validation failure, responds with 400 and a `details` array of field-level error messages.
+ * On unexpected errors (non-ZodError), delegates to the next error handler.
+ *
+ * @param {z.ZodSchema} schema - Zod schema to parse the request body against.
+ * @returns {import('express').RequestHandler} Middleware function.
  */
 const validateRequest = (schema) => (req, res, next) => {
   try {

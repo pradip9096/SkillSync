@@ -1,3 +1,16 @@
+/**
+ * @file validationSchemas.js
+ * @description Zod validation schemas for incoming request bodies. Used by
+ * `validateRequest` middleware to enforce input shape and types before data
+ * reaches the controller layer.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ registerSchema, loginSchema, bookingSchema }`.
+ *
+ * Dependencies:
+ *   - `zod` — schema declaration and parsing library.
+ */
+
 const { z } = require('zod');
 
 // Shared Indian Phone Number regex (basic validation for format +91XXXXXXXXXX)

@@ -1,8 +1,26 @@
 /**
- * Purpose: Unified database seeding script to populate the database with Users (Admin, Clients, Experts) and their corresponding Expert profiles.
- * Inputs: Database connection string via process.env.MONGO_URI.
- * Outputs: None (logs status and exits).
- * Side Effects: Connects to MongoDB, deletes all documents in User, Expert, and Booking collections, inserts new records.
+ * @file userSeeder.js
+ * @description Development and staging database seed script. Drops all existing `User`,
+ * `Expert`, and `Booking` documents and replaces them with a canonical set of fixtures:
+ * one Admin, one Client, and six Expert accounts across all supported categories.
+ * Hourly rates are in INR (₹).
+ *
+ * Inputs and outputs:
+ *   - Run directly: `node src/seeds/userSeeder.js`
+ *   - Reads `process.env.MONGO_URI`.
+ *   - Exits with code 0 on success; code 1 on error.
+ *
+ * Side effects:
+ *   - Connects to MongoDB.
+ *   - Deletes ALL documents from `bookings`, `experts`, and `users` collections.
+ *   - Inserts seed documents.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB connection.
+ *   - `dotenv` — Loads `.env` from `backend/.env`.
+ *   - `../models/User` — Mongoose User model.
+ *   - `../models/Expert` — Mongoose Expert model.
+ *   - `../models/Booking` — Mongoose Booking model (cleared during seed).
  */
 
 const mongoose = require('mongoose');
@@ -15,6 +33,14 @@ const Booking = require('../models/Booking');
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+/**
+ * Clears all existing users, experts, and bookings, then inserts the canonical fixture set.
+ * This function is async. It awaits `mongoose.connect`, `deleteMany` operations, and
+ * sequential `User.create` / `Expert.create` calls for each account.
+ *
+ * @async
+ * @returns {Promise<void>} Calls `process.exit(0)` on success; `process.exit(1)` on error.
+ */
 const seedData = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);

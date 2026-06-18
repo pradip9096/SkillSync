@@ -1,8 +1,11 @@
 /**
- * Purpose: Mongoose schema and model for Experts.
- * Inputs: None (defines the structure for expert profile data).
- * Outputs: Mongoose model for the 'Expert' collection.
- * Side Effects: None.
+ * @file Expert.js
+ * @description Mongoose schema and model for expert profiles. Each `Expert` document
+ * is linked one-to-one with a `User` account (role `Expert`) via the `user` field.
+ * `hourlyRate` is in INR (₹); the gallery array is capped at 5 images by the service layer.
+ *
+ * Inputs and outputs:
+ *   - Exports: the `Expert` Mongoose model.
  */
 
 const mongoose = require('mongoose');

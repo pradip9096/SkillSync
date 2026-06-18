@@ -1,8 +1,23 @@
 /**
- * Purpose: Script to populate the MongoDB database with initial expert data.
- * Inputs: Database connection string via process.env.MONGO_URI and a local array of sample expert objects.
- * Outputs: None (logs status to console and terminates the process).
- * Side Effects: Connects to MongoDB, deletes all existing documents in the Expert and Booking collections, inserts new sample experts, and terminates the Node.js process.
+ * @file expertSeeder.js
+ * @description Development and staging database seed script for expert profiles only.
+ * Drops all existing `Expert` and `Booking` documents and inserts a canonical fixture
+ * set of six experts across all supported categories. Hourly rates are in INR (₹).
+ *
+ * Inputs and outputs:
+ *   - Run directly: `node src/seeds/expertSeeder.js`
+ *   - Reads `process.env.MONGO_URI`.
+ *   - Exits with code 0 on success; code 1 on error.
+ *
+ * Side effects:
+ *   - Connects to MongoDB.
+ *   - Deletes ALL documents from `experts` and `bookings` collections.
+ *   - Inserts seed documents.
+ *
+ * Dependencies:
+ *   - `mongoose` — MongoDB connection.
+ *   - `dotenv` — Loads `.env` from `backend/.env`.
+ *   - `../models/Expert`, `../models/Booking` — Mongoose models (cleared during seed).
  */
 
 const mongoose = require('mongoose');
@@ -75,10 +90,12 @@ const experts = [
 ];
 
 /**
- * Purpose: Connects to the database, clears existing experts and bookings, and inserts new sample experts.
+ * Clears all existing experts and bookings, then inserts the canonical fixture set.
+ * This function is async. It awaits `mongoose.connect`, `deleteMany` operations, and
+ * `Expert.insertMany`.
+ *
  * @async
- * @returns {Promise<void>} Exits the process upon completion or failure.
- * Side effects: Establishes a database connection, removes all records from 'experts' and 'bookings' collections, inserts new records, logs progress, and terminates the process.
+ * @returns {Promise<void>} Calls `process.exit(0)` on success; `process.exit(1)` on error.
  */
 const seedData = async () => {
   try {

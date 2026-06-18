@@ -1,3 +1,38 @@
+/**
+ * @file BookingService.js
+ * @description Core business-logic service for the session booking domain. Owns all
+ * booking lifecycle operations: creation (with Razorpay order), payment verification
+ * (client-side HMAC check + webhook), status transitions (state machine enforcement +
+ * time-lock rules), late-cancellation penalty tracking, and automated reminders via Agenda.
+ *
+ * Inputs and outputs:
+ *   - Exports: a singleton `BookingService` instance.
+ *
+ * Side effects:
+ *   - Reads and writes `Booking`, `PaymentLog`, `ProcessedWebhook`, `Notification`,
+ *     `Availability` MongoDB collections via repositories.
+ *   - Calls `razorpayClient.createOrder` / `refundPayment` (outbound Razorpay API).
+ *   - Schedules / cancels Agenda background jobs (`cancel-abandoned-booking`,
+ *     `send-booking-confirmation`, session reminder jobs).
+ *   - Emits `slot_booked` / `slot_released` Socket.io events to expert rooms.
+ *   - Emits `new_notification` Socket.io events to user personal rooms.
+ *   - Writes `User.suspendedUntil` and `User.lateCancellationsCount` on late cancellations.
+ *
+ * Dependencies:
+ *   - `mongoose` — Transaction sessions.
+ *   - `crypto` — HMAC-SHA256 for client-side payment signature verification.
+ *   - `../utils/razorpayClient` — Circuit-breaker-wrapped Razorpay API calls.
+ *   - `../config/agenda` — Shared Agenda.js scheduler instance.
+ *   - `../constants/bookingStatus` — State machine definitions.
+ *   - `../utils/phoneUtils` — Indian phone validation.
+ *   - `../utils/timeFormatters` — 12-hour time string formatting.
+ *   - `../utils/serializers` — Booking DTO serializer.
+ *   - `../services/reminderScheduler` — Session reminder scheduling helpers.
+ *   - Repository singletons: `BookingRepository`, `ExpertRepository`,
+ *     `AvailabilityRepository`, `UserRepository`.
+ *   - Models: `ProcessedWebhook`, `PaymentLog`, `Notification`.
+ */
+
 const mongoose = require('mongoose');
 const { createOrder, refundPayment } = require('../utils/razorpayClient');
 const crypto = require('crypto');
@@ -20,7 +55,33 @@ const Notification = require('../models/Notification');
 
 // Razorpay client initialized in utils/razorpayClient.js
 
+/**
+ * Singleton service class encapsulating all booking business logic.
+ * Exported as a module-level singleton; do not re-instantiate.
+ */
 class BookingService {
+  /**
+   * Validates the booking request, creates a Razorpay order, and persists a `Pending`
+   * booking document inside a MongoDB transaction. Guards against: suspended users,
+   * self-booking, expert role booking, blocked slots, and already-booked slots.
+   * Schedules a 5-minute `cancel-abandoned-booking` Agenda job to release the slot if
+   * payment is never completed. Emits `slot_booked` to the expert's Socket.io room.
+   * This function is async. It awaits `ExpertRepository.findByIdWithUser`, `createOrder`,
+   * `session.withTransaction`, and `agenda.schedule`.
+   *
+   * @async
+   * @param {{ payload: object, authUser: object|null, io: import('socket.io').Server|null }} args
+   *   - `payload`: booking fields (`expert`, `userName`, `userEmail`, `userPhone`,
+   *     `bookingDate`, `slotTime`, `notes`).
+   *   - `authUser`: authenticated User document from `req.user` (or `null` for guest).
+   *   - `io`: Socket.io server instance for real-time slot events.
+   * @returns {Promise<{ data: object, razorpayOrderId: string, amount: number, keyId: string }>}
+   * @throws {400} If phone number is invalid, expert ID is invalid, slot is blocked,
+   *   or Razorpay order creation fails.
+   * @throws {403} If user is suspended, is an Expert/Admin role, or tries to self-book.
+   * @throws {404} If the expert profile does not exist.
+   * @throws {409} If the time slot is already booked (pre-check; also enforced by DB index).
+   */
   async createBooking({ payload, authUser, io }) {
     const { expert, userName, userEmail, userPhone, bookingDate, slotTime, notes } = payload;
     
@@ -179,6 +240,19 @@ class BookingService {
     };
   }
 
+  /**
+   * Returns a paginated list of bookings for the given email address. Non-Admin users
+   * may only query their own bookings (enforced by email comparison against `authUser`).
+   * Excludes `Blocked by Expert` placeholder records from the results.
+   * This function is async. It awaits `BookingRepository.find` and `BookingRepository.countDocuments`.
+   *
+   * @async
+   * @param {{ email: string, authUser: object, page?: number|string, limit?: number|string }} args
+   * @returns {Promise<{ count: number, total: number, pages: number, data: object[] }>}
+   *   Paginated booking DTOs serialized via `serializeBookingDTO`.
+   * @throws {400} If `email` is not provided.
+   * @throws {403} If a non-Admin user queries a different email address.
+   */
   async getBookingsByEmail({ email, authUser, page = 1, limit = 20 }) {
     if (!email) {
       const err = new Error('Please provide an email');
@@ -218,6 +292,25 @@ class BookingService {
     };
   }
 
+  /**
+   * Transitions a booking to a new status, enforcing: ownership authorization, the
+   * `VALID_TRANSITIONS` state machine, time-lock rules (Completed requires ≥1 h elapsed,
+   * Cancelled requires >0 min remaining), and the 2-hour late-cancellation window.
+   * Applies User suspension on the 3rd late cancellation within a 7-day window.
+   * Initiates a Razorpay refund for standard (non-late) cancellations of paid bookings.
+   * Cancels Agenda reminders and dispatches `send-booking-cancellation` job on cancellation.
+   * Emits `slot_released` and `new_notification` Socket.io events.
+   * This function is async. It awaits multiple repository, `PaymentLog`, `Notification`,
+   * `agenda`, and `cancelScheduledReminders` calls.
+   *
+   * @async
+   * @param {{ bookingId: string, status: string, authUser: object, io: object|null }} args
+   * @returns {Promise<import('../models/Booking').BookingDocument>} Updated booking document.
+   * @throws {400} If status transition is invalid, date parsing fails, or time-lock violated.
+   * @throws {403} If the caller is not the booking owner, the booking's expert, or an Admin.
+   * @throws {404} If the booking does not exist.
+   * @throws {502} If a refund API call fails during cancellation.
+   */
   async updateBookingStatus({ bookingId, status, authUser, io }) {
     const booking = await BookingRepository.findById(bookingId);
     if (!booking) {
@@ -416,6 +509,16 @@ class BookingService {
     return booking;
   }
 
+  /**
+   * Returns all unavailable time slots for a given expert on a given date by merging
+   * active bookings with expert-blocked availability records.
+   * This function is async. It awaits `BookingRepository.find` and `AvailabilityRepository.find`.
+   *
+   * @async
+   * @param {{ expertId: string, date: string }} args - `date` must be in `YYYY-MM-DD` format.
+   * @returns {Promise<Array<{ slotTime: string, userName?: string, notes?: string }>>}
+   *   Combined array of booked and blocked slot objects.
+   */
   async getBookedSlots({ expertId, date }) {
     const bookings = await BookingRepository.find({ 
       expert: expertId, 
@@ -438,6 +541,17 @@ class BookingService {
     ];
   }
 
+  /**
+   * Sets `booking.isRated = true` to prevent duplicate review submissions.
+   * Only the booking owner or an Admin may call this.
+   * This function is async. It awaits `BookingRepository.findById` and `BookingRepository.save`.
+   *
+   * @async
+   * @param {{ bookingId: string, authUser: object }} args
+   * @returns {Promise<import('../models/Booking').BookingDocument>} Updated booking document.
+   * @throws {403} If the caller is not the booking owner or an Admin.
+   * @throws {404} If the booking does not exist.
+   */
   async markAsRated({ bookingId, authUser }) {
     const booking = await BookingRepository.findById(bookingId);
 
@@ -462,6 +576,22 @@ class BookingService {
     return booking;
   }
 
+  /**
+   * Internal helper that persists a `PaymentLog`, transitions the booking to `Confirmed`,
+   * sends a booking-confirmation Agenda job, and schedules session reminders.
+   * Guards idempotency via a unique `PaymentLog.razorpayPaymentId` index; returns
+   * `alreadyProcessed: true` if the payment was previously recorded. Handles the
+   * race condition where two payments arrive for the same slot: the later one triggers
+   * an automatic refund.
+   * This function is async. It awaits `PaymentLog.findOne`, `BookingRepository.findByIdWithExpert`,
+   * `PaymentLog.save`, `BookingRepository.save`, `Notification.create`, `agenda.now`,
+   * and `scheduleSessionReminders`.
+   *
+   * @async
+   * @param {{ bookingId: string, razorpayPaymentId: string, razorpayOrderId: string, razorpaySignature: string, io: object|null }} args
+   * @returns {Promise<{ success: boolean, alreadyProcessed?: boolean, conflict?: boolean, booking: object }>}
+   * @throws {Error} If `PaymentLog.save` fails for a reason other than duplicate key.
+   */
   async confirmBookingPayment({ bookingId, razorpayPaymentId, razorpayOrderId, razorpaySignature, io }) {
     const existingLog = await PaymentLog.findOne({ razorpayPaymentId });
     if (existingLog) {
@@ -567,6 +697,22 @@ class BookingService {
     return { success: true, booking };
   }
 
+  /**
+   * Verifies a Razorpay payment initiated from the client side. Recomputes the expected
+   * HMAC-SHA256 signature (`orderId|paymentId`) and uses `crypto.timingSafeEqual` for
+   * comparison, then calls `confirmBookingPayment` to finalize the booking.
+   * This function is async. It awaits `BookingRepository.findByIdWithExpert` and
+   * `this.confirmBookingPayment`.
+   *
+   * @async
+   * @param {{ payload: object, authUser: object, io: object|null }} args
+   *   `payload` must contain `bookingId`, `razorpayPaymentId`, `razorpayOrderId`, `razorpaySignature`.
+   * @returns {Promise<import('../models/Booking').BookingDocument>} The confirmed booking.
+   * @throws {400} If any required field is missing or signature verification fails.
+   * @throws {403} If the caller does not own the booking.
+   * @throws {404} If the booking does not exist.
+   * @throws {409} If the slot was already taken by a concurrent booking (auto-refund issued).
+   */
   async verifyPayment({ payload, authUser, io }) {
     const { bookingId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = payload;
 
@@ -615,6 +761,21 @@ class BookingService {
     return result.booking;
   }
 
+  /**
+   * Processes an inbound Razorpay webhook event. Enforces idempotency by inserting a
+   * `ProcessedWebhook` record keyed on `x-razorpay-event-id`; duplicate inserts (code 11000)
+   * are silently ignored. Handles `payment.captured` / `order.paid` (confirms booking) and
+   * `payment.failed` (cancels the pending booking and releases the slot). All other event
+   * types are acknowledged with `{ success: true, ignored: true }`.
+   * This function is async. It awaits `ProcessedWebhook.create`, `BookingRepository.findOne`,
+   * `this.confirmBookingPayment`, and `cancelScheduledReminders`.
+   *
+   * @async
+   * @param {{ event: string, payload: object, headers: object, io: object|null }} args
+   * @returns {Promise<{ success: boolean, ignored?: boolean, alreadyProcessed?: boolean, cancelled?: boolean }>}
+   * @throws {400} If payment or order ID format is invalid.
+   * @throws {404} If the associated booking cannot be found.
+   */
   async handleWebhook({ event, payload, headers, io }) {
     const eventId = headers['x-razorpay-event-id'];
     if (eventId) {
@@ -634,6 +795,13 @@ class BookingService {
       const razorpayOrderId = paymentEntity.order_id;
       const razorpayPaymentId = paymentEntity.id;
       const signatureHeader = headers['x-razorpay-signature'];
+
+      if (typeof razorpayPaymentId !== 'string' || !/^pay_[A-Za-z0-9]+$/.test(razorpayPaymentId) ||
+          typeof razorpayOrderId !== 'string' || !/^order_[A-Za-z0-9]+$/.test(razorpayOrderId)) {
+        const err = new Error('Invalid payment or order ID format');
+        err.statusCode = 400;
+        throw err;
+      }
 
       const booking = await BookingRepository.findOne({ razorpayOrderId });
       if (!booking) {

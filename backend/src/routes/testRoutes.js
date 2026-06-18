@@ -1,3 +1,26 @@
+/**
+ * @file testRoutes.js
+ * @description Express router that exposes database seed and teardown endpoints for Playwright
+ * E2E test automation. Registered at `/api/test/` only when `NODE_ENV` is not `production`
+ * (the module calls `process.exit(1)` if accidentally loaded in production).
+ *
+ * All seed endpoints are idempotent: they call `cleanupTestData()` before inserting new
+ * records to ensure a clean, deterministic starting state for each test suite.
+ *
+ * Inputs and outputs:
+ *   - Exports: an Express `Router` instance.
+ *
+ * Side effects:
+ *   - All route handlers read and write the `User`, `Expert`, `Booking`, `Availability`,
+ *     `Message`, and `Notification` MongoDB collections.
+ *   - Some handlers emit Socket.io events to users' global rooms.
+ *
+ * Dependencies:
+ *   - `../models/User`, `../models/Expert`, `../models/Availability`, `../models/Booking`,
+ *     `../models/Message`, `../models/Notification` — Mongoose models.
+ *   - `bcryptjs` — Password hashing (imported but bcrypt is also run via pre-save hook).
+ */
+
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -15,7 +38,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /**
- * Helper to wipe all test data
+ * Wipes all test fixture documents for the known E2E email addresses across all collections.
+ * Resolves Expert profile IDs first because `Availability.expert` references the Expert
+ * document `_id`, not the User `_id`.
+ * This function is async. It awaits multiple `find` and `deleteMany` operations.
+ *
+ * @async
+ * @returns {Promise<void>}
  */
 const cleanupTestData = async () => {
   const users = await User.find({ email: { $in: [
@@ -29,15 +58,22 @@ const cleanupTestData = async () => {
     'chat-client@skillsync.com',
     'admin-e2e@skillsync.com',
     'suspended-client@skillsync.com',
-    'target-expert@skillsync.com'
+    'target-expert@skillsync.com',
+    'payment-expert-e2e@skillsync.com',
+    'payment-client-e2e@skillsync.com',
+    'payment-client-b-e2e@skillsync.com',
   ] } });
   const userIds = users.map(u => u._id);
   
   if (userIds.length > 0) {
+    // Availability.expert references Expert profile _id, not User _id — must resolve first
+    const expertProfiles = await Expert.find({ user: { $in: userIds } });
+    const expertProfileIds = expertProfiles.map(e => e._id);
+
     await Message.deleteMany({ $or: [{ sender: { $in: userIds } }, { receiver: { $in: userIds } }] });
     await Notification.deleteMany({ user: { $in: userIds } });
-    await Booking.deleteMany({ $or: [{ user: { $in: userIds } }, { expert: { $in: userIds } }] });
-    await Availability.deleteMany({ expert: { $in: userIds } });
+    await Booking.deleteMany({ $or: [{ user: { $in: userIds } }, { expert: { $in: expertProfileIds } }] });
+    await Availability.deleteMany({ expert: { $in: expertProfileIds } });
     await Expert.deleteMany({ user: { $in: userIds } });
     await User.deleteMany({ _id: { $in: userIds } });
   }
@@ -490,6 +526,80 @@ router.post('/seed-admin-e2e', async (req, res) => {
     });
   } catch (error) {
     console.error('Seeding admin error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/test/seed-payment-e2e
+ * Seeds isolated test data for the Payment Gateway E2E suite.
+ * Per DL-01 (payment_gateway_e2e_plan.md): must connect to local ephemeral DB (TEST_DB_URI).
+ * Idempotent — calls cleanupTestData() before creating fresh records.
+ * Returns { success: true, slotsCreated: 1, expertEmail, clientEmail, bookingDate, slotTime }
+ */
+router.post('/seed-payment-e2e', async (req, res) => {
+  try {
+    await cleanupTestData();
+
+    const clientUser = new User({
+      name: 'Payment Test Client',
+      email: 'payment-client-e2e@skillsync.com',
+      password: 'TestPassword123!',
+      role: 'Client',
+      phone: '+917000000001',
+    });
+    await clientUser.save();
+
+    const expertUser = new User({
+      name: 'Payment Test Expert',
+      email: 'payment-expert-e2e@skillsync.com',
+      password: 'TestPassword123!',
+      role: 'Expert',
+      phone: '+917000000002',
+    });
+    await expertUser.save();
+
+    const expertProfile = new Expert({
+      name: 'Payment Test Expert',
+      category: 'Technology',
+      hourlyRate: 500,
+      experience: 5,
+      description: 'Dedicated E2E payment test expert. Do not book in production.',
+      user: expertUser._id,
+    });
+    await expertProfile.save();
+
+    // Second client for TS-07 concurrency race (cannot be created via public register API
+    // because Zod schema accepts 'user' but User model enum requires 'Client')
+    const clientUserB = new User({
+      name: 'Payment Client B',
+      email: 'payment-client-b-e2e@skillsync.com',
+      password: 'TestPassword123!',
+      role: 'Client',
+      phone: '+917000000003',
+    });
+    await clientUserB.save();
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const bookingDate = tomorrow.toISOString().split('T')[0];
+
+    // Availability records are BLOCKS (not available slots) in this system.
+    // Creating an Availability block for the target slot would prevent booking.
+    // No Availability record = the slot is bookable (backend allows any unblocked, unbooked slot).
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment E2E seed complete',
+      slotsCreated: 1,
+      expertEmail: expertUser.email,
+      clientEmail: clientUser.email,
+      clientBEmail: clientUserB.email,
+      bookingDate,
+      slotTime: '10:00',
+    });
+  } catch (error) {
+    console.error('seed-payment-e2e failed:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

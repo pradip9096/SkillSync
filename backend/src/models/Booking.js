@@ -1,8 +1,20 @@
 /**
- * Purpose: Mongoose schema and model for session bookings.
- * Inputs: None (defines the structure for booking data).
- * Outputs: Mongoose model for the 'Booking' collection.
- * Side Effects: Defines a compound unique index in MongoDB to prevent duplicate bookings for the same expert, date, and time slot (excluding cancelled ones).
+ * @file Booking.js
+ * @description Mongoose schema and model for session bookings. This is the central
+ * document in the booking lifecycle. Conflict prevention uses two layers: (1) a
+ * pre-check query in `BookingService` and (2) a compound unique partial index on the
+ * `active` field defined below. An `active=false` booking (Cancelled, Late Cancellation,
+ * or Completed) is excluded from the index so the slot can be rebooked.
+ *
+ * Inputs and outputs:
+ *   - Exports: the `Booking` Mongoose model.
+ *
+ * Side effects:
+ *   - Registers two pre-save hooks (one for `save`, one for `findOneAndUpdate`) that
+ *     enforce the `active` flag synchronisation and a time-lock preventing premature
+ *     `Completed` transitions.
+ *   - Defines a compound unique partial index `{ expert, bookingDate, slotTime }` where
+ *     `active: true` — written to MongoDB on first model use.
  */
 
 const mongoose = require('mongoose');
@@ -98,11 +110,12 @@ const bookingSchema = new mongoose.Schema({
 });
 
 /**
- * Purpose: Converts booking date and slot time into a JavaScript Date object in IST (+05:30).
- * @param {string} bookingDate - Date string in YYYY-MM-DD format.
- * @param {string} slotTime - Time string in HH:mm format.
- * @returns {Date|null} - A JavaScript Date object representing the session time, or null if the date/time is invalid.
- * Side effects: None.
+ * Parses a `YYYY-MM-DD` date and `HH:mm` 24-hour time string in IST (+05:30)
+ * into a UTC JavaScript `Date` object.
+ *
+ * @param {string} bookingDate - Session date in `YYYY-MM-DD` format.
+ * @param {string} slotTime - Session start time in `HH:mm` (24-hour) format.
+ * @returns {Date|null} Parsed `Date`, or `null` if the input is invalid.
  */
 const parseISTSessionTime = (bookingDate, slotTime) => {
   const session = new Date(`${bookingDate}T${slotTime}:00+05:30`);
@@ -110,9 +123,14 @@ const parseISTSessionTime = (bookingDate, slotTime) => {
 };
 
 /**
- * Purpose: Pre-save hook to enforce time-lock validation for 'Completed' status updates.
- * @returns {Promise<void>} Resolves if validation passes, otherwise throws an Error.
- * Side effects: Throws an error to prevent saving if the session time has not yet passed.
+ * Pre-save hook. Synchronises the `active` flag with booking status and enforces the
+ * time-lock rule: a booking cannot be moved to `Completed` until at least 1 hour after
+ * the session start time (IST). `bypassTimeLock` or `_bypassTimeLock` skip this guard
+ * for admin overrides.
+ *
+ * @async
+ * @returns {Promise<void>}
+ * @throws {Error} If `bookingDate`/`slotTime` are unparseable, or the session has not yet ended.
  */
 bookingSchema.pre('save', async function () {
   // Synchronize the active field state with the status.
@@ -139,9 +157,12 @@ bookingSchema.pre('save', async function () {
 });
 
 /**
- * Purpose: Pre-findOneAndUpdate hook to enforce time-lock validation for 'Completed' status updates during updates.
- * @returns {Promise<void>} Resolves if validation passes, otherwise throws an Error.
- * Side effects: Throws an error to prevent the update if the session time has not yet passed.
+ * Pre-`findOneAndUpdate` hook. Mirrors the time-lock logic from the `pre('save')` hook
+ * for update-path writes (e.g. admin status changes via `findOneAndUpdate`).
+ *
+ * @async
+ * @returns {Promise<void>}
+ * @throws {Error} If the session has not yet ended when transitioning to `Completed`.
  */
 bookingSchema.pre('findOneAndUpdate', async function () {
   const update = this.getUpdate();

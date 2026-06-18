@@ -8,6 +8,17 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const Booking = require('../models/Booking');
 
+/**
+ * Connects to MongoDB, sets the `active` field on all existing booking documents to
+ * reflect their status (required by the new partial unique index), drops the legacy
+ * non-partial compound index (`expert_1_bookingDate_1_slotTime_1` if present), and
+ * rebuilds all indexes defined in the Booking model schema.
+ * This function is async. It awaits `connectDB`, `Booking.updateMany`, index operations,
+ * `Booking.cleanIndexes`, and `Booking.createIndexes`.
+ *
+ * @async
+ * @returns {Promise<void>} Calls `process.exit(0)` on success; `process.exit(1)` on error.
+ */
 const rebuildIndex = async () => {
   try {
     // 1. Connect to database

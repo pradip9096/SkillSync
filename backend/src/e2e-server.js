@@ -1,3 +1,26 @@
+/**
+ * @file e2e-server.js
+ * @description Lightweight test-mode entry point for Playwright E2E tests. Imports the
+ * production Express app and injects two DI stubs into `app.locals` before starting the
+ * HTTP server, avoiding costly external service calls during automated test runs.
+ *
+ * Inputs and outputs:
+ *   - Not imported by other modules; intended to be run directly as `node src/e2e-server.js`.
+ *   - Starts the server on `process.env.PORT` (default 5005) to avoid clashing with the
+ *     development server on port 5000.
+ *
+ * Side effects:
+ *   - Overrides `app.locals.videoRoomService` with a stub that returns a hard-coded Google
+ *     STUN server, bypassing the Twilio Network Traversal Service paid API.
+ *   - Overrides `app.locals.socketAuthenticator` to accept the hard-coded Playwright fixture
+ *     token `mock_token` in addition to real JWTs, bypassing a live MongoDB user lookup.
+ *   - Starts the HTTP server and writes a startup message to stdout.
+ *
+ * Dependencies:
+ *   - `./app` — Production Express app + HTTP server instance.
+ *   - `jsonwebtoken` — JWT verification for non-mock tokens in the socket authenticator.
+ */
+
 const { app, server } = require('./app');
 const jwt = require('jsonwebtoken');
 

@@ -1,3 +1,23 @@
+/**
+ * @file uploadMiddleware.js
+ * @description Configures and exports a Multer middleware instance for handling profile
+ * picture and gallery image uploads. Accepts jpeg, jpg, png, and webp files up to 5 MB,
+ * stores them in `frontend/public/uploads/` with a unique timestamped filename.
+ *
+ * Inputs and outputs:
+ *   - Exports: the configured `multer` upload middleware (call as `upload.single('fieldName')`).
+ *
+ * Side effects:
+ *   - Creates the `frontend/public/uploads/` directory if it does not already exist
+ *     (synchronous `fs.mkdirSync` at module-load time).
+ *   - Writes uploaded files to disk in the uploads directory.
+ *
+ * Dependencies:
+ *   - `multer` — Multipart form-data middleware for Express.
+ *   - `path` — File extension extraction.
+ *   - `fs` — Directory existence check and creation.
+ */
+
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -20,13 +40,18 @@ const storage = multer.diskStorage({
   }
 });
 
-// Check file type
+/**
+ * Validates that an uploaded file is an allowed image type by checking both the
+ * file extension and the MIME type. Both must pass to prevent extension-spoofing attacks.
+ *
+ * @param {Express.Multer.File} file - The Multer file object from the incoming request.
+ * @param {function(Error|null, boolean): void} cb - Multer callback: `cb(null, true)` to accept;
+ *   `cb(new Error(...))` to reject.
+ * @returns {void}
+ */
 function checkFileType(file, cb) {
-  // Allowed ext
   const filetypes = /jpeg|jpg|png|webp/;
-  // Check ext
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  // Check mime
   const mimetype = filetypes.test(file.mimetype);
 
   if (mimetype && extname) {

@@ -1,8 +1,12 @@
 /**
- * Purpose: Routing endpoints for user registration and authentication login.
- * Inputs: Express router instance.
- * Outputs: Mounted routes.
- * Side Effects: Connects API requests to authentication controller.
+ * @file authRoutes.js
+ * @description Express router for user authentication and profile endpoints. A
+ * shared rate limiter (10 req / 15 min per IP) is applied to all auth routes to
+ * slow brute-force attempts. Profile image uploads use the `uploadMiddleware` Multer
+ * instance (single-file, field name `profileImage`).
+ *
+ * Inputs and outputs:
+ *   - Exports: an Express `Router` instance mounted at `/api/auth` in `app.js`.
  */
 
 const express = require('express');

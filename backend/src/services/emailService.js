@@ -1,10 +1,37 @@
+/**
+ * @file emailService.js
+ * @description Transactional email dispatch service. Sends via a configured SMTP transport
+ * when `SMTP_HOST` is set, or falls back to Ethereal Mail (free test accounts) in
+ * development, printing a preview URL to the console.
+ *
+ * Inputs and outputs:
+ *   - Exports: `{ sendEmail }`.
+ *
+ * Side effects:
+ *   - Establishes an SMTP connection to the configured mail server or Ethereal.
+ *   - Sends an email to `to`.
+ *   - Writes logs to stdout.
+ *
+ * Dependencies:
+ *   - `nodemailer` — SMTP client and Ethereal test account factory.
+ */
+
 const nodemailer = require('nodemailer');
 
 /**
- * Purpose: General email dispatcher service.
- * Inputs: { to, subject, html, text }
- * Outputs: Promise resolving to the sent email info or mock payload.
- * Side Effects: Sends an email via SMTP in production or generates a console log/Ethereal preview link in development.
+ * Dispatches a transactional email. Uses the SMTP transport when `SMTP_HOST` is set;
+ * otherwise creates a free Ethereal test account and logs a preview URL.
+ * This function is async. It awaits `transporter.sendMail` (and optionally
+ * `nodemailer.createTestAccount` for the Ethereal fallback).
+ *
+ * @async
+ * @param {{ to: string, subject: string, html?: string, text?: string }} args
+ *   - `to`: Recipient email address.
+ *   - `subject`: Email subject line.
+ *   - `html`: HTML body (optional).
+ *   - `text`: Plain-text body (optional).
+ * @returns {Promise<{ messageId: string, previewUrl?: string }>} Nodemailer send result.
+ * @throws {Error} If SMTP delivery fails (re-throws the underlying nodemailer error).
  */
 const sendEmail = async ({ to, subject, html, text }) => {
   // If SMTP configuration is provided, use it
