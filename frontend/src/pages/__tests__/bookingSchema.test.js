@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bookingSchema } from '../ExpertDetail';
+import { bookingSchema } from '../../schemas/bookingSchema';
 
 describe('bookingSchema Validation', () => {
   it('should validate a correct booking payload', () => {
@@ -21,7 +21,7 @@ describe('bookingSchema Validation', () => {
     };
     const result = bookingSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
-    expect(result.error.issues[0].message).toBe('Name is required');
+    expect(result.error.issues[0].message).toBe('Name must be at least 2 characters');
   });
 
   it('should reject invalid email', () => {
@@ -43,6 +43,6 @@ describe('bookingSchema Validation', () => {
     };
     const result = bookingSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
-    expect(result.error.issues[0].message).toBe('Must be a valid 10-digit Indian phone number');
+    expect(result.error.issues[0].message).toBe('Must be a valid 10-digit Indian mobile number (e.g. 9876543210)');
   });
 });

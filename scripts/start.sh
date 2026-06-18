@@ -27,7 +27,7 @@ clear_port() {
     fi
 }
 
-clear_port 5000 "Backend"
+clear_port 5001 "Backend"
 clear_port 5173 "Frontend"
 
 echo -e "${BLUE}Starting Backend...${NC}"
