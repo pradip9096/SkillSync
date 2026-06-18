@@ -1,8 +1,17 @@
+/**
+ * @file messageController.test.js
+ * @description Unit tests for messaging controller functions in `messageController.js`.
+ * Covers message retrieval by booking, message sending with HTML sanitization, bulk
+ * read-state marking, unread message count, and unique conversation listing.
+ * Authorization enforcement is verified for both client and expert roles.
+ * Message, Booking, and Notification models are fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
-const { 
-  sendMessage, 
-  getMessagesByBooking, 
+const {
+  sendMessage,
+  getMessagesByBooking,
   markMessagesAsRead, 
   getUnreadCount, 
   getUniqueConversations 

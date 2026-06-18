@@ -1,3 +1,11 @@
+/**
+ * @file BookingService.test.js
+ * @description Unit tests for the booking business logic in `services/BookingService.js`.
+ * Covers booking creation, payment verification, status transitions, idempotency guards,
+ * and concurrent booking conflict prevention. All repositories, Razorpay, Agenda,
+ * and notification models are fully mocked for isolation.
+ */
+
 process.env.RAZORPAY_KEY_ID = 'test_key';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 const mongoose = require('mongoose');

@@ -1,3 +1,11 @@
+/**
+ * @file webhookMiddleware.test.js
+ * @description Unit tests for the Razorpay webhook signature verification middleware
+ * in `webhookMiddleware.js`. Verifies HMAC-SHA256 signature computation, timing-safe
+ * comparison, rejection of missing or tampered signatures, and 500 response when
+ * the webhook secret is not configured.
+ */
+
 const crypto = require('crypto');
 const httpMocks = require('node-mocks-http');
 const { verifyWebhookSignature } = require('../../../middleware/webhookMiddleware');

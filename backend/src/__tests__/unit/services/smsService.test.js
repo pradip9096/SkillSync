@@ -1,3 +1,12 @@
+/**
+ * @file smsService.test.js
+ * @description Unit tests for the Twilio SMS dispatch service in `services/smsService.js`.
+ * Verifies Twilio message creation when credentials are configured, the development
+ * console-log fallback when credentials are absent, and the circuit breaker fallback
+ * that returns a mock SID to prevent system failure when Twilio is unavailable.
+ * The twilio module is fully mocked.
+ */
+
 const { sendSMS } = require('../../../services/smsService');
 const twilio = require('twilio');
 

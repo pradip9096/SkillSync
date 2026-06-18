@@ -1,3 +1,10 @@
+/**
+ * @file expertDashboardController.test.js
+ * @description Unit tests for expert dashboard controller functions in `expertDashboardController.js`.
+ * Covers booking retrieval, profile management, slot blocking and unblocking, gallery image
+ * upload and deletion, client rating, and analytics retrieval. ExpertService is fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
 const Expert = require('../../../models/Expert');
 const Booking = require('../../../models/Booking');

@@ -1,3 +1,11 @@
+/**
+ * @file bookingController.test.js
+ * @description Unit tests for session booking controller functions in `bookingController.js`.
+ * Verifies that each controller delegates correctly to BookingService, including booking
+ * creation, payment verification, status updates, booked slot retrieval, and webhook handling.
+ * BookingService and Razorpay are fully mocked.
+ */
+
 process.env.RAZORPAY_KEY_ID = 'test_key';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret';
 const httpMocks = require('node-mocks-http');

@@ -1,8 +1,16 @@
+/**
+ * @file notificationController.test.js
+ * @description Unit tests for notification controller functions in `notificationController.js`.
+ * Covers fetching user notifications, marking a single notification as read, marking all
+ * notifications as read in bulk, and retrieving the unread notification count.
+ * The Notification model is fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
-const { 
-  getNotifications, 
-  markAsRead, 
-  markAllAsRead, 
+const {
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
   getUnreadCount 
 } = require('../../../controllers/notificationController');
 const Notification = require('../../../models/Notification');

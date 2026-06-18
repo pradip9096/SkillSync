@@ -1,3 +1,11 @@
+/**
+ * @file authController.test.js
+ * @description Unit tests for user authentication and registration handlers in `authController.js`.
+ * Covers Feature 1.1: Registration, Login, JWT generation, profile management,
+ * and Role-Based Access Control (RBAC) enforcement. All external dependencies
+ * (User model, Expert model, JWT, email service) are fully mocked.
+ */
+
 const httpMocks = require('node-mocks-http');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
