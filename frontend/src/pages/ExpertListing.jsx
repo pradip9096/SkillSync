@@ -41,7 +41,7 @@ const ExpertListing = () => {
   }, [search]);
 
   // React Query for data fetching
-  const { data: response, isLoading: loading, error: queryError } = useQuery({
+  const { data: response, isLoading: loading, isError, error: queryError } = useQuery({
     queryKey: ['experts', debouncedSearch, category],
     queryFn: async () => {
       const { data } = await fetchExperts({ search: debouncedSearch, category });
@@ -51,10 +51,16 @@ const ExpertListing = () => {
   });
 
   const experts = response?.data || [];
-  const error = queryError ? 'Failed to fetch experts. Please try again later.' : null;
+  
+  // If we have an error but also have data (due to cache), show a toast/warning instead of replacing the whole UI
+  const hasCachedData = experts.length > 0;
+  const showMainError = isError && !hasCachedData;
+  const showToastError = isError && hasCachedData;
+
+  const errorMsg = queryError ? 'Failed to fetch experts. Please try again later.' : null;
 
   // Filter out the expert's own profile card if logged in
-  const displayedExperts = (experts || []).filter(
+  const displayedExperts = experts.filter(
     (exp) => !user || (exp.user !== user._id && exp.user?._id !== user._id)
   );
 
@@ -104,7 +110,7 @@ const ExpertListing = () => {
         </div>
 
         {/* Content Display Section */}
-        {loading ? (
+        {loading && !hasCachedData ? (
           // Loading Spinner
           <div className="flex flex-col items-center justify-center py-24">
             <div className="relative">
@@ -113,18 +119,27 @@ const ExpertListing = () => {
             </div>
             <p className="text-gray-500 font-bold mt-6 tracking-wide uppercase text-sm">Initializing...</p>
           </div>
-        ) : error ? (
-          // Error Message
+        ) : showMainError ? (
+          // Main Error Message
           <div className="bg-red-50 border border-red-100 text-red-700 px-8 py-6 rounded-3xl flex items-center gap-4 animate-fade-in">
             <AlertCircle className="w-8 h-8 text-red-500" />
-            <p className="font-semibold text-lg">{error}</p>
+            <p className="font-semibold text-lg">{errorMsg}</p>
           </div>
-        ) : (displayedExperts || []).length > 0 ? (
+        ) : displayedExperts.length > 0 ? (
           // Grid of Expert Cards
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {(displayedExperts || []).map((expert, index) => (
-              <ExpertCard key={expert._id} expert={expert} index={index} />
-            ))}
+          <div className="relative">
+            {/* Transient Error Toast for Cached Data */}
+            {showToastError && (
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-3 rounded-full flex items-center gap-3 shadow-lg shadow-yellow-500/10 z-10 animate-slide-down">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                <span className="font-bold text-sm">Offline: Showing cached data</span>
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+              {displayedExperts.map((expert, index) => (
+                <ExpertCard key={expert._id} expert={expert} index={index} />
+              ))}
+            </div>
           </div>
         ) : (
           // Empty State

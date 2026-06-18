@@ -12,6 +12,14 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Added
 
+- Added WebRTC peer-to-peer video session feature to enable live video calls.
+- Added a real-time socket connection status indicator to the messaging UI.
+- Added an unauthenticated, production-safe `/api/health` endpoint for uptime and database connection monitoring.
+- Added `CLAUDE.md` to provide project guidance and operational context for AI assistants.
+- Added an E2E test server with Dependency Injection mocks for structured Playwright testing.
+- Added isolated test data seeding route (`/api/test/seed-payment-e2e`) for the Payment Gateway E2E test suite.
+- Added a dedicated `payments` project in the Playwright configuration with specialized npm scripts to securely run the Payment Gateway E2E test suite.
+- Added end-to-end test specifications for the live Razorpay payment gateway integration.
 - Added formal Implementation Plan (DOC-IMP-004) and Verification & Validation Report (DOC-VV-004) governing the Test Directory Remediation.
 - Added standalone Model Context Protocol (MCP) Database Inspector server to safely execute read-only queries against the local MongoDB cluster.
 - Added Husky pre-push hooks and lint-staged pre-commit hooks to automate local test suite execution and formatting.
@@ -19,6 +27,10 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Changed
 
+- Changed environment variable management by centralizing configuration into a single validated module.
+- Changed messaging smoke tests into structured Playwright specifications.
+- Changed Playwright video recording configuration to retain artifacts only on test failure.
+- Changed documentation layout by archiving stale SDLC remediation reports.
 - Changed backend testing architecture to enforce strict colocation boundaries, migrating unit tests into `src/__tests__/unit/` and integration suites to `tests/integration/`.
 
 ### Fixed
@@ -99,10 +111,10 @@ Changelog policy, workflow, and SOP are maintained in
 - Fixed Razorpay checkout mobile number prefill blank issue by passing database-validated, correctly prefixed phone numbers directly.
 - Fixed Brave/Adblocker payment freezes by adding explicit UI warning/troubleshooting tips in the error box regarding blocked sardine.ai and lumberjack scripts.
 - Fixed payment idempotency race conditions by gracefully catching MongoDB `11000` duplicate key errors on the `PaymentLog` model during concurrent webhook and client pings.
-- Fixed `Booking` schema default status from `Confirmed` to `Pending` to ensure programmatically created bookings cannot bypass the payment flow.
 
 ### Security
 
+- Fixed `Booking` schema default status from `Confirmed` to `Pending` to ensure programmatically created bookings cannot bypass the payment flow.
 - Secured backend API with `helmet` for HTTP headers and `express-mongo-sanitize` for NoSQL injection prevention.
 - Secured backend from denial-of-service via massive payloads by enforcing a `10kb` limit on `express.json()`.
 - Secured HTTP and Socket.io endpoints by replacing wildcard CORS with strict frontend origin configurations.
@@ -195,9 +207,9 @@ Changelog policy, workflow, and SOP are maintained in
 - Added email delivery service with Nodemailer, including support for Ethereal Mail preview URLs and console log fallbacks.
 - Added SMS delivery service with Twilio SDK and development console logging fallbacks.
 - Added integration test suite `test_reminders.js` covering creation, cancellation, and manual execution flows.
-- Added Forgot and Reset Password self-service flows with 10-minute expiring tokens and SMTP email alerts.
-- Added frontend ForgotPassword and ResetPassword pages with glassmorphic cards, validation rules, navigation links on the Login view, and automatic dashboard redirection upon successful credential updates.
 - Added integration test suite `test_forgot_password.js` covering token requests, token validations, expiry constraints, resets, and post-reset credentials verification.
+- Added frontend ForgotPassword and ResetPassword pages with validation and login navigation.
+- Added automatic dashboard redirection upon successful credential updates.
 
 ### Changed
 
@@ -280,11 +292,7 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Fixed
 
-- Fixed expert self-booking and Admin booking loopholes by enforcing booking creation
-  restrictions in both UI and backend validation.
 - Fixed blocked expert slots leaking into client-facing booking history.
-- Fixed unauthorized booking access risks by protecting booking retrieval, status update,
-  and rating endpoints with authentication and ownership checks.
 - Fixed Expert Dashboard unblock rendering by returning richer booked-slot objects and
   handling both object and string slot payloads in the frontend.
 - Fixed real-time client updates after expert unblock by standardizing the `slot_released`
@@ -302,6 +310,10 @@ Changelog policy, workflow, and SOP are maintained in
 
 ### Security
 
+- Fixed expert self-booking and Admin booking loopholes by enforcing booking creation
+  restrictions in both UI and backend validation.
+- Fixed unauthorized booking access risks by protecting booking retrieval, status update,
+  and rating endpoints with authentication and ownership checks.
 - Secured booking history lookup so users can only view their own bookings unless they are
   Admins.
 - Secured booking status updates and rating operations with owner, host Expert, or Admin

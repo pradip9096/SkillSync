@@ -7,7 +7,7 @@ test.describe('Feature 3.1 - The Core Booking Journey', () => {
 
   test.beforeAll(async ({ request }) => {
     // 1. Hit the backend test seed endpoint
-    const res = await request.post('http://localhost:5000/api/test/seed-booking-e2e');
+    const res = await request.post('http://localhost:5001/api/test/seed-booking-e2e');
     const body = await res.text();
     expect(res.status(), `Backend seed failed: ${body}`).toBe(201);
   });

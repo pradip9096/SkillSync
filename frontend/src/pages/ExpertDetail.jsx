@@ -16,18 +16,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { fetchExpertById, fetchBookedSlots, createBooking, verifyPayment } from '../services/api';
 import socket from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, Loader2, ChevronLeft, CheckCircle, ShieldCheck, Star, AlertCircle, X, ChevronRight } from 'lucide-react';
-
-const bookingSchema = z.object({
-  userName: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be under 50 characters'),
-  userEmail: z.string().email('Invalid email address'),
-  userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian mobile number (e.g. 9876543210)'),
-  notes: z.string().max(500).optional(),
-});
+import { bookingSchema } from '../schemas/bookingSchema';
 
 /**
  * ExpertDetail Page Component.
@@ -487,7 +480,10 @@ const ExpertDetail = () => {
             </div>
 
             <div className="space-y-4">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Available Slots</label>
+              <div className="flex items-center justify-between px-1">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Available Slots</label>
+                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">IST (UTC+5:30)</span>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {timeSlots.map((slot) => {
                   const isBooked = bookedSlots.some(s => (typeof s === 'string' ? s : s.slotTime) === slot.value);
