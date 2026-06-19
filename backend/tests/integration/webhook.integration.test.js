@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const { app } = require('../../src/app');
 const Booking = require('../../src/models/Booking');
 const Expert = require('../../src/models/Expert');
+const ProcessedWebhook = require('../../src/models/ProcessedWebhook');
 const User = require('../../src/models/User');
 
 let mongoServer;
@@ -145,6 +146,61 @@ describe('Feature 2.4: Webhook State Mutations Integration', () => {
 
     const booking = await Booking.findById(pendingBookingId);
     expect(booking.status).toBe('Confirmed'); // DB safely Mutated!
+  });
+
+  it('INT-WEBHOOK-03b: Should not poison idempotency record for malformed captured payload', async () => {
+    const eventId = 'evt_malformed_then_retry';
+    const malformedPayload = {
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            order_id: RAZORPAY_ORDER_ID,
+            id: 'invalid_payment_id'
+          }
+        }
+      }
+    };
+
+    const malformedSignature = generateSignature(malformedPayload);
+    const malformedResponse = await request(app)
+      .post('/bookings/webhook')
+      .set('x-razorpay-event-id', eventId)
+      .set('x-razorpay-signature', malformedSignature)
+      .send(malformedPayload);
+
+    expect(malformedResponse.status).toBe(400);
+    expect(malformedResponse.body.error).toMatch(/Invalid payment or order ID format/i);
+    await expect(ProcessedWebhook.findOne({ eventId })).resolves.toBeNull();
+
+    const bookingAfterMalformedAttempt = await Booking.findById(pendingBookingId);
+    expect(bookingAfterMalformedAttempt.status).toBe('Pending');
+
+    const retryPayload = {
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            order_id: RAZORPAY_ORDER_ID,
+            id: 'pay_retry123abc'
+          }
+        }
+      }
+    };
+
+    const retrySignature = generateSignature(retryPayload);
+    const retryResponse = await request(app)
+      .post('/bookings/webhook')
+      .set('x-razorpay-event-id', eventId)
+      .set('x-razorpay-signature', retrySignature)
+      .send(retryPayload);
+
+    expect(retryResponse.status).toBe(200);
+    expect(retryResponse.body.success).toBe(true);
+
+    const bookingAfterRetry = await Booking.findById(pendingBookingId);
+    expect(bookingAfterRetry.status).toBe('Confirmed');
+    await expect(ProcessedWebhook.countDocuments({ eventId })).resolves.toBe(1);
   });
 
   it('INT-WEBHOOK-04: Should mutate state to Cancelled upon valid payment.failed event', async () => {
