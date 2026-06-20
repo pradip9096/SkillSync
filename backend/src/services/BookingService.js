@@ -767,7 +767,8 @@ class BookingService {
    * are silently ignored. Handles `payment.captured` / `order.paid` (confirms booking) and
    * `payment.failed` (cancels the pending booking and releases the slot). All other event
    * types are acknowledged with `{ success: true, ignored: true }`.
-   * This function is async. It awaits `ProcessedWebhook.create`, `BookingRepository.findOne`,
+   * This function is async. It validates captured-payment IDs before recording the
+   * idempotency key, then awaits `ProcessedWebhook.create`, `BookingRepository.findOne`,
    * `this.confirmBookingPayment`, and `cancelScheduledReminders`.
    *
    * @async
@@ -778,17 +779,19 @@ class BookingService {
    */
   async handleWebhook({ event, payload, headers, io }) {
     const eventId = headers['x-razorpay-event-id'];
-    if (eventId) {
+    const recordWebhookEvent = async () => {
+      if (!eventId) return false;
       try {
         await ProcessedWebhook.create({ eventId, provider: 'razorpay' });
       } catch (err) {
         if (err.code === 11000) {
           console.log(`[Webhook Idempotency] Duplicate webhook caught and ignored for event: ${eventId}`);
-          return { success: true, ignored: true };
+          return true;
         }
         throw err;
       }
-    }
+      return false;
+    };
 
     if (event === 'payment.captured' || event === 'order.paid') {
       const paymentEntity = payload.payment.entity;
@@ -802,6 +805,8 @@ class BookingService {
         err.statusCode = 400;
         throw err;
       }
+
+      if (await recordWebhookEvent()) return { success: true, ignored: true };
 
       const booking = await BookingRepository.findOne({ razorpayOrderId });
       if (!booking) {
@@ -822,6 +827,8 @@ class BookingService {
     }
 
     if (event === 'payment.failed') {
+      if (await recordWebhookEvent()) return { success: true, ignored: true };
+
       const paymentEntity = payload.payment.entity;
       const razorpayOrderId = paymentEntity.order_id;
 
@@ -845,6 +852,8 @@ class BookingService {
       }
       return { success: true, cancelled: true };
     }
+
+    if (await recordWebhookEvent()) return { success: true, ignored: true };
 
     return { success: true, ignored: true };
   }
